@@ -1,0 +1,23 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    env:
+      KAIRO_OFFLINE: '1'
+      CARGO_BUILD_JOBS: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          components: rustfmt, clippy
+          toolchain: 1.99.1
+      - run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      - run: sh scripts/verify.sh
+      - run: python3 tests/workflow_policy.py && python3 tests/release_inventory.py
+      - run: python3 tests/git_secret_scan.py

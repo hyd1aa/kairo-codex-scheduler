@@ -1,0 +1,8 @@
+/target/
+/sandbox/
+/dist/
+__pycache__/
+*.token
+auth.json
+state.json
+.env

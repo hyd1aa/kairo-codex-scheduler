@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "kind": "new-public-export-snapshot-not-original-development-history",
+  "private_evidence_source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
+  "prior_audited_snapshot": "62ac949",
+  "frozen_runtime_source_commit": "3ce80a056d458fc41e0897d24ae2340edbbe36ea",
+  "archive_declared_original_commit": "a220f66377e5f337a6f60201fdd4f1bb68777204",
+  "original_git_objects_supplied": false,
+  "history_policy": "One new local root; no original branches/tags/remotes/bundles/objects imported; no fabricated original authors/dates",
+  "project_license": "MIT",
+  "apache_relicense_applied": false,
+  "private_history_and_evidence_excluded": true,
+  "python_or_gist_source_included": false,
+  "early_python_full_lineage_verified": false,
+  "owner_licensing_authority_confirmed": false,
+  "publisher_identity_confirmed": false,
+  "public_endpoint_verified": false,
+  "runtime_policy": "Rust production code and installer bytes preserved; two cfg(test) fixture sections anonymized; package builder/public documentation adapted"
+}

@@ -1,0 +1,1330 @@
+{
+  "Absolute Codex executable path": {
+    "en": "Absolute Codex executable path",
+    "zh": "Codex 可执行文件绝对路径"
+  },
+  "Absolute paths required": {
+    "en": "Absolute paths required",
+    "zh": "需要绝对路径"
+  },
+  "Account changed; blocked": {
+    "en": "Account changed; blocked",
+    "zh": "账号变化，已阻止"
+  },
+  "Account duplicate guard": {
+    "en": "Account duplicate guard",
+    "zh": "账号级重复请求保护"
+  },
+  "Account gate mismatch": {
+    "en": "Account gate mismatch",
+    "zh": "账号门禁不匹配"
+  },
+  "Account gate missing; migration required": {
+    "en": "Account gate missing; migration required",
+    "zh": "账号门禁缺失，需要迁移"
+  },
+  "Account profile name": {
+    "en": "Account profile name",
+    "zh": "账号配置名称"
+  },
+  "Acknowledge a fresh account with no recent requests": {
+    "en": "Acknowledge a fresh account with no recent requests",
+    "zh": "确认首次绑定且没有近期调用"
+  },
+  "Add HH:MM": {
+    "en": "Add HH:MM",
+    "zh": "新增 HH:MM 时间"
+  },
+  "Ambiguous cutoff": {
+    "en": "Ambiguous cutoff",
+    "zh": "截止时间无效"
+  },
+  "Anchor missing": {
+    "en": "Anchor missing",
+    "zh": "锚点缺失"
+  },
+  "Atomically apply a verified local binary": {
+    "en": "Atomically apply a verified local binary",
+    "zh": "原子安装已校验的本地程序"
+  },
+  "Atomically migrate compatible state or import a normalized transfer": {
+    "en": "Atomically migrate compatible state or import a normalized transfer",
+    "zh": "原子迁移兼容状态或导入标准化迁移包"
+  },
+  "ChatGPT OAuth required": {
+    "en": "ChatGPT OAuth required",
+    "zh": "需要 ChatGPT OAuth"
+  },
+  "Check, install, recover or roll back updates": {
+    "en": "Check, install, recover or roll back updates",
+    "zh": "检查、安装、恢复或回滚更新"
+  },
+  "Clock moved backward; blocked": {
+    "en": "Clock moved backward; blocked",
+    "zh": "时钟回拨，已阻止"
+  },
+  "Codex five-hour window scheduler": {
+    "en": "Codex five-hour window scheduler",
+    "zh": "Codex 五小时窗口智能调度管理器"
+  },
+  "Configure idle prewarm and safety buffer": {
+    "en": "Configure idle prewarm and safety buffer",
+    "zh": "设置空闲预热及安全缓冲"
+  },
+  "Control only kairo.service": {
+    "en": "Control only kairo.service",
+    "zh": "仅控制 kairo.service"
+  },
+  "Convert and validate without writing state or networking": {
+    "en": "Convert and validate without writing state or networking",
+    "zh": "只转换校验，不写状态、不联网"
+  },
+  "Countdown missing": {
+    "en": "Countdown missing",
+    "zh": "倒计时缺失"
+  },
+  "Diagnose installation and safely repair configuration": {
+    "en": "Diagnose installation and safely repair configuration",
+    "zh": "诊断安装并安全修复配置"
+  },
+  "Duplicate time": {
+    "en": "Duplicate time",
+    "zh": "时间重复"
+  },
+  "Duplicate window": {
+    "en": "Duplicate window",
+    "zh": "窗口重复"
+  },
+  "Edit an existing time": {
+    "en": "Edit an existing time",
+    "zh": "修改已有时间"
+  },
+  "Enable live scheduling after separate production approval": {
+    "en": "Enable live scheduling after separate production approval",
+    "zh": "单独生产批准后启用真实调度"
+  },
+  "Enable or disable idle-window prewarm": {
+    "en": "Enable or disable idle-window prewarm",
+    "zh": "开启或关闭空闲窗口预热"
+  },
+  "Existing Codex authentication directory": {
+    "en": "Existing Codex authentication directory",
+    "zh": "现有 Codex 认证目录"
+  },
+  "Existing Codex authentication directory; no token copying": {
+    "en": "Existing Codex authentication directory; no token copying",
+    "zh": "现有 Codex 认证目录，不复制令牌"
+  },
+  "Expected verified account fingerprint": {
+    "en": "Expected verified account fingerprint",
+    "zh": "预期的已验证账号指纹"
+  },
+  "Explicit acknowledgment of approved production cutover": {
+    "en": "Explicit acknowledgment of approved production cutover",
+    "zh": "明确确认已批准生产切换"
+  },
+  "Explicit original account fingerprint": {
+    "en": "Explicit original account fingerprint",
+    "zh": "明确的原账号指纹"
+  },
+  "Fetch and apply a checksum-authenticated release manifest": {
+    "en": "Fetch and apply a checksum-authenticated release manifest",
+    "zh": "按独立可信清单校验值下载并升级"
+  },
+  "Five-hour quota unavailable": {
+    "en": "Five-hour quota unavailable",
+    "zh": "无五小时额度"
+  },
+  "HH:MM required": {
+    "en": "HH:MM required",
+    "zh": "必须使用 HH:MM"
+  },
+  "Independently trusted SHA256": {
+    "en": "Independently trusted SHA256",
+    "zh": "独立可信的 SHA256 校验值"
+  },
+  "Initialize configuration without starting services": {
+    "en": "Initialize configuration without starting services",
+    "zh": "初始化配置，不启动服务"
+  },
+  "Install a verified binary without starting services": {
+    "en": "Install a verified binary without starting services",
+    "zh": "安装校验后的二进制，不启动服务"
+  },
+  "Installation prefix": {
+    "en": "Installation prefix",
+    "zh": "安装目录"
+  },
+  "Interface language: zh-CN or en-US": {
+    "en": "Interface language: zh-CN or en-US",
+    "zh": "界面语言：zh-CN 或 en-US"
+  },
+  "Invalid account fingerprint": {
+    "en": "Invalid account fingerprint",
+    "zh": "账号指纹无效"
+  },
+  "Invalid attempt history": {
+    "en": "Invalid attempt history",
+    "zh": "尝试历史无效"
+  },
+  "Invalid clock": {
+    "en": "Invalid clock",
+    "zh": "时钟无效"
+  },
+  "Invalid configuration": {
+    "en": "Invalid configuration",
+    "zh": "配置无效"
+  },
+  "Invalid cursor or backward clock": {
+    "en": "Invalid cursor or backward clock",
+    "zh": "游标无效或时钟回拨"
+  },
+  "Invalid gate parameters": {
+    "en": "Invalid gate parameters",
+    "zh": "门禁参数无效"
+  },
+  "Invalid quota": {
+    "en": "Invalid quota",
+    "zh": "额度数据无效"
+  },
+  "Invalid state": {
+    "en": "Invalid state",
+    "zh": "状态无效"
+  },
+  "Invalid window observations": {
+    "en": "Invalid window observations",
+    "zh": "窗口观测记录无效"
+  },
+  "Keep offline daemon alive until signal": {
+    "en": "Keep offline daemon alive until signal",
+    "zh": "离线时间线结束后等待退出信号"
+  },
+  "List activation times": {
+    "en": "List activation times",
+    "zh": "查看激活时间"
+  },
+  "Local gate mismatch": {
+    "en": "Local gate mismatch",
+    "zh": "本地门禁不匹配"
+  },
+  "Local reservation missing": {
+    "en": "Local reservation missing",
+    "zh": "缺少本地调用前记录"
+  },
+  "Machine-readable JSON without ANSI": {
+    "en": "Machine-readable JSON without ANSI",
+    "zh": "无 ANSI 的机器可解析 JSON"
+  },
+  "Manage daily activation times": {
+    "en": "Manage daily activation times",
+    "zh": "管理每日激活时间"
+  },
+  "Maximum log records: 1..10000": {
+    "en": "Maximum log records: 1..10000",
+    "zh": "最大日志数量：1..10000"
+  },
+  "Minimum spacing 10 minutes": {
+    "en": "Minimum spacing 10 minutes",
+    "zh": "最小间隔十分钟"
+  },
+  "Normalized transfer bundle; never raw OAuth": {
+    "en": "Normalized transfer bundle; never raw OAuth",
+    "zh": "标准化状态迁移包，不接受 OAuth"
+  },
+  "OAuth account missing": {
+    "en": "OAuth account missing",
+    "zh": "OAuth 账号缺失"
+  },
+  "OAuth login, verification and account profiles": {
+    "en": "OAuth login, verification and account profiles",
+    "zh": "OAuth 登录、校验和账号配置"
+  },
+  "OAuth token missing": {
+    "en": "OAuth token missing",
+    "zh": "OAuth 令牌缺失"
+  },
+  "OAuth unavailable": {
+    "en": "OAuth unavailable",
+    "zh": "OAuth 未授权"
+  },
+  "Offline synthetic timeline; never invokes Codex": {
+    "en": "Offline synthetic timeline; never invokes Codex",
+    "zh": "离线合成时间线，绝不调用 Codex"
+  },
+  "Offline tick delay in milliseconds": {
+    "en": "Offline tick delay in milliseconds",
+    "zh": "离线测试每步间隔毫秒数"
+  },
+  "Original scheduler timezone, e.g. Asia/Shanghai": {
+    "en": "Original scheduler timezone, e.g. Asia/Shanghai",
+    "zh": "原调度器时区，例如 Asia/Shanghai"
+  },
+  "Pause Kairo model requests": {
+    "en": "Pause Kairo model requests",
+    "zh": "暂停 Kairo 模型请求"
+  },
+  "Perform one iteration": {
+    "en": "Perform one iteration",
+    "zh": "只执行一轮检查"
+  },
+  "Persist interface language": {
+    "en": "Persist interface language",
+    "zh": "保存界面语言"
+  },
+  "Preview a synthetic scheduling decision": {
+    "en": "Preview a synthetic scheduling decision",
+    "zh": "预览合成调度决策"
+  },
+  "Preview the next 24 hours": {
+    "en": "Preview the next 24 hours",
+    "zh": "预览未来24小时"
+  },
+  "Private Kairo data directory": {
+    "en": "Private Kairo data directory",
+    "zh": "Kairo 私有数据目录"
+  },
+  "Python 1.3 JSON state file": {
+    "en": "Python 1.3 JSON state file",
+    "zh": "Python 1.3 JSON 状态文件"
+  },
+  "Quota HTTP {}": {
+    "en": "Quota HTTP {}",
+    "zh": "额度请求被拒绝"
+  },
+  "Quota allowed flag missing": {
+    "en": "Quota allowed flag missing",
+    "zh": "缺少额度许可标志"
+  },
+  "Quota duration missing": {
+    "en": "Quota duration missing",
+    "zh": "额度时长缺失"
+  },
+  "Quota limit flag missing": {
+    "en": "Quota limit flag missing",
+    "zh": "缺少额度限制标志"
+  },
+  "Quota transport failed": {
+    "en": "Quota transport failed",
+    "zh": "额度网络请求失败"
+  },
+  "Quota usage missing": {
+    "en": "Quota usage missing",
+    "zh": "额度用量缺失"
+  },
+  "Read Kairo logs": {
+    "en": "Read Kairo logs",
+    "zh": "查看 Kairo 日志"
+  },
+  "Read a local release manifest": {
+    "en": "Read a local release manifest",
+    "zh": "读取本地发布清单"
+  },
+  "Read five-hour and weekly quota without model requests": {
+    "en": "Read five-hour and weekly quota without model requests",
+    "zh": "查询五小时及每周额度，不调用模型"
+  },
+  "Read or configure executable and OAuth paths": {
+    "en": "Read or configure executable and OAuth paths",
+    "zh": "查看或设置程序及认证路径"
+  },
+  "Recover an interrupted update transaction": {
+    "en": "Recover an interrupted update transaction",
+    "zh": "恢复中断的升级事务"
+  },
+  "Remove a time": {
+    "en": "Remove a time",
+    "zh": "删除时间"
+  },
+  "Remove binaries and preserve user state": {
+    "en": "Remove binaries and preserve user state",
+    "zh": "卸载程序并保留用户状态"
+  },
+  "Repair configuration defaults; never reset attempt history": {
+    "en": "Repair configuration defaults; never reset attempt history",
+    "zh": "修复默认配置，不重置调用历史"
+  },
+  "Reset buffer in seconds: 0..300": {
+    "en": "Reset buffer in seconds: 0..300",
+    "zh": "重置后缓冲秒数：0..300"
+  },
+  "Reset missing": {
+    "en": "Reset missing",
+    "zh": "重置时间缺失"
+  },
+  "Response too large": {
+    "en": "Response too large",
+    "zh": "响应过大"
+  },
+  "Restore defaults": {
+    "en": "Restore defaults",
+    "zh": "恢复默认参数"
+  },
+  "Restore four default times": {
+    "en": "Restore four default times",
+    "zh": "恢复四个默认时间"
+  },
+  "Roll back the binary while retaining current attempt history": {
+    "en": "Roll back the binary while retaining current attempt history",
+    "zh": "回退二进制并保留当前调用历史"
+  },
+  "Run the scheduler; observation until explicitly activated": {
+    "en": "Run the scheduler; observation until explicitly activated",
+    "zh": "运行调度器，明确批准前仅观察"
+  },
+  "Schema invalid": {
+    "en": "Schema invalid",
+    "zh": "状态版本无效"
+  },
+  "Show help": {
+    "en": "Show help",
+    "zh": "显示帮助"
+  },
+  "Show natural-dispatch and delayed window confirmation": {
+    "en": "Show natural-dispatch and delayed window confirmation",
+    "zh": "查看自然调度和延迟窗口确认"
+  },
+  "Show project help": {
+    "en": "Show project help",
+    "zh": "显示项目说明"
+  },
+  "Show runtime status": {
+    "en": "Show runtime status",
+    "zh": "查看运行状态"
+  },
+  "Show the next actual check": {
+    "en": "Show the next actual check",
+    "zh": "查看下次实际检查时间"
+  },
+  "Show version": {
+    "en": "Show version",
+    "zh": "显示版本"
+  },
+  "Source binary": {
+    "en": "Source binary",
+    "zh": "源二进制程序"
+  },
+  "State missing/corrupt: execution blocked": {
+    "en": "State missing/corrupt: execution blocked",
+    "zh": "状态丢失或损坏，执行已阻止"
+  },
+  "Structurally read-only observation": {
+    "en": "Structurally read-only observation",
+    "zh": "结构性只读观察，禁止模型执行"
+  },
+  "Synthetic fixture": {
+    "en": "Synthetic fixture",
+    "zh": "合成测试文件"
+  },
+  "Synthetic quota fixture": {
+    "en": "Synthetic quota fixture",
+    "zh": "合成额度测试文件"
+  },
+  "Unix user home": {
+    "en": "Unix user home",
+    "zh": "系统用户主目录"
+  },
+  "Unknown system timezone; scheduling blocked": {
+    "en": "Unknown system timezone; scheduling blocked",
+    "zh": "无法识别系统时区，调度已暂停"
+  },
+  "Unsafe directory": {
+    "en": "Unsafe directory",
+    "zh": "不安全的目录"
+  },
+  "Validate state without requests": {
+    "en": "Validate state without requests",
+    "zh": "无请求校验持久化状态"
+  },
+  "Verified account fingerprint": {
+    "en": "Verified account fingerprint",
+    "zh": "已验证账号指纹"
+  },
+  "Weekly quota unavailable": {
+    "en": "Weekly quota unavailable",
+    "zh": "无每周额度"
+  },
+  "Workdir must be empty": {
+    "en": "Workdir must be empty",
+    "zh": "工作目录必须为空"
+  },
+  "absolute_codex_executable_path": {
+    "en": "Absolute Codex executable path",
+    "zh": "Codex 可执行文件绝对路径"
+  },
+  "absolute_paths_required": {
+    "en": "Absolute paths required",
+    "zh": "需要绝对路径"
+  },
+  "account_binding_required": {
+    "en": "account binding required",
+    "zh": "请先验证并绑定账号"
+  },
+  "account_changed": {
+    "en": "account changed",
+    "zh": "账号变化"
+  },
+  "account_changed;_blocked": {
+    "en": "Account changed; blocked",
+    "zh": "账号变化，已阻止"
+  },
+  "account_changed_before_exec": {
+    "en": "account changed before exec",
+    "zh": "执行前账号发生变化，禁止请求"
+  },
+  "account_duplicate_guard": {
+    "en": "Account duplicate guard",
+    "zh": "账号级重复请求保护"
+  },
+  "account_execution_owned": {
+    "en": "account execution owned",
+    "zh": "此账号已有其他调度实例持有执行权"
+  },
+  "account_gate_mismatch": {
+    "en": "Account gate mismatch",
+    "zh": "账号门禁不匹配"
+  },
+  "account_gate_missing;_migration_required": {
+    "en": "Account gate missing; migration required",
+    "zh": "账号门禁缺失，需要迁移"
+  },
+  "account_guard_exists": {
+    "en": "account guard exists",
+    "zh": "账号安全门禁已存在；不得重建状态"
+  },
+  "account_guard_invalid": {
+    "en": "account guard invalid",
+    "zh": "账号门禁无效"
+  },
+  "account_guard_missing": {
+    "en": "account guard missing",
+    "zh": "账号门禁缺失"
+  },
+  "account_mismatch": {
+    "en": "account mismatch",
+    "zh": "账号不匹配"
+  },
+  "account_profile_name": {
+    "en": "Account profile name",
+    "zh": "账号配置名称"
+  },
+  "account_required": {
+    "en": "account required",
+    "zh": "需要账号指纹"
+  },
+  "acknowledge_a_fresh_account_with_no_recent_requests": {
+    "en": "Acknowledge a fresh account with no recent requests",
+    "zh": "确认首次绑定且没有近期调用"
+  },
+  "add_hh:mm": {
+    "en": "Add HH:MM",
+    "zh": "新增 HH:MM 时间"
+  },
+  "already_bound": {
+    "en": "already bound",
+    "zh": "已绑定或状态需要人工复核"
+  },
+  "already_initialized": {
+    "en": "already initialized",
+    "zh": "已初始化"
+  },
+  "ambiguous_cutoff": {
+    "en": "Ambiguous cutoff",
+    "zh": "截止时间无效"
+  },
+  "anchor_invalid": {
+    "en": "anchor invalid",
+    "zh": "调度锚点格式无效"
+  },
+  "anchor_missing": {
+    "en": "anchor missing",
+    "zh": "调度锚点缺失"
+  },
+  "architecture_unsupported": {
+    "en": "architecture unsupported",
+    "zh": "不支持的架构"
+  },
+  "atomically_apply_a_verified_local_binary": {
+    "en": "Atomically apply a verified local binary",
+    "zh": "原子安装已校验的本地程序"
+  },
+  "atomically_migrate_compatible_state_or_import_a_normalized_transfer": {
+    "en": "Atomically migrate compatible state or import a normalized transfer",
+    "zh": "原子迁移兼容状态或导入标准化迁移包"
+  },
+  "auth_action_invalid": {
+    "en": "auth action invalid",
+    "zh": "账号操作无效"
+  },
+  "candidate_invalid": {
+    "en": "candidate invalid",
+    "zh": "候选程序校验失败"
+  },
+  "chatgpt_oauth_required": {
+    "en": "ChatGPT OAuth required",
+    "zh": "需要 ChatGPT OAuth"
+  },
+  "check,_install,_recover_or_roll_back_updates": {
+    "en": "Check, install, recover or roll back updates",
+    "zh": "检查、安装、恢复或回滚更新"
+  },
+  "checksum_invalid": {
+    "en": "checksum invalid",
+    "zh": "校验值格式无效"
+  },
+  "checksum_mismatch": {
+    "en": "checksum mismatch",
+    "zh": "校验失败"
+  },
+  "cli_help_failed": {
+    "en": "cli help failed",
+    "zh": "CLI 安全参数检查失败"
+  },
+  "cli_safety_flag_missing": {
+    "en": "cli safety flag missing",
+    "zh": "CLI 缺少必要安全参数"
+  },
+  "clock_backward": {
+    "en": "clock backward",
+    "zh": "时钟回拨"
+  },
+  "clock_invalid": {
+    "en": "clock invalid",
+    "zh": "时间戳无效"
+  },
+  "clock_missing": {
+    "en": "clock missing",
+    "zh": "缺少时间戳"
+  },
+  "clock_moved_backward;_blocked": {
+    "en": "Clock moved backward; blocked",
+    "zh": "时钟回拨，已阻止"
+  },
+  "codex_five-hour_window_scheduler": {
+    "en": "Codex five-hour window scheduler",
+    "zh": "Codex 五小时窗口智能调度管理器"
+  },
+  "configure_idle_prewarm_and_safety_buffer": {
+    "en": "Configure idle prewarm and safety buffer",
+    "zh": "设置空闲预热及安全缓冲"
+  },
+  "confirmation_account_invalid": {
+    "en": "confirmation account invalid",
+    "zh": "确认任务账号或版本无效"
+  },
+  "confirmation_account_mismatch": {
+    "en": "confirmation account mismatch",
+    "zh": "确认任务账号不匹配"
+  },
+  "confirmation_task_invalid": {
+    "en": "confirmation task invalid",
+    "zh": "确认任务记录无效"
+  },
+  "control_only_kairo.service": {
+    "en": "Control only kairo.service",
+    "zh": "仅控制 kairo.service"
+  },
+  "convert_and_validate_without_writing_state_or_networking": {
+    "en": "Convert and validate without writing state or networking",
+    "zh": "只转换校验，不写状态、不联网"
+  },
+  "countdown_missing": {
+    "en": "Countdown missing",
+    "zh": "倒计时缺失"
+  },
+  "cursor_inconsistent": {
+    "en": "cursor inconsistent",
+    "zh": "调度游标与锚点或当日截止时间不一致"
+  },
+  "cursor_invalid": {
+    "en": "cursor invalid",
+    "zh": "调度游标无效"
+  },
+  "cutover_approval_required": {
+    "en": "cutover approval required",
+    "zh": "需要明确生产切换批准"
+  },
+  "daemon_already_running": {
+    "en": "daemon already running",
+    "zh": "守护进程已运行或正在升级"
+  },
+  "daemon_blocked": {
+    "en": "daemon blocked",
+    "zh": "守护进程安全阻止执行"
+  },
+  "daily_cutoff": {
+    "en": "daily cutoff",
+    "zh": "已到当日截止时间或时钟回拨，禁止请求"
+  },
+  "deployment_invalid": {
+    "en": "deployment invalid",
+    "zh": "部署授权记录无效"
+  },
+  "diagnose_installation_and_safely_repair_configuration": {
+    "en": "Diagnose installation and safely repair configuration",
+    "zh": "诊断安装并安全修复配置"
+  },
+  "download_failed": {
+    "en": "download failed",
+    "zh": "下载失败"
+  },
+  "download_host_denied": {
+    "en": "download host denied",
+    "zh": "下载地址不在允许的发布主机列表"
+  },
+  "download_too_large": {
+    "en": "download too large",
+    "zh": "下载文件过大"
+  },
+  "duplicate_time": {
+    "en": "Duplicate time",
+    "zh": "时间重复"
+  },
+  "duplicate_window": {
+    "en": "Duplicate window",
+    "zh": "窗口重复"
+  },
+  "edit_an_existing_time": {
+    "en": "Edit an existing time",
+    "zh": "修改已有时间"
+  },
+  "enable_live_scheduling_after_separate_production_approval": {
+    "en": "Enable live scheduling after separate production approval",
+    "zh": "单独生产批准后启用真实调度"
+  },
+  "enable_or_disable_idle-window_prewarm": {
+    "en": "Enable or disable idle-window prewarm",
+    "zh": "开启或关闭空闲窗口预热"
+  },
+  "existing_codex_authentication_directory": {
+    "en": "Existing Codex authentication directory",
+    "zh": "现有 Codex 认证目录"
+  },
+  "existing_codex_authentication_directory;_no_token_copying": {
+    "en": "Existing Codex authentication directory; no token copying",
+    "zh": "现有 Codex 认证目录，不复制令牌"
+  },
+  "expected_verified_account_fingerprint": {
+    "en": "Expected verified account fingerprint",
+    "zh": "预期的已验证账号指纹"
+  },
+  "explicit_acknowledgment_of_approved_production_cutover": {
+    "en": "Explicit acknowledgment of approved production cutover",
+    "zh": "明确确认已批准生产切换"
+  },
+  "explicit_original_account_fingerprint": {
+    "en": "Explicit original account fingerprint",
+    "zh": "明确的原账号指纹"
+  },
+  "fetch_and_apply_a_checksum-authenticated_release_manifest": {
+    "en": "Fetch and apply a checksum-authenticated release manifest",
+    "zh": "按独立可信清单校验值下载并升级"
+  },
+  "final_gate_denied": {
+    "en": "final gate denied",
+    "zh": "调用前最终门禁拒绝"
+  },
+  "five-hour_quota_unavailable": {
+    "en": "Five-hour quota unavailable",
+    "zh": "无五小时额度"
+  },
+  "fixture_empty": {
+    "en": "fixture empty",
+    "zh": "模拟时间线为空"
+  },
+  "fixture_path_required": {
+    "en": "fixture path required",
+    "zh": "模拟测试必须使用隔离目录"
+  },
+  "fixture_state_exists": {
+    "en": "fixture state exists",
+    "zh": "模拟状态已存在"
+  },
+  "fresh_account_ack_required": {
+    "en": "fresh account ack required",
+    "zh": "首次绑定须确认无近期请求；已有服务应使用迁移导入"
+  },
+  "hh:mm_required": {
+    "en": "HH:MM required",
+    "zh": "必须使用 HH:MM"
+  },
+  "independently_trusted_sha256": {
+    "en": "Independently trusted SHA256",
+    "zh": "独立可信的 SHA256 校验值"
+  },
+  "initialize_configuration_without_starting_services": {
+    "en": "Initialize configuration without starting services",
+    "zh": "初始化配置，不启动服务"
+  },
+  "install_a_verified_binary_without_starting_services": {
+    "en": "Install a verified binary without starting services",
+    "zh": "安装校验后的二进制，不启动服务"
+  },
+  "installation_prefix": {
+    "en": "Installation prefix",
+    "zh": "安装目录"
+  },
+  "interactive_login_required": {
+    "en": "interactive login required",
+    "zh": "OAuth 登录需要交互终端，由用户完成人工认证"
+  },
+  "interface_language:_zh-cn_or_en-us": {
+    "en": "Interface language: zh-CN or en-US",
+    "zh": "界面语言：zh-CN 或 en-US"
+  },
+  "invalid_account_fingerprint": {
+    "en": "Invalid account fingerprint",
+    "zh": "账号指纹无效"
+  },
+  "invalid_attempt_history": {
+    "en": "Invalid attempt history",
+    "zh": "尝试历史无效"
+  },
+  "invalid_clock": {
+    "en": "Invalid clock",
+    "zh": "时钟无效"
+  },
+  "invalid_configuration": {
+    "en": "Invalid configuration",
+    "zh": "配置无效"
+  },
+  "invalid_cursor_or_backward_clock": {
+    "en": "Invalid cursor or backward clock",
+    "zh": "游标无效或时钟回拨"
+  },
+  "invalid_gate_parameters": {
+    "en": "Invalid gate parameters",
+    "zh": "门禁参数无效"
+  },
+  "invalid_quota": {
+    "en": "Invalid quota",
+    "zh": "额度数据无效"
+  },
+  "invalid_state": {
+    "en": "Invalid state",
+    "zh": "状态无效"
+  },
+  "invalid_window_observations": {
+    "en": "Invalid window observations",
+    "zh": "窗口观测记录无效"
+  },
+  "keep_offline_daemon_alive_until_signal": {
+    "en": "Keep offline daemon alive until signal",
+    "zh": "离线时间线结束后等待退出信号"
+  },
+  "language_invalid": {
+    "en": "language invalid",
+    "zh": "语言无效"
+  },
+  "legacy_account_required": {
+    "en": "legacy account required",
+    "zh": "需要原账号指纹"
+  },
+  "legacy_active_or_unknown": {
+    "en": "legacy active or unknown",
+    "zh": "旧服务仍运行或状态未知，禁止接管"
+  },
+  "legacy_anchor_invalid": {
+    "en": "legacy anchor invalid",
+    "zh": "旧状态锚点不是有效本地时间"
+  },
+  "legacy_attempts_invalid": {
+    "en": "legacy attempts invalid",
+    "zh": "旧调用历史结构无效"
+  },
+  "legacy_history_invalid": {
+    "en": "legacy history invalid",
+    "zh": "旧窗口历史结构无效"
+  },
+  "legacy_process_active": {
+    "en": "legacy process active",
+    "zh": "旧调度进程仍运行"
+  },
+  "legacy_processed_invalid": {
+    "en": "legacy processed invalid",
+    "zh": "旧锚点处理记录无效"
+  },
+  "legacy_quota_invalid": {
+    "en": "legacy quota invalid",
+    "zh": "旧状态额度记录无效"
+  },
+  "legacy_schema_invalid": {
+    "en": "legacy schema invalid",
+    "zh": "旧状态版本或账号指纹不匹配"
+  },
+  "legacy_status_unknown": {
+    "en": "legacy status unknown",
+    "zh": "无法检查旧服务状态"
+  },
+  "legacy_timestamp_invalid": {
+    "en": "legacy timestamp invalid",
+    "zh": "旧状态时间戳无效"
+  },
+  "legacy_timezone_required": {
+    "en": "legacy timezone required",
+    "zh": "需要原调度器时区"
+  },
+  "legacy_unknown_field": {
+    "en": "legacy unknown field",
+    "zh": "旧状态存在未知字段，禁止猜测迁移"
+  },
+  "list_activation_times": {
+    "en": "List activation times",
+    "zh": "查看激活时间"
+  },
+  "local_gate_mismatch": {
+    "en": "Local gate mismatch",
+    "zh": "本地门禁不匹配"
+  },
+  "local_reservation_missing": {
+    "en": "Local reservation missing",
+    "zh": "缺少本地调用前记录"
+  },
+  "log_limit_invalid": {
+    "en": "log limit invalid",
+    "zh": "日志数量必须为1到10000"
+  },
+  "logs_failed": {
+    "en": "logs failed",
+    "zh": "日志查询失败"
+  },
+  "machine-readable_json_without_ansi": {
+    "en": "Machine-readable JSON without ANSI",
+    "zh": "无 ANSI 的机器可解析 JSON"
+  },
+  "manage_daily_activation_times": {
+    "en": "Manage daily activation times",
+    "zh": "管理每日激活时间"
+  },
+  "manifest_checksum_mismatch": {
+    "en": "manifest checksum mismatch",
+    "zh": "发布清单校验失败"
+  },
+  "manifest_schema_invalid": {
+    "en": "manifest schema invalid",
+    "zh": "更新清单版本无效"
+  },
+  "manifest_too_large": {
+    "en": "manifest too large",
+    "zh": "更新清单过大"
+  },
+  "maximum_log_records:_1..10000": {
+    "en": "Maximum log records: 1..10000",
+    "zh": "最大日志数量：1..10000"
+  },
+  "menu_choice_invalid": {
+    "en": "menu choice invalid",
+    "zh": "菜单选项无效"
+  },
+  "migration_failed": {
+    "en": "migration failed",
+    "zh": "状态迁移失败"
+  },
+  "minimum_spacing_10_minutes": {
+    "en": "Minimum spacing 10 minutes",
+    "zh": "最小间隔十分钟"
+  },
+  "no_newer_release": {
+    "en": "no newer release",
+    "zh": "没有较新的可用版本"
+  },
+  "normalized_transfer_bundle;_never_raw_oauth": {
+    "en": "Normalized transfer bundle; never raw OAuth",
+    "zh": "标准化状态迁移包，不接受 OAuth"
+  },
+  "oauth_account_missing": {
+    "en": "OAuth account missing",
+    "zh": "OAuth 账号缺失"
+  },
+  "oauth_login,_verification_and_account_profiles": {
+    "en": "OAuth login, verification and account profiles",
+    "zh": "OAuth 登录、校验和账号配置"
+  },
+  "oauth_login_failed": {
+    "en": "oauth login failed",
+    "zh": "OAuth 登录未完成"
+  },
+  "oauth_token_missing": {
+    "en": "OAuth token missing",
+    "zh": "OAuth 令牌缺失"
+  },
+  "oauth_unavailable": {
+    "en": "OAuth unavailable",
+    "zh": "OAuth 未授权"
+  },
+  "observer_cannot_execute": {
+    "en": "observer cannot execute",
+    "zh": "观察适配器没有模型执行能力"
+  },
+  "offline_mode": {
+    "en": "offline mode",
+    "zh": "离线模式禁止网络访问"
+  },
+  "offline_synthetic_timeline;_never_invokes_codex": {
+    "en": "Offline synthetic timeline; never invokes Codex",
+    "zh": "离线合成时间线，绝不调用 Codex"
+  },
+  "offline_tick_delay_in_milliseconds": {
+    "en": "Offline tick delay in milliseconds",
+    "zh": "离线测试每步间隔毫秒数"
+  },
+  "original_scheduler_timezone,_e.g._asia_shanghai": {
+    "en": "Original scheduler timezone, e.g. Asia/Shanghai",
+    "zh": "原调度器时区，例如 Asia/Shanghai"
+  },
+  "pause_kairo_model_requests": {
+    "en": "Pause Kairo model requests",
+    "zh": "暂停 Kairo 模型请求"
+  },
+  "perform_one_iteration": {
+    "en": "Perform one iteration",
+    "zh": "只执行一轮检查"
+  },
+  "persist_interface_language": {
+    "en": "Persist interface language",
+    "zh": "保存界面语言"
+  },
+  "post_update_failed": {
+    "en": "post update failed",
+    "zh": "升级后校验失败"
+  },
+  "prefix_invalid": {
+    "en": "prefix invalid",
+    "zh": "安装路径无效"
+  },
+  "preview_a_synthetic_scheduling_decision": {
+    "en": "Preview a synthetic scheduling decision",
+    "zh": "预览合成调度决策"
+  },
+  "preview_the_next_24_hours": {
+    "en": "Preview the next 24 hours",
+    "zh": "预览未来24小时"
+  },
+  "private_directory_required": {
+    "en": "private directory required",
+    "zh": "必须指定独立的私有目录"
+  },
+  "private_kairo_data_directory": {
+    "en": "Private Kairo data directory",
+    "zh": "Kairo 私有数据目录"
+  },
+  "private_permissions_required": {
+    "en": "private permissions required",
+    "zh": "私有文件必须仅允许当前用户访问"
+  },
+  "process_output_too_large": {
+    "en": "process output too large",
+    "zh": "子进程输出过大"
+  },
+  "process_read_failed": {
+    "en": "process read failed",
+    "zh": "子进程输出读取失败"
+  },
+  "process_timeout": {
+    "en": "process timeout",
+    "zh": "子进程超时或已收到退出信号"
+  },
+  "profile_exists": {
+    "en": "profile exists",
+    "zh": "账号名称已存在"
+  },
+  "profile_missing": {
+    "en": "profile missing",
+    "zh": "账号不存在"
+  },
+  "profile_name_invalid": {
+    "en": "profile name invalid",
+    "zh": "账号名称只能包含字母、数字、下划线和连字符"
+  },
+  "profile_name_required": {
+    "en": "profile name required",
+    "zh": "需要账号名称"
+  },
+  "profile_path_required": {
+    "en": "profile path required",
+    "zh": "需要认证目录路径"
+  },
+  "profile_selected": {
+    "en": "profile selected",
+    "zh": "不可删除正在使用的账号"
+  },
+  "profiles_invalid": {
+    "en": "profiles invalid",
+    "zh": "账号配置无效"
+  },
+  "python_1.3_json_state_file": {
+    "en": "Python 1.3 JSON state file",
+    "zh": "Python 1.3 JSON 状态文件"
+  },
+  "quota_allowed_flag_missing": {
+    "en": "Quota allowed flag missing",
+    "zh": "缺少额度许可标志"
+  },
+  "quota_duration_missing": {
+    "en": "Quota duration missing",
+    "zh": "额度时长缺失"
+  },
+  "quota_http_{}": {
+    "en": "Quota HTTP {}",
+    "zh": "额度请求被拒绝"
+  },
+  "quota_limit_flag_missing": {
+    "en": "Quota limit flag missing",
+    "zh": "缺少额度限制标志"
+  },
+  "quota_transport_failed": {
+    "en": "Quota transport failed",
+    "zh": "额度网络请求失败"
+  },
+  "quota_usage_missing": {
+    "en": "Quota usage missing",
+    "zh": "额度用量缺失"
+  },
+  "read_a_local_release_manifest": {
+    "en": "Read a local release manifest",
+    "zh": "读取本地发布清单"
+  },
+  "read_five-hour_and_weekly_quota_without_model_requests": {
+    "en": "Read five-hour and weekly quota without model requests",
+    "zh": "查询五小时及每周额度，不调用模型"
+  },
+  "read_kairo_logs": {
+    "en": "Read Kairo logs",
+    "zh": "查看 Kairo 日志"
+  },
+  "read_or_configure_executable_and_oauth_paths": {
+    "en": "Read or configure executable and OAuth paths",
+    "zh": "查看或设置程序及认证路径"
+  },
+  "recover_an_interrupted_update_transaction": {
+    "en": "Recover an interrupted update transaction",
+    "zh": "恢复中断的升级事务"
+  },
+  "release_path_invalid": {
+    "en": "release path invalid",
+    "zh": "版本目录无效"
+  },
+  "release_target_missing": {
+    "en": "release target missing",
+    "zh": "更新缺少当前架构"
+  },
+  "remove_a_time": {
+    "en": "Remove a time",
+    "zh": "删除时间"
+  },
+  "remove_binaries_and_preserve_user_state": {
+    "en": "Remove binaries and preserve user state",
+    "zh": "卸载程序并保留用户状态"
+  },
+  "repair_configuration_defaults;_never_reset_attempt_history": {
+    "en": "Repair configuration defaults; never reset attempt history",
+    "zh": "修复默认配置，不重置调用历史"
+  },
+  "reservation_invalid": {
+    "en": "reservation invalid",
+    "zh": "调用前记录无效"
+  },
+  "reservation_missing": {
+    "en": "reservation missing",
+    "zh": "缺少调用前记录"
+  },
+  "reset_buffer_in_seconds:_0..300": {
+    "en": "Reset buffer in seconds: 0..300",
+    "zh": "重置后缓冲秒数：0..300"
+  },
+  "reset_missing": {
+    "en": "Reset missing",
+    "zh": "重置时间缺失"
+  },
+  "response_too_large": {
+    "en": "Response too large",
+    "zh": "响应过大"
+  },
+  "restore_defaults": {
+    "en": "Restore defaults",
+    "zh": "恢复默认参数"
+  },
+  "restore_four_default_times": {
+    "en": "Restore four default times",
+    "zh": "恢复四个默认时间"
+  },
+  "roll_back_the_binary_while_retaining_current_attempt_history": {
+    "en": "Roll back the binary while retaining current attempt history",
+    "zh": "回退二进制并保留当前调用历史"
+  },
+  "rollback_incompatible": {
+    "en": "rollback incompatible",
+    "zh": "旧程序不兼容当前状态，禁止回滚"
+  },
+  "rollback_missing": {
+    "en": "rollback missing",
+    "zh": "没有可回滚版本"
+  },
+  "run_the_scheduler;_observation_until_explicitly_activated": {
+    "en": "Run the scheduler; observation until explicitly activated",
+    "zh": "运行调度器，明确批准前仅观察"
+  },
+  "runtime_invalid": {
+    "en": "runtime invalid",
+    "zh": "运行配置无效"
+  },
+  "runtime_user_mismatch": {
+    "en": "runtime user mismatch",
+    "zh": "模型执行用户与 OAuth 用户不一致"
+  },
+  "schema_invalid": {
+    "en": "Schema invalid",
+    "zh": "状态版本无效"
+  },
+  "server_identity_mismatch": {
+    "en": "server identity mismatch",
+    "zh": "服务端账号身份不匹配"
+  },
+  "server_identity_missing": {
+    "en": "server identity missing",
+    "zh": "服务端未返回账号身份"
+  },
+  "service_action_invalid": {
+    "en": "service action invalid",
+    "zh": "服务操作无效"
+  },
+  "service_failed": {
+    "en": "service failed",
+    "zh": "Kairo 服务操作失败；请检查权限与安装状态"
+  },
+  "shadow_incomplete": {
+    "en": "shadow incomplete",
+    "zh": "只读观察状态初始化未完成"
+  },
+  "show_help": {
+    "en": "Show help",
+    "zh": "显示帮助"
+  },
+  "show_natural-dispatch_and_delayed_window_confirmation": {
+    "en": "Show natural-dispatch and delayed window confirmation",
+    "zh": "查看自然调度和延迟窗口确认"
+  },
+  "show_project_help": {
+    "en": "Show project help",
+    "zh": "显示项目说明"
+  },
+  "show_runtime_status": {
+    "en": "Show runtime status",
+    "zh": "查看运行状态"
+  },
+  "show_the_next_actual_check": {
+    "en": "Show the next actual check",
+    "zh": "查看下次实际检查时间"
+  },
+  "show_version": {
+    "en": "Show version",
+    "zh": "显示版本"
+  },
+  "shutdown_requested": {
+    "en": "shutdown requested",
+    "zh": "已收到退出信号，禁止新请求"
+  },
+  "source_binary": {
+    "en": "Source binary",
+    "zh": "源二进制程序"
+  },
+  "state_missing_corrupt:_execution_blocked": {
+    "en": "State missing/corrupt: execution blocked",
+    "zh": "状态丢失或损坏，执行已阻止"
+  },
+  "state_name_invalid": {
+    "en": "state name invalid",
+    "zh": "状态文件名称无效"
+  },
+  "state_too_large": {
+    "en": "state too large",
+    "zh": "状态文件过大"
+  },
+  "stop_kairo_before_update": {
+    "en": "stop kairo before update",
+    "zh": "升级前请停止 Kairo 服务"
+  },
+  "structurally_read-only_observation": {
+    "en": "Structurally read-only observation",
+    "zh": "结构性只读观察，禁止模型执行"
+  },
+  "subcommand_required": {
+    "en": "subcommand required",
+    "zh": "需要子命令"
+  },
+  "synthetic_fixture": {
+    "en": "Synthetic fixture",
+    "zh": "合成测试文件"
+  },
+  "synthetic_quota_fixture": {
+    "en": "Synthetic quota fixture",
+    "zh": "合成额度测试文件"
+  },
+  "time_missing": {
+    "en": "time missing",
+    "zh": "时间不存在"
+  },
+  "transfer_invalid": {
+    "en": "transfer invalid",
+    "zh": "状态迁移包无效"
+  },
+  "transfer_required": {
+    "en": "transfer required",
+    "zh": "需要状态迁移包"
+  },
+  "unix_user_home": {
+    "en": "Unix user home",
+    "zh": "系统用户主目录"
+  },
+  "unknown_system_timezone;_scheduling_blocked": {
+    "en": "Unknown system timezone; scheduling blocked",
+    "zh": "无法识别系统时区，调度已暂停"
+  },
+  "unsafe_directory": {
+    "en": "Unsafe directory",
+    "zh": "不安全的目录"
+  },
+  "unsafe_path": {
+    "en": "unsafe path",
+    "zh": "路径不安全"
+  },
+  "unsafe_permissions": {
+    "en": "unsafe permissions",
+    "zh": "目录不可允许其他用户写入"
+  },
+  "unsafe_state_file": {
+    "en": "unsafe state file",
+    "zh": "状态文件类型、所有权或硬链接不安全"
+  },
+  "update_in_progress": {
+    "en": "update in progress",
+    "zh": "程序升级中，请稍后重试或运行 update recover"
+  },
+  "validate_state_without_requests": {
+    "en": "Validate state without requests",
+    "zh": "无请求校验持久化状态"
+  },
+  "verified_account_fingerprint": {
+    "en": "Verified account fingerprint",
+    "zh": "已验证账号指纹"
+  },
+  "version_invalid": {
+    "en": "version invalid",
+    "zh": "版本格式无效"
+  },
+  "weekly_quota_unavailable": {
+    "en": "Weekly quota unavailable",
+    "zh": "无每周额度"
+  },
+  "workdir_must_be_empty": {
+    "en": "Workdir must be empty",
+    "zh": "工作目录必须为空"
+  },
+  "zh-CN or en-US": {
+    "en": "zh-CN or en-US",
+    "zh": "zh-CN 或 en-US"
+  },
+  "zh-cn_or_en-us": {
+    "en": "zh-CN or en-US",
+    "zh": "zh-CN 或 en-US"
+  }
+}

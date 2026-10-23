@@ -1,0 +1,19 @@
+Kairo 0.2.1 source candidate
+Copyright (c) 2026 Kairo contributors
+
+First-party code and newly authored project documentation retain the MIT License.
+This NOTICE is informational and does not change or extend the license grant.
+Third-party components retain their original licenses and attribution notices:
+see THIRD_PARTY_NOTICES.md, docs/THIRD_PARTY_LICENSES.txt, docs/DEPENDENCIES.tsv,
+and licenses/. This is not an Apache-2.0 relicensing of those components.
+
+This public-oriented history starts at an audited source snapshot. It does not
+reconstruct the original development history. See SOURCE_ORIGIN.json and
+PUBLIC_FILE_MANIFEST.json. Original Gist and early Python implementation source,
+private test evidence, handoff bundles and old release binaries are excluded.
+An implementation of a legacy data-format reader is independent Rust code;
+its presence does not grant permission to redistribute any historical Python.
+
+No public endpoint, deployed private reporting channel or authenticated publisher
+identity is established merely by creating this candidate. Owner approval is
+required before any public repository, tag or Release is created.
