@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Offline executable acceptance. No real OAuth, Codex, HTTP or service control."""
 import hashlib,json,os,pathlib,pty,re,select,subprocess,sys,tempfile,time,signal,shutil,fcntl,termios,struct
+from datetime import datetime
+from zoneinfo import ZoneInfo
 running=[]
 import atexit
 def cleanup():
@@ -119,8 +121,11 @@ exit 99''')
     acceptance=call('acceptance',where=where)
     assert acceptance['pending_confirmation'] is True and acceptance['request_success'] is True and acceptance['countdown_confirmed'] is False
     assert acceptance['confirmation_details']['check_count']==0 and acceptance['confirmation_details']['samples']==[]
-    assert '+08:00' in acceptance['recent_request_at'] and (where/'confirmations.json').exists()
-    assert call('status',where=where)['acceptance']['pending_confirmation'] is True
+    status=call('status',where=where)
+    acceptance_timezone=status['timezone']
+    expected_request_at=datetime.fromtimestamp(n,ZoneInfo(acceptance_timezone)).isoformat()
+    assert acceptance['recent_request_at']==expected_request_at and (where/'confirmations.json').exists()
+    assert status['acceptance']['pending_confirmation'] is True
     assert 'confirmation' in raw(['--lang','en-US','acceptance'],where).stdout.lower()
     call('validate',where=where)
     confirmation_before=(where/'confirmations.json').read_bytes()
@@ -234,4 +239,4 @@ exit 86''');crashsha=hashlib.sha256(crash.read_bytes()).hexdigest()
     assert fallback['timezone']!='timezone_unknown' and time.monotonic()-started<7
     child=pathlib.Path('/proc')/timezone_child.read_text().strip()/'stat'
     assert not child.exists() or child.read_text().split()[2]=='Z', 'Timezone helper child survived timeout'
-print(f'{checks} CLI/process/transaction checks passed; mock-only Codex/OAuth/systemd, zero real model requests')
+print(f'{checks} CLI/process/transaction checks passed; mock-only Codex/OAuth/systemd, zero real model requests; system timezone={acceptance_timezone}')
