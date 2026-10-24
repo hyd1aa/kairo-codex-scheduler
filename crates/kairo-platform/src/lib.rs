@@ -63,7 +63,7 @@ impl Store {
             .create(true)
             .truncate(false)
             .mode(0o600)
-            .custom_flags(0x20000)
+            .custom_flags(libc::O_NOFOLLOW)
             .open(root.join("store.lock"))?;
         single_owner(&lock)?;
         preserve_owner(&lock, root)?;
@@ -90,7 +90,7 @@ impl Store {
             .create(true)
             .truncate(false)
             .mode(0o600)
-            .custom_flags(0x20000)
+            .custom_flags(libc::O_NOFOLLOW)
             .open(&tmp)?;
         single_owner(&f)?;
         preserve_owner(&f, &self.root)?;
@@ -105,7 +105,7 @@ impl Store {
                 .create(true)
                 .truncate(false)
                 .mode(0o600)
-                .custom_flags(0x20000)
+                .custom_flags(libc::O_NOFOLLOW)
                 .open(snap)?;
             single_owner(&sf)?;
             preserve_owner(&sf, &self.root)?;
@@ -432,6 +432,41 @@ mod storage_security_tests {
         symlink(p.join("target"), p.join("store.lock")).unwrap();
         assert!(Store::open(&p).is_err());
         assert_eq!(fs::read(p.join("target")).unwrap(), b"untouched");
+        fs::remove_dir_all(p).unwrap();
+    }
+    #[test]
+    fn temporary_state_symlink_preserves_fixed_target() {
+        let p = std::env::temp_dir().join(format!("kairo-write-link-{}", std::process::id()));
+        let store = Store::open(&p).unwrap();
+        let target = p.join("fixed-target");
+        fs::write(&target, b"untouched").unwrap();
+        symlink(&target, p.join(".config.json.tmp")).unwrap();
+        assert!(store
+            .write("config.json", &serde_json::json!({"generation": 1}))
+            .is_err());
+        assert_eq!(fs::read(&target).unwrap(), b"untouched");
+        assert!(!p.join("config.json").exists());
+        drop(store);
+        fs::remove_dir_all(p).unwrap();
+    }
+    #[test]
+    fn previous_state_symlink_preserves_fixed_target_and_config() {
+        let p = std::env::temp_dir().join(format!("kairo-previous-link-{}", std::process::id()));
+        let store = Store::open(&p).unwrap();
+        let original = serde_json::json!({"generation": 1});
+        store.write("config.json", &original).unwrap();
+        let target = p.join("fixed-target");
+        fs::write(&target, b"untouched").unwrap();
+        symlink(&target, p.join(".config.json.previous")).unwrap();
+        assert!(store
+            .write("config.json", &serde_json::json!({"generation": 2}))
+            .is_err());
+        assert_eq!(fs::read(&target).unwrap(), b"untouched");
+        assert_eq!(
+            store.read::<serde_json::Value>("config.json").unwrap(),
+            original
+        );
+        drop(store);
         fs::remove_dir_all(p).unwrap();
     }
     #[test]

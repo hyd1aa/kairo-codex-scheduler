@@ -34,6 +34,7 @@ jobs:
   build:
     needs: security
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: ubuntu-24.04
