@@ -15,5 +15,15 @@
   "owner_licensing_authority_confirmed": false,
   "publisher_identity_confirmed": false,
   "public_endpoint_verified": false,
-  "runtime_policy": "Rust production code and installer bytes preserved; two cfg(test) fixture sections anonymized; package builder/public documentation adapted"
+  "runtime_policy": "Original export retained runtime/installer bytes except anonymized test fixtures. Subsequent genuine private acceptance commits fix timezone-aware tests, ARM64 libc::O_NOFOLLOW, and container CI. Installer bytes remain unchanged.",
+  "post_export_changes": {
+    "independent_root": "c5c287f9ce409328ba5562691ad2b6fbfe5e8394",
+    "reviewed_change_tip": "ebe41915a087629974acf4432852f3e2626db264",
+    "commits": [
+      "c5527139b033c005bed771af40f8421fd1c5398b",
+      "600623321824ebed5854a211fd74834026b0134e",
+      "ebe41915a087629974acf4432852f3e2626db264"
+    ],
+    "basis": "New Zouter-authored MIT fixes in independent history; no private development objects imported. This metadata refresh does not fabricate original development history."
+  }
 }
