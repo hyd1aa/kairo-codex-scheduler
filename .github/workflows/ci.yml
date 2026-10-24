@@ -19,11 +19,50 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Select checks for changed paths
+        id: scope
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python3 - <<'PY_SCOPE'
+          import os,subprocess
+          base=os.environ.get('BASE','')
+          try:
+              assert base and set(base)!={'0'}
+              paths=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
+              rust=any(p.startswith('crates/') or p in ['Cargo.toml','Cargo.lock','scripts/verify.sh','scripts/i18n-catalog.py'] for p in paths)
+          except Exception:
+              rust=True
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('rust='+str(rust).lower()+'\n')
+          print('Rust/core checks required:',rust)
+          PY_SCOPE
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        if: steps.scope.outputs.rust == 'true'
         with:
           components: rustfmt, clippy
           toolchain: 1.99.1
       - run: sudo apt-get update && sudo apt-get install -y python3-yaml
       - run: sh scripts/verify.sh
+        if: steps.scope.outputs.rust == 'true'
+      - name: Verify current stable assets and focused pipe lifecycle
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/kairo-stable"
+          base=https://github.com/hyd1aa/kairo-codex-scheduler/releases/download/v0.2.1
+          for name in SHA256SUMS kairo-0.2.1-x86_64-unknown-linux-gnu.tar.gz kairo-0.2.1-x86_64-unknown-linux-gnu; do
+            curl -fLsS --proto '=https' --proto-redir '=https' --max-time 120 -o "$RUNNER_TEMP/kairo-stable/$name" "$base/$name"
+          done
+          (cd "$RUNNER_TEMP/kairo-stable" && grep -E '  kairo-0.2.1-x86_64-unknown-linux-gnu(\.tar\.gz)?$' SHA256SUMS | sha256sum -c -)
+          chmod 755 "$RUNNER_TEMP/kairo-stable/kairo-0.2.1-x86_64-unknown-linux-gnu"
+          bash -n install.sh
+          bash -n uninstall.sh
+          python3 tests/readme_links.py
+          if [ "${{ steps.scope.outputs.rust }}" = true ]; then
+            python3 tests/menu_readme.py target/release/kairo
+          else
+            python3 tests/menu_readme.py "$RUNNER_TEMP/kairo-stable/kairo-0.2.1-x86_64-unknown-linux-gnu"
+          fi
+          docker build -f tests/Dockerfile.online -t kairo-pipe-test .
+          python3 tests/pipe_lifecycle.py "$RUNNER_TEMP/kairo-stable" --image kairo-pipe-test
       - run: python3 tests/workflow_policy.py && python3 tests/release_inventory.py
       - run: python3 tests/git_secret_scan.py

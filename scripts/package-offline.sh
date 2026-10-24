@@ -15,6 +15,7 @@ cp "$arm" "$root/bin/kairo-aarch64-unknown-linux-gnu"
 # Artifact downloads may strip mode bits; the signed archive must restore them.
 chmod 755 "$root/bin/kairo-x86_64-unknown-linux-gnu" "$root/bin/kairo-aarch64-unknown-linux-gnu"
 cp "$repo/install.sh" "$root/install.sh"
+cp "$repo/uninstall.sh" "$root/uninstall.sh"
 cp "$repo"/packaging/*.sh "$repo/packaging/kairo.service" "$repo/packaging/RELEASE-PUBLIC-KEY.pem" "$root/packaging/"
 for name in README.md README.en.md LICENSE NOTICE THIRD_PARTY_NOTICES.md AGENTS.md SECURITY.md CONTRIBUTING.md CHANGELOG.md SOURCE_ORIGIN.json PUBLIC_FILE_MANIFEST.json; do cp "$repo/$name" "$root/"; done
 cp "$repo"/docs/*.md "$repo"/docs/*.tsv "$repo/docs/THIRD_PARTY_LICENSES.txt" "$root/docs/"

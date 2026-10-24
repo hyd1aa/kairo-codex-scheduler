@@ -1,8 +1,8 @@
 # 安装与维护 / Installation and maintenance
 
-v0.2.1已公开：[Release](https://github.com/hyd1aa/kairo-codex-scheduler/releases/tag/v0.2.1)。使用[README中的已验证命令](../README.md)明确安装0.2.1。默认GitHub HTTPS＋SHA256完整性检查，不要求发行签名；同源SHA不提供独立发布者身份认证。必须信任仓库管理者及GitHub/TLS。高级签名路径保持独立且失败不降级。
+v0.2.1已公开：[Release](https://github.com/hyd1aa/kairo-codex-scheduler/releases/tag/v0.2.1)。使用[README中的固定命令](../README.md)自动选择最新稳定正式版，固定版本仍为高级选项。默认GitHub HTTPS＋SHA256完整性检查，不要求发行签名；同源SHA不提供独立发布者身份认证。必须信任仓库管理者及GitHub/TLS。高级签名路径保持独立且失败不降级。
 
-v0.2.1 is public. Use the verified version-explicit command in the [README](../README.en.md). Default trust is GitHub HTTPS/repository control with SHA256 integrity, not independent publisher authentication. Optional signatures are a separate, fail-closed path.
+v0.2.1 is public. Use the fixed latest-stable command in the [README](../README.en.md); pinning a version remains an advanced option. Default trust is GitHub HTTPS/repository control with SHA256 integrity, not independent publisher authentication. Optional signatures are a separate, fail-closed path.
 
 ## 首次安装 / First installation
 
@@ -72,3 +72,25 @@ sudo kairo system-uninstall --yes
 Debian12 x86_64干净QEMU TCG来宾（1vCPU/1024MiB）从真正GitHub公网下载脚本、对应架构包及官方Codex依赖，端到端TLS/发布SHA256校验，验证systemd/global命令、中英文菜单、时间增删改及无OAuth时禁止请求。受限代理只转发真实GitHub/官方Debian源，不替换文件或证书，不是本地回环发行模拟。此来宾完成缺curl时真实APT恢复、兼容旧RC与正式包不同哈希间的在线更新/回滚、损坏SHA256拒绝；历史不兼容0.2.0验证拒绝及自动恢复，不宣称成功迁移。
 
 Debian12 x86_64 public installation passed in a fresh QEMU TCG guest over real public GitHub TLS. Missing-curl APT recovery, compatible RC-to-release binary updates/rollback, checksum rejection and observation-only systemd were checked. The proxy only forwards actual approved upstream traffic; it neither serves fixture releases nor replaces TLS certificates. Historical0.2.0 is incompatible and was tested for safe refusal/recovery. Other OS/ARM64 public-entry installs and physical hardware remain unverified; native ARM64 build/test is not an online system-install pass. Real OAuth/MFA remains installer-controlled and was not performed during acceptance.
+
+## 管道入口 / Streaming entry points
+
+首页安装和卸载命令固定且不带版本。保留高级固定版本：
+
+```sh
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/install.sh | sudo bash -s -- --version 0.2.1'
+```
+
+不使用 `sudo -S` 读取密码，以免与脚本源流混用。sudo正常从终端读取密码；安装器本身不从stdin询问账号或启用调度。网络/下载/校验失败返回非零，HUP/INT/TERM分别传播129/130/143并清理已建立的私有暂存目录；SIGKILL或断电不能执行shell清理钩子，重跑依靠已有持久化恢复，不宣称能截获SIGKILL。
+
+Use the homepage pipefail commands for reliable pipeline status. Plain `curl | bash` cannot detect a producer that fails before sending a script. No installer prompts consume the script stream. The complete function is parsed before any installation/removal action; child commands receive /dev/null. OAuth remains a later human operation. Existing v0.2.1 binaries/releases are immutable: rerunning the current online bootstrap also refreshes its managed maintenance helpers without replacing user data, even when the binary is already current.
+
+## 高级卸载 / Advanced removal
+
+默认卸载保留凭据、配置、请求历史和专用用户。只有明确决定永久清除这些数据时才使用：
+
+```sh
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/uninstall.sh | sudo bash -s -- --purge-data --confirm DELETE-KAIRO-DATA'
+```
+
+This explicitly deletes /var/lib/kairo, /var/lib/kairo-account-guards and /home/kairo/.codex, including authentication and request history. It keeps the dedicated user/ownership marker for safe reinstall and never removes the Codex CLI or shared dependencies. Do not purge to bypass safety history. Foreign unit/command replacements, unknown files or active unmanaged Kairo processes are refused/preserved and reported as incomplete removal; stop/review them before retrying. There is no implicit confirmation read from the download pipe.

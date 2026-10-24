@@ -41,5 +41,12 @@
     "public_install_validation": "Debian12 x86_64 clean QEMU TCG, actual GitHub HTTPS; native APT and same-guest recovery, compatible RC update/rollback, SHA256 refusal, real observation-only systemd; zero model requests",
     "other_public_online_platforms": "not claimed",
     "scope_of_followup": "Post-release documentation/provenance only; v0.2.1 runtime and installer bytes unchanged"
+  },
+  "maintenance_entry_update": {
+    "base_main": "c3ec99cb42e4ee0b8b76934ec4cb2d908fb4f2d3",
+    "runtime_version": "0.2.1",
+    "rust_core_changed": false,
+    "existing_release_assets_changed": false,
+    "policy": "Streaming function buffering, stable latest selection, independent managed uninstall, refreshed local helpers and accurate bilingual menus; no new Rust Release needed"
   }
 }
