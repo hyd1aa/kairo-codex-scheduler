@@ -1,3 +1,4 @@
+2bde0e303db7348b05f77def9548edbb8f8de87592de80a213cd5396c935d9e3  .gitattributes
 6a082e0c22e36e7ae754cb611bc1b8cbb96924355b87480dae1cbb7e57a8bcb2  .github/dependabot.yml
 7195d2b529d13953b30f633b0c276391caa953907ac57fe65a6efa8e9310833d  .github/workflows/ci.yml
 abc3d086e37d6674e4bd0020dd7c4de23ba9ec18a48014e7f080a3600ed174f4  .github/workflows/publish.yml

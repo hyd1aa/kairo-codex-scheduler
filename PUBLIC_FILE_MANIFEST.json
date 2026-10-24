@@ -20,6 +20,17 @@
   ],
   "files": [
     {
+      "path": ".gitattributes",
+      "sha256": "2bde0e303db7348b05f77def9548edbb8f8de87592de80a213cd5396c935d9e3",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored repository metadata under the existing MIT license",
+      "source_commit": null,
+      "source_path": ".gitattributes",
+      "source_sha256": null,
+      "transformation": "New metadata: classify preserved third-party license notices for GitHub Linguist; no runtime or license-content changes"
+    },
+    {
       "path": ".github/dependabot.yml",
       "sha256": "6a082e0c22e36e7ae754cb611bc1b8cbb96924355b87480dae1cbb7e57a8bcb2",
       "category": "first-party",
