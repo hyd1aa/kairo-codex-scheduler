@@ -539,7 +539,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "6592782eda15663f192a00278e558d898d7389a0b7949b6808319bbebfdb94bd",
+      "sha256": "2911a61f815e239dc27be162a0f30d2f81c118590ff457439eabec5dbd8272ca",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
@@ -1051,7 +1051,7 @@
     },
     {
       "path": "tests/online_install_guest.py",
-      "sha256": "73f4643c6698bdba6e379637eba90fd2f3f596e154ae3bf0c4c2857b69f9dcad",
+      "sha256": "ba64ab9e6a1a55961aaee0d7d0b002d152064d70ff2f8c287b3233cfe0fbb77f",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",

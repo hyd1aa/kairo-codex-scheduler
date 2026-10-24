@@ -38,7 +38,11 @@ if ((missing)); then
   DEBIAN_FRONTEND=noninteractive timeout 180 apt-get install -y -qq --no-install-recommends ca-certificates curl coreutils python3 tar gzip passwd tzdata util-linux
  elif command -v dnf >/dev/null || command -v microdnf >/dev/null; then
   pm=dnf; command -v dnf >/dev/null || pm=microdnf
-  timeout 180 "$pm" -y install ca-certificates curl coreutils python3 tar gzip shadow-utils tzdata util-linux
+  packages=(ca-certificates curl coreutils python3 tar gzip shadow-utils tzdata util-linux)
+  if [[ $pm == microdnf ]] && command -v rpm >/dev/null && rpm -q coreutils-single >/dev/null 2>&1; then
+   packages=(ca-certificates curl python3 tar gzip shadow-utils tzdata util-linux)
+  fi
+  timeout 180 "$pm" -y install "${packages[@]}"
  else fail '缺少可用包管理器' 'No supported package manager'; fi
 fi
 stage=$(mktemp -d /tmp/kairo-online.XXXXXXXX)
@@ -105,6 +109,8 @@ with tarfile.open(stage/asset) as archive:
    p.parent.mkdir(parents=True,exist_ok=True)
    with p.open('xb') as f:f.write(archive.extractfile(m).read())
    p.chmod(0o755 if m.mode & 0o111 else 0o644)
+for required in ['install.sh','packaging/system-first-install.sh','packaging/system-install.sh','packaging/install.sh','packaging/system-uninstall.sh','packaging/kairo.service']:
+ assert (stage/root/required).is_file(), 'Incomplete installation package: '+required
 binary=stage/root/'bin'/f'kairo-{target}'
 b=binary.read_bytes();assert b[:6]==b'\x7fELF\x02\x01' and struct.unpack('<H',b[18:20])[0]==(62 if target.startswith('x86_64') else 183), 'ELF architecture mismatch'
 rows=(stage/root/'SHA256SUMS').read_text('ascii').splitlines()

@@ -63,6 +63,16 @@ manifest=assets/'SHA256SUMS';clean_manifest=manifest.read_bytes();manifest.write
 pathlib.Path('/tmp/fail-network').touch();call(entry,False);pathlib.Path('/tmp/fail-network').unlink()
 # TLS failure with a fixed non-trusted CA; no -k or fallback.
 env={**os.environ,'CURL_CA_BUNDLE':'/etc/ssl/certs/ca-certificates.crt'};call(entry,False,env)
+# Benign incomplete package, with a matching outer checksum: reject before activation.
+missing=io.BytesIO()
+with tarfile.open(fileobj=io.BytesIO(clean)) as old, tarfile.open(fileobj=missing,mode='w:gz') as new:
+ for m in old:
+  if m.name.endswith('/install.sh') and '/packaging/' not in m.name:continue
+  data=old.extractfile(m).read() if m.isfile() else None
+  new.addfile(m,io.BytesIO(data) if data is not None else None)
+archive.write_bytes(missing.getvalue());manifest.write_text(hashlib.sha256(archive.read_bytes()).hexdigest()+'  '+archive.name+'\n')
+call(entry,False);assert pathlib.Path('/tmp/service-active').exists()
+archive.write_bytes(clean);manifest.write_bytes(clean_manifest)
 # Fixed wrong-version package: all hashes match, declared binary version does not.
 wrong=assets/'kairo-0.2.2-x86_64-unknown-linux-gnu.tar.gz'
 with tarfile.open(fileobj=io.BytesIO(clean)) as old, tarfile.open(wrong,'w:gz') as new:
