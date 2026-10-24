@@ -339,6 +339,10 @@
     "en": "Remove binaries and preserve user state",
     "zh": "卸载程序并保留用户状态"
   },
+  "Remove the managed system installation, preserving state": {
+    "en": "Remove the managed system installation, preserving state",
+    "zh": "卸载系统安装并保留状态"
+  },
   "Repair configuration defaults; never reset attempt history": {
     "en": "Repair configuration defaults; never reset attempt history",
     "zh": "修复默认配置，不重置调用历史"
@@ -430,6 +434,10 @@
   "Unsafe directory": {
     "en": "Unsafe directory",
     "zh": "不安全的目录"
+  },
+  "Update from GitHub HTTPS with SHA256 verification": {
+    "en": "Update from GitHub HTTPS with SHA256 verification",
+    "zh": "从 GitHub HTTPS 校验 SHA256 并更新"
   },
   "Validate state without requests": {
     "en": "Validate state without requests",
@@ -614,6 +622,10 @@
   "confirmation_account_mismatch": {
     "en": "confirmation account mismatch",
     "zh": "确认任务账号不匹配"
+  },
+  "confirmation_required": {
+    "en": "confirmation required",
+    "zh": "需要确认卸载"
   },
   "confirmation_task_invalid": {
     "en": "confirmation task invalid",
@@ -895,6 +907,10 @@
     "en": "Manage daily activation times",
     "zh": "管理每日激活时间"
   },
+  "managed_installer_missing": {
+    "en": "managed installer missing",
+    "zh": "需要通过在线安装器安装"
+  },
   "manifest_checksum_mismatch": {
     "en": "manifest checksum mismatch",
     "zh": "发布清单校验失败"
@@ -966,6 +982,10 @@
   "offline_tick_delay_in_milliseconds": {
     "en": "Offline tick delay in milliseconds",
     "zh": "离线测试每步间隔毫秒数"
+  },
+  "online_update_failed": {
+    "en": "online update failed",
+    "zh": "在线更新失败，未跳过校验，请检查权限及日志"
   },
   "original_scheduler_timezone,_e.g._asia_shanghai": {
     "en": "Original scheduler timezone, e.g. Asia/Shanghai",
@@ -1115,6 +1135,10 @@
     "en": "Remove binaries and preserve user state",
     "zh": "卸载程序并保留用户状态"
   },
+  "remove_the_managed_system_installation,_preserving_state": {
+    "en": "Remove the managed system installation, preserving state",
+    "zh": "卸载系统安装并保留状态"
+  },
   "repair_configuration_defaults;_never_reset_attempt_history": {
     "en": "Repair configuration defaults; never reset attempt history",
     "zh": "修复默认配置，不重置调用历史"
@@ -1259,6 +1283,10 @@
     "en": "Synthetic quota fixture",
     "zh": "合成额度测试文件"
   },
+  "system_uninstall_failed": {
+    "en": "system uninstall failed",
+    "zh": "系统卸载失败，请检查权限及日志"
+  },
   "time_missing": {
     "en": "time missing",
     "zh": "时间不存在"
@@ -1294,6 +1322,10 @@
   "unsafe_state_file": {
     "en": "unsafe state file",
     "zh": "状态文件类型、所有权或硬链接不安全"
+  },
+  "update_from_github_https_with_sha256_verification": {
+    "en": "Update from GitHub HTTPS with SHA256 verification",
+    "zh": "从 GitHub HTTPS 校验 SHA256 并更新"
   },
   "update_in_progress": {
     "en": "update in progress",

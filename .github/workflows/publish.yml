@@ -1,72 +1,45 @@
-name: Prepare approved draft Release (manual; never publishes the draft)
+name: Prepare draft Release (explicit approval only)
 on:
   workflow_dispatch:
     inputs:
       approved:
         type: boolean
         default: false
-        description: Owner has cleared all A gates and approved creation of a draft
+        required: true
+      source:
+        type: string
+        required: true
       candidate_run:
+        type: string
         required: true
-        description: Successful main release.yml run ID in this repository
-      source_commit:
-        required: true
-        description: Full reviewed source commit (must also be this workflow main commit)
-      manifest_sha256:
-        required: true
-        description: Independently reviewed signed manifest SHA256
 permissions:
   contents: read
   actions: read
 jobs:
   draft:
     if: inputs.approved && github.ref == 'refs/heads/main'
-    environment: public-release
     runs-on: ubuntu-24.04
     permissions:
       contents: write
       actions: read
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      CANDIDATE_RUN: ${{ inputs.candidate_run }}
-      SOURCE_COMMIT: ${{ inputs.source_commit }}
-      MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          ref: ${{ inputs.source }}
           persist-credentials: false
-      - name: Bind successful build to reviewed main commit
+      - name: Bind successful candidate to exact source and pre-existing tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE: ${{ inputs.source }}
+          RUN: ${{ inputs.candidate_run }}
         run: |
           set -eu
-          test "$SOURCE_COMMIT" = "$GITHUB_SHA"
-          case "$CANDIDATE_RUN" in ''|*[!0-9]*) exit 1;; esac
-          gh api "repos/$GH_REPO/actions/runs/$CANDIDATE_RUN" > "$RUNNER_TEMP/run.json"
-          python3 - <<'PY'
-          import json, os
-          run=json.load(open(os.environ['RUNNER_TEMP']+'/run.json'))
-          assert run['head_sha']==os.environ['SOURCE_COMMIT']
-          assert run['head_branch']=='main' and run['event']=='workflow_dispatch'
-          assert run['status']=='completed' and run['conclusion']=='success'
-          assert run['path']=='.github/workflows/release.yml'
-          assert run['repository']['full_name']==os.environ['GH_REPO']
-          PY
-          gh run download "$CANDIDATE_RUN" --name signed-release-candidate --dir dist
-      - name: Reverify all assets and existing owner-created tag
-        run: |
-          set -eu
-          python3 scripts/verify-release.py dist --source "$SOURCE_COMMIT" --manifest-sha256 "$MANIFEST_SHA256" > "$RUNNER_TEMP/verified.json"
-          python3 tests/package_contents.py dist/kairo-0.2.1.tar.gz
-          python3 scripts/check-release-secrets.py dist
+          python3 -c 'import os,re; assert re.fullmatch("[0-9a-f]{40}",os.environ["SOURCE"]); assert re.fullmatch("[0-9]+",os.environ["RUN"])'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN" > run.json
+          python3 -c 'import json,os; r=json.load(open("run.json")); assert r["conclusion"]=="success" and r["head_sha"]==os.environ["SOURCE"] and r["head_branch"]=="main" and r["path"]==".github/workflows/release.yml" and r["event"]=="workflow_dispatch"'
           git fetch origin refs/tags/v0.2.1:refs/tags/v0.2.1
-          test "$(git rev-parse 'v0.2.1^{commit}')" = "$SOURCE_COMMIT"
-      - name: Create draft only with the verified asset allowlist
-        run: |
-          set -eu
-          python3 - <<'PY'
-          import json, os, subprocess
-          verified=json.load(open(os.environ['RUNNER_TEMP']+'/verified.json'))
-          subprocess.run(['gh','release','create','v0.2.1','--draft','--verify-tag',
-              '--title','Kairo 0.2.1','--notes-file','docs/RELEASE_NOTES_0.2.1_RC.md',
-              *['dist/'+name for name in verified['release_assets']]],check=True)
-          PY
+          test "$(git rev-list -n1 v0.2.1)" = "$SOURCE"
+          gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name release-candidate --dir dist
+          (cd dist && sha256sum -c SHA256SUMS)
+          python3 scripts/check-release-secrets.py dist
+          gh release create v0.2.1 --repo "$GITHUB_REPOSITORY" --draft --verify-tag --target "$SOURCE" --title 'Kairo v0.2.1' --notes-file docs/RELEASE_NOTES_0.2.1_RC.md dist/*

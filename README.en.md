@@ -1,23 +1,42 @@
 # Kairo
 
-A Rust scheduler for Codex five-hour allowance windows. [简体中文](README.md)
+A small Rust tool for scheduled Codex five-hour quota-window warmup and delayed confirmation. [中文](README.md)
 
-Version 0.2.1 is an unpublished source candidate, not a live GitHub Release. New installations observe only and never automatically enable/start the service. OAuth and live deployment approval are separate administrator steps. Kairo cannot increase, bypass or reset subscription allowances.
+**This is a private release candidate. No public stable Release is available yet. The online one-command installer will be advertised only after publication and anonymous download verification.** Users need neither Rust/Cargo nor a hand-written systemd unit.
 
-See [installation/OAuth/upgrade/uninstall](docs/INSTALL.md), [security](SECURITY.md), [provenance](docs/PROVENANCE.md) and [releasing](docs/RELEASING.md). Authenticate the bootstrap digest through an independent owner channel before executing the signed installer. No real public download endpoint is claimed.
+## Install and use
 
-`kairo` opens the bilingual menu. Commands include `status`, `schedule list/add/edit/remove/preview`, `quota`, `auth`, `doctor`, `service` and `update`. Use `--lang en-US` or `--lang zh-CN`. Unknown timezone, identity/quota failures, missing approval/history and backward clocks block requests. Durable reservations precede model execution; unknown outcomes are not replayed. Delayed window confirmation performs read-only checks without model retries.
+The installer detects Linux and CPU architecture, prepares OS dependencies, downloads the matching prebuilt package from GitHub Releases and verifies SHA256. It creates a dedicated `kairo` user, global command and systemd service. If the official Codex CLI is missing, it installs a pinned official native binary with SHA256 verification; existing installations are preserved. A fresh Kairo installation remains stopped and observation-only until OAuth and safety checks are complete.
 
-Build on Linux with Rust/Cargo 1.99.1, a C linker, Python3, OpenSSL and python3-yaml:
+For an already obtained and verified release: `sudo bash ./install.sh --version 0.2.1 --source-dir /path/to/release`. Isolated tests may explicitly use `--skip-codex`; it never bypasses Kairo integrity checks and does not remove the CLI requirement for actual use.
 
 ```sh
-export CARGO_BUILD_JOBS=1 KAIRO_OFFLINE=1
-cargo fetch --locked
-sh scripts/verify.sh
+kairo
+kairo --lang en-US                  # CLI language; switch menu language in the menu
+kairo schedule add 02:00
+kairo schedule edit 02:00 03:30
+kairo schedule remove 03:30
+kairo schedule preview
+sudo kairo update online
+sudo kairo system-uninstall --yes   # stops/removes service; retains account/state
 ```
 
-Tests use synthetic accounts and mocked executors only. The offline environment flag fences Rust adapters, not arbitrary external programs or the whole OS. Never mount real credentials into tests. See [contributing](CONTRIBUTING.md).
+[OAuth, activation, updates, rollback and removal](docs/INSTALL.md). Complete browser/MFA login through the official Codex CLI under the dedicated user. Kairo neither collects nor uploads credentials. The bilingual menu provides quotas, logs, schedules, service controls, updates and uninstall.
 
-Independent project code retains MIT. Dependencies retain their own licenses; see [file inventory](PUBLIC_FILE_MANIFEST.json), [NOTICE](NOTICE), [third-party notices](THIRD_PARTY_NOTICES.md). Comparison against a fixed Gist supports independent Rust expression and identified no permission-requiring reuse. Neither that script nor historical Python code is distributed. Full early Python history remains unverified; no rights over it are claimed. Maintainer confirmation of first-party licensing authority and publication identity is still required.
+## Integrity and safety
 
-Prior isolation evidence includes software-emulated QEMU guests, containers and mocks, not physical hardware certification. Independent candidate build checks do not expand that coverage. Full AlmaLinux10 minimal system installation remains unverified.
+Default trust relies on GitHub HTTPS and repository/Release administration; SHA256 checks file integrity, **not an independently authenticated publisher identity**. No release-key management is required. Existing Ed25519 tools remain an optional advanced path. A signature failure never triggers fallback, and SHA256 failures are never ignored.
+
+Five-hour/weekly quota checks, system timezone, idle warmup, read-only delayed confirmation, global deduplication, durable restart recovery and server-denial protection remain intact. Unknown quota, missing authorization/binding or unmet activation gates block model requests. Kairo cannot reset, increase or bypass OpenAI quotas, and never blindly retries an uncertain request.
+
+The entry supports Debian12/13, Ubuntu22.04/24.04, AlmaLinux9 and Rocky9 on x86_64/aarch64, subject to binary runtime checks and the documented [validation scope](docs/INSTALL.md). Alma/Rocky10 automatic first installation is not supported. QEMU TCG, container and mocked checks are not physical-hardware certification.
+
+## Development and license
+
+Only source builds need Rust/Cargo1.99.1. Set `CARGO_BUILD_JOBS=1` on small hosts. Tests use `KAIRO_OFFLINE=1`, synthetic accounts and no real credential mounts.
+
+```sh
+cargo build --release --locked
+```
+
+[MIT](LICENSE); dependencies retain their own terms. See [notices](THIRD_PARTY_NOTICES.md), [provenance](docs/PROVENANCE.md), [file inventory](PUBLIC_FILE_MANIFEST.json) and [security policy](SECURITY.md). Historical Python/Gist applications and private development history are excluded.

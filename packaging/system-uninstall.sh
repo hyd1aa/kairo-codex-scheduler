@@ -20,3 +20,9 @@ if [ -d "$trust_dir" ] && [ ! -L "$trust_dir" ]; then
  rm -f "$trust_dir/release-auth.sh" "$trust_dir/signed-update.sh"
  rmdir "$trust_dir" 2>/dev/null || :
 fi
+
+# Public installer helpers contain no user credentials or journals.
+if [ -d "$staging/opt/kairo/installer" ] && [ ! -L "$staging/opt/kairo/installer" ]; then
+ rm -f "$staging/opt/kairo/installer/install.sh" "$staging/opt/kairo/installer/system-uninstall.sh"
+ rmdir "$staging/opt/kairo/installer" 2>/dev/null || :
+fi

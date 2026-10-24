@@ -45,18 +45,20 @@
     },
     {
       "path": ".github/workflows/publish.yml",
-      "sha256": "af296166c6b2cb810ee456f341f99e9bc686d6671ec3acee29092d2712e5b830",
+      "sha256": "abc3d086e37d6674e4bd0020dd7c4de23ba9ec18a48014e7f080a3600ed174f4",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": ".github/workflows/publish.yml",
       "source_sha256": "af296166c6b2cb810ee456f341f99e9bc686d6671ec3acee29092d2712e5b830",
-      "transformation": "Rename generic Git-object scanner reference; no publication execution"
+      "transformation": "Rename generic Git-object scanner reference; no publication execution",
+      "previous_reviewed_sha256": "af296166c6b2cb810ee456f341f99e9bc686d6671ec3acee29092d2712e5b830",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "e7596b80e1c0ad981fe4d1cb8f9cdc45b9b82c2760775afa115208b0d5fa49c4",
+      "sha256": "7335490166e62f2878b236ccdc5a9f2b57acf038b3cac787f711c47be238d437",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -65,7 +67,8 @@
       "source_sha256": "9dc9c4b06ea136a82baea7c767695b106656475f3645935f52978f528f9aacf9",
       "transformation": "Rename generic Git-object scanner reference; no publication execution",
       "export_snapshot_sha256": "a0341bdc5fb7d59a423d835306f152892148959a35d7a5cea340b3c1d7b02ee5",
-      "post_export_change_basis": "Independently authored private acceptance correction; see SOURCE_ORIGIN.json and subsequent Git history. MIT unchanged."
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance",
+      "previous_reviewed_sha256": "e7596b80e1c0ad981fe4d1cb8f9cdc45b9b82c2760775afa115208b0d5fa49c4"
     },
     {
       "path": ".gitignore",
@@ -80,25 +83,29 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "0db836e0ad5337f73855a85baf6aabe36f8875c8b37cb8355aab3defca92e91f",
+      "sha256": "e10deabadbc3697ed119af528ab7547b567b0778854040f204862cf715723001",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/AGENTS.md",
       "source_sha256": "0db836e0ad5337f73855a85baf6aabe36f8875c8b37cb8355aab3defca92e91f",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "0db836e0ad5337f73855a85baf6aabe36f8875c8b37cb8355aab3defca92e91f",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "6fc3883f933558e7d3799b4589c0cd90f501cc94bf2264225b6fb236ff0393c8",
+      "sha256": "84c93df34589bec2b4325cde272c094760a3693fec91a77e9c83d87faef5bc25",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/CHANGELOG.md",
       "source_sha256": "6fc3883f933558e7d3799b4589c0cd90f501cc94bf2264225b6fb236ff0393c8",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "6fc3883f933558e7d3799b4589c0cd90f501cc94bf2264225b6fb236ff0393c8",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -157,40 +164,46 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "a16e04ce761e3cc8dc6d523162db1f2221140e0c82730c26ead38f7938e346e9",
+      "sha256": "a11774e41b9deb8e13ed52e6adb9cea0197d26e8ca9d759c36f1545ba4dfb92f",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/README.en.md",
       "source_sha256": "a16e04ce761e3cc8dc6d523162db1f2221140e0c82730c26ead38f7938e346e9",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "a16e04ce761e3cc8dc6d523162db1f2221140e0c82730c26ead38f7938e346e9",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "README.md",
-      "sha256": "0192fff982a9115127c664db5855d22e8a291372b00f0faa79601d9a4da71db9",
+      "sha256": "2488b81bb57d5da24c113086fc25f7f329eb984a6f6d6d69ac04b7f7c30ba7b5",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/README.md",
       "source_sha256": "0192fff982a9115127c664db5855d22e8a291372b00f0faa79601d9a4da71db9",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "0192fff982a9115127c664db5855d22e8a291372b00f0faa79601d9a4da71db9",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "SECURITY.md",
-      "sha256": "52b71b2d358a24606d80ac7b2abe64ed1dc3f69dc9d91dfc49ba956e9000254f",
+      "sha256": "d4a28545214902a44b2a039e9da4a87c8801b0232a8e04ddd4843c5dbab2e5d7",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/SECURITY.md",
       "source_sha256": "52b71b2d358a24606d80ac7b2abe64ed1dc3f69dc9d91dfc49ba956e9000254f",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "52b71b2d358a24606d80ac7b2abe64ed1dc3f69dc9d91dfc49ba956e9000254f",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "SOURCE_ORIGIN.json",
-      "sha256": "5a463428a939bfd72c73c206566ab46243533b845a0c4df1a204ec8533a96ae6",
+      "sha256": "e78c750717abd587a47ff8bbb91de480e3c4dde487a944ec9487783f57c7d532",
       "category": "generated-provenance",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -199,7 +212,8 @@
       "source_sha256": null,
       "transformation": "Exact source checkpoint identifiers; no original history claim",
       "export_snapshot_sha256": "d5ff5716686c35fb7be2002bac3b941187f2c71cd1c6cdb20a6c0d41ee1c47d4",
-      "post_export_change_basis": "Independently authored private acceptance correction; see SOURCE_ORIGIN.json and subsequent Git history. MIT unchanged."
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance",
+      "previous_reviewed_sha256": "5a463428a939bfd72c73c206566ab46243533b845a0c4df1a204ec8533a96ae6"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -236,25 +250,29 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "35a03386969e338dd92324cef1a88facad733edc5aacac3cb58b8fba694e9a7e",
+      "sha256": "b0e8504f6cdd8cb2cf0e91de6df64988354ed1e0fef2f189a714c22c8a0d4da3",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "crates/kairo-cli/src/main.rs",
       "source_sha256": "35a03386969e338dd92324cef1a88facad733edc5aacac3cb58b8fba694e9a7e",
-      "transformation": "byte-identical"
+      "transformation": "byte-identical",
+      "previous_reviewed_sha256": "35a03386969e338dd92324cef1a88facad733edc5aacac3cb58b8fba694e9a7e",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "crates/kairo-cli/src/messages.json",
-      "sha256": "495ba372bf2ca0d1e65583f3d870533a5b779d3947a4a1aaa1daa0c60d6d8b4c",
+      "sha256": "04923086acfd9d9d8acda9f5af1996b8cfe4fff0177dcc5a190a96fd8fc45236",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "crates/kairo-cli/src/messages.json",
       "source_sha256": "495ba372bf2ca0d1e65583f3d870533a5b779d3947a4a1aaa1daa0c60d6d8b4c",
-      "transformation": "byte-identical"
+      "transformation": "byte-identical",
+      "previous_reviewed_sha256": "495ba372bf2ca0d1e65583f3d870533a5b779d3947a4a1aaa1daa0c60d6d8b4c",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -447,25 +465,29 @@
     },
     {
       "path": "docs/INSTALL.md",
-      "sha256": "bf165d40a461ec70edce87dcfca568d6f30880c021c57b4360551eefcb7a6a0f",
+      "sha256": "044c6446fd9d46bdc5c90928ed92e2a743cbbe414d3d7fe64c2a0f6689d7dd9e",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/docs/INSTALL.md",
       "source_sha256": "bf165d40a461ec70edce87dcfca568d6f30880c021c57b4360551eefcb7a6a0f",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "bf165d40a461ec70edce87dcfca568d6f30880c021c57b4360551eefcb7a6a0f",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "docs/KEY_OPERATIONS.md",
-      "sha256": "4f361f642d900c708b7b838deaeb9a28f3b81acfd27a0ccb0c8deeff99034265",
+      "sha256": "14d24d8f6371c7a47857f563bc02d6d2717ff576a0cfc8436da8028136ea6010",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/docs/KEY_OPERATIONS.md",
       "source_sha256": "4f361f642d900c708b7b838deaeb9a28f3b81acfd27a0ccb0c8deeff99034265",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "4f361f642d900c708b7b838deaeb9a28f3b81acfd27a0ccb0c8deeff99034265",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "docs/PROVENANCE.md",
@@ -480,25 +502,29 @@
     },
     {
       "path": "docs/RELEASE_NOTES_0.2.1_RC.md",
-      "sha256": "d14326ddd93b25ade850d545cb31aedbee7eb61ace57dac9612c3eb43e399fbb",
+      "sha256": "25b98fdf547195915c93d08e2927593f40fa6c69b35ac614a454bd0dda301d09",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/docs/RELEASE_NOTES_0.2.1_RC.md",
       "source_sha256": "d14326ddd93b25ade850d545cb31aedbee7eb61ace57dac9612c3eb43e399fbb",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "d14326ddd93b25ade850d545cb31aedbee7eb61ace57dac9612c3eb43e399fbb",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "docs/RELEASING.md",
-      "sha256": "26a877ecc5a77cf0aba796b5ddd3bed2ad23868eb57997d08d4a96d9f7b67a73",
+      "sha256": "a09adf089d36d91c8fb54d025a8040c067bbf3ec8db9ef9a242089dc1601ca1f",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/docs/RELEASING.md",
       "source_sha256": "26a877ecc5a77cf0aba796b5ddd3bed2ad23868eb57997d08d4a96d9f7b67a73",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "26a877ecc5a77cf0aba796b5ddd3bed2ad23868eb57997d08d4a96d9f7b67a73",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "docs/THIRD_PARTY_LICENSES.txt",
@@ -510,6 +536,17 @@
       "source_path": "docs/THIRD_PARTY_LICENSES.txt",
       "source_sha256": "6e1ac8cf29f621c928eba96923538250bb776dd454188b6cc3a6982116b05104",
       "transformation": "byte-identical"
+    },
+    {
+      "path": "install.sh",
+      "sha256": "6592782eda15663f192a00278e558d898d7389a0b7949b6808319bbebfdb94bd",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
+      "source_commit": null,
+      "source_path": null,
+      "source_sha256": null,
+      "transformation": "New implementation in genuine follow-up history, not imported third-party expression"
     },
     {
       "path": "licenses/rust-stdlib/COPYRIGHT-library.html",
@@ -788,14 +825,16 @@
     },
     {
       "path": "packaging/system-uninstall.sh",
-      "sha256": "f6e39daeb8c8b8246b76ea2012a095a3f1fd519ee6e6933e4c88559b5847d423",
+      "sha256": "48d98f134958d3956bdd6e04ee25b3df84dd7e34afbd66dbc36439d53e39b96e",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "packaging/system-uninstall.sh",
       "source_sha256": "f6e39daeb8c8b8246b76ea2012a095a3f1fd519ee6e6933e4c88559b5847d423",
-      "transformation": "byte-identical"
+      "transformation": "byte-identical",
+      "previous_reviewed_sha256": "f6e39daeb8c8b8246b76ea2012a095a3f1fd519ee6e6933e4c88559b5847d423",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     },
     {
       "path": "packaging/uninstall.sh",
@@ -854,14 +893,27 @@
     },
     {
       "path": "scripts/package-offline.sh",
-      "sha256": "de76dfa0afd46aadf45c362163cf076271a3618773b6f8d16ddbb6a15f339293",
+      "sha256": "b4ef2868111d90867e14dab02f24d2b5bfbfd94191ca811437d492c4fd981535",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/scripts/package-offline.sh",
       "source_sha256": "de76dfa0afd46aadf45c362163cf076271a3618773b6f8d16ddbb6a15f339293",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies"
+      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "previous_reviewed_sha256": "de76dfa0afd46aadf45c362163cf076271a3618773b6f8d16ddbb6a15f339293",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
+    },
+    {
+      "path": "scripts/package-online.py",
+      "sha256": "92eb42323fc831f8c45f6f91d993b127818a02b7e7ea94c30b9d3224e04f51a9",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
+      "source_commit": null,
+      "source_path": null,
+      "source_sha256": null,
+      "transformation": "New implementation in genuine follow-up history, not imported third-party expression"
     },
     {
       "path": "scripts/release-sbom.py",
@@ -919,6 +971,17 @@
       "transformation": "byte-identical"
     },
     {
+      "path": "tests/Dockerfile.online",
+      "sha256": "3b259925c6498957fef949de5971264cb5d0274bd8f1ebe034cad04f98002956",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
+      "source_commit": null,
+      "source_path": null,
+      "source_sha256": null,
+      "transformation": "New implementation in genuine follow-up history, not imported third-party expression"
+    },
+    {
       "path": "tests/acceptance.py",
       "sha256": "439cfe69e1b72d25e0247ddb1dafca1f346351df6e8cf6031fb8ad8d26d0dac3",
       "category": "first-party",
@@ -963,6 +1026,39 @@
       "source_path": "tests/license_inventory_notices.py",
       "source_sha256": "a214be3feaff66bd6e128bf2e6682908ebed3e5d6b86dbae68f5df05e4ccc047",
       "transformation": "Use publicly named dependency decision inventory"
+    },
+    {
+      "path": "tests/online_cli.py",
+      "sha256": "129373da6c858b3fc349a8ab211db89bf6336363c48f6b1b3585a77361da9139",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
+      "source_commit": null,
+      "source_path": null,
+      "source_sha256": null,
+      "transformation": "New implementation in genuine follow-up history, not imported third-party expression"
+    },
+    {
+      "path": "tests/online_install.py",
+      "sha256": "5a3cf62f34962e9367765a58ce6dc5f9f66cb781f7d28fa822ecd906ed6a6d75",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
+      "source_commit": null,
+      "source_path": null,
+      "source_sha256": null,
+      "transformation": "New implementation in genuine follow-up history, not imported third-party expression"
+    },
+    {
+      "path": "tests/online_install_guest.py",
+      "sha256": "73f4643c6698bdba6e379637eba90fd2f3f596e154ae3bf0c4c2857b69f9dcad",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
+      "source_commit": null,
+      "source_path": null,
+      "source_sha256": null,
+      "transformation": "New implementation in genuine follow-up history, not imported third-party expression"
     },
     {
       "path": "tests/package_contents.py",
@@ -1032,15 +1128,17 @@
     },
     {
       "path": "tests/workflow_policy.py",
-      "sha256": "0bb81528410716e83bf4b940f38834f90eb19e01a9888e4352f5cc5e06eeb146",
+      "sha256": "b1607363eab1dc714bfea9e6cc3cd9e510bc7f0f9ee6a6d74e67693fd9271fe3",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "tests/workflow_policy.py",
       "source_sha256": "0bb81528410716e83bf4b940f38834f90eb19e01a9888e4352f5cc5e06eeb146",
-      "transformation": "byte-identical"
+      "transformation": "byte-identical",
+      "previous_reviewed_sha256": "0bb81528410716e83bf4b940f38834f90eb19e01a9888e4352f5cc5e06eeb146",
+      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     }
   ],
-  "inventory_state": "Post-export private acceptance candidate; Git commit and external artifact digest bind this inventory. Original source_commit/source_sha256 remain provenance, not current-content assertions."
+  "inventory_state": "Current simplified release candidate, bound by enclosing genuine Git commit and external source archive digest; original source fields describe provenance"
 }

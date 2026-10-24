@@ -25,5 +25,12 @@
       "ebe41915a087629974acf4432852f3e2626db264"
     ],
     "basis": "New Zouter-authored MIT fixes in independent history; no private development objects imported. This metadata refresh does not fabricate original development history."
+  },
+  "simple_release_policy": {
+    "base_reviewed_commit": "8e9e9d3238a4e18fd97632317e2aa3b292dd2f50",
+    "project_license": "MIT",
+    "default_trust": "GitHub HTTPS and SHA256 integrity; not independent publisher authentication",
+    "signature_tools": "explicit optional path; no automatic fallback",
+    "scope": "Installer, CLI maintenance wiring, release preparation, docs and focused tests; Rust scheduling state machine unchanged"
   }
 }

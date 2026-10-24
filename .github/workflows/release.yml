@@ -1,11 +1,6 @@
-name: Signed candidate preparation (manual; never publishes)
+name: Release candidate (HTTPS and SHA256; never publishes)
 on:
   workflow_dispatch:
-    inputs:
-      sign_candidate:
-        type: boolean
-        default: false
-        description: Sign candidate using the protected release-signing environment
 permissions:
   contents: read
 jobs:
@@ -58,9 +53,11 @@ jobs:
           toolchain: 1.99.1
       - name: Trust only this checked-out container workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: sh scripts/verify.sh
-      - run: python3 tests/release_trust.py target/release/kairo
-      - run: python3 tests/workflow_policy.py && python3 tests/release_inventory.py
+      - run: cargo fmt --check
+      - run: cargo test -p kairo-cli --locked
+      - run: cargo build --release --locked -p kairo-cli
+      - run: python3 tests/online_cli.py target/release/kairo
+      - run: python3 tests/workflow_policy.py
       - run: |
           mkdir dist
           cp target/release/kairo "dist/kairo-${{ matrix.target }}"
@@ -71,6 +68,9 @@ jobs:
   assemble:
     needs: build
     runs-on: ubuntu-24.04
+    env:
+      KAIRO_OFFLINE: '1'
+      CARGO_BUILD_JOBS: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -85,59 +85,17 @@ jobs:
           toolchain: 1.99.1
       - run: |
           cargo fetch --locked
-          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
-          mkdir dist
-          sh scripts/package-offline.sh \
-            binaries/kairo-x86_64-unknown-linux-gnu \
-            binaries/kairo-aarch64-unknown-linux-gnu \
-            "dist/kairo-$version.tar.gz"
-          cp binaries/kairo-x86_64-unknown-linux-gnu "dist/kairo-$version-x86_64-unknown-linux-gnu"
-          cp binaries/kairo-aarch64-unknown-linux-gnu "dist/kairo-$version-aarch64-unknown-linux-gnu"
-          python3 scripts/release-sbom.py dist/sbom.spdx.json
+          python3 scripts/package-online.py binaries/kairo-x86_64-unknown-linux-gnu binaries/kairo-aarch64-unknown-linux-gnu dist --source "$GITHUB_SHA"
           sudo apt-get update && sudo apt-get install -y python3-jsonschema
           curl -fLsS --max-time 60 https://raw.githubusercontent.com/spdx/spdx-spec/v2.3/schemas/spdx-schema.json -o "$RUNNER_TEMP/spdx.schema.json"
           printf '%s  %s\n' 239208b7ac287b3cf5d9a9af23f9d69863971102a5e1587a27a398b43490b89b "$RUNNER_TEMP/spdx.schema.json" | sha256sum -c -
           python3 tests/validate_sbom.py dist/sbom.spdx.json "$RUNNER_TEMP/spdx.schema.json"
-          python3 -c 'import json,os,pathlib; pathlib.Path("dist/release-metadata.json").write_text(json.dumps({"source_commit":os.environ["GITHUB_SHA"],"version":"0.2.1","published":False},indent=2))'
-          python3 tests/package_contents.py "dist/kairo-$version.tar.gz"
+          python3 tests/package_contents.py dist/kairo-0.2.1.tar.gz
           python3 scripts/check-release-secrets.py dist
-          (cd dist && sha256sum "kairo-$version.tar.gz" > "kairo-$version.sha256")
-          echo 'UNSIGNED: publisher Ed25519 signature and trusted key distribution are required before release.' > dist/RELEASE-BLOCKED.txt
+          (cd dist && sha256sum -c SHA256SUMS)
+          docker build -f tests/Dockerfile.online -t kairo-online-test .
+          python3 tests/online_install.py dist
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: unsigned-release-candidate
-          path: dist/*
-
-  sign:
-    needs: assemble
-    if: inputs.sign_candidate && github.ref == 'refs/heads/main'
-    environment: release-signing
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: unsigned-release-candidate
-          path: dist
-      - name: Sign and reverify candidate (no publication)
-        env:
-          KAIRO_RELEASE_PRIVATE_KEY: ${{ secrets.KAIRO_RELEASE_PRIVATE_KEY }}
-        run: |
-          set -eu
-          umask 077
-          key_file="$RUNNER_TEMP/kairo-release-signing.pem"
-          trap 'rm -f "$key_file"' EXIT HUP INT TERM
-          test -n "$KAIRO_RELEASE_PRIVATE_KEY"
-          printf '%s\n' "$KAIRO_RELEASE_PRIVATE_KEY" > "$key_file"
-          unset KAIRO_RELEASE_PRIVATE_KEY
-          python3 scripts/sign-release.py dist "$key_file"
-          rm -f dist/RELEASE-BLOCKED.txt
-          python3 scripts/check-release-secrets.py dist
-          manifest_sha=$(sha256sum dist/kairo-0.2.1.sha256 | cut -d ' ' -f 1)
-          python3 scripts/verify-release.py dist --source "$GITHUB_SHA" --manifest-sha256 "$manifest_sha"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: signed-release-candidate
+          name: release-candidate
           path: dist/*

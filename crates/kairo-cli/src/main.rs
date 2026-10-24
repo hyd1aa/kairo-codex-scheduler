@@ -183,6 +183,13 @@ enum Cmd {
     #[command(about = "Show project help / 显示项目说明")]
     HelpInfo,
     #[command(
+        about = "Remove the managed system installation, preserving state / 卸载系统安装并保留状态"
+    )]
+    SystemUninstall {
+        #[arg(long, required = true)]
+        yes: bool,
+    },
+    #[command(
         about = "Run the scheduler; observation until explicitly activated / 运行调度器，明确批准前仅观察"
     )]
     Daemon {
@@ -288,6 +295,10 @@ enum Schedule {
 }
 #[derive(Subcommand)]
 enum Update {
+    #[command(
+        about = "Update from GitHub HTTPS with SHA256 verification / 从 GitHub HTTPS 校验 SHA256 并更新"
+    )]
+    Online,
     #[command(about = "Read a local release manifest / 读取本地发布清单")]
     Check { manifest: PathBuf },
     #[command(about = "Atomically apply a verified local binary / 原子安装已校验的本地程序")]
@@ -466,12 +477,36 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                 json!({"installed":true,"prefix":prefix,"execution":"observation_only"}),
             );
         }
+        Cmd::SystemUninstall { yes } => {
+            if !yes {
+                bail!("confirmation_required / 需要确认卸载");
+            }
+            let status = std::process::Command::new("sh")
+                .arg("/opt/kairo/installer/system-uninstall.sh")
+                .env("KAIRO_LANG", cli.lang.as_deref().unwrap_or("zh-CN"))
+                .status()
+                .context("managed_installer_missing / 需要通过在线安装器安装")?;
+            if !status.success() {
+                bail!("system_uninstall_failed / 系统卸载失败，请检查权限及日志");
+            }
+            return Ok(());
+        }
         Cmd::Uninstall { prefix } => {
             up::uninstall(&prefix, &cli.data_dir)?;
             return emit(cli, json!({"removed":true,"data_dir":cli.data_dir}));
         }
         Cmd::Update { action } => {
             match action {
+                Update::Online => {
+                    let status = std::process::Command::new("bash")
+                        .args(["/opt/kairo/installer/install.sh", "--update"])
+                        .env("KAIRO_LANG", cli.lang.as_deref().unwrap_or("zh-CN"))
+                        .status()
+                        .context("managed_installer_missing / 需要通过在线安装器安装")?;
+                    if !status.success() {
+                        bail!("online_update_failed / 在线更新失败，未跳过校验，请检查权限及日志");
+                    }
+                }
                 Update::Check { manifest } => {
                     return emit(cli, up::check_manifest(&up::manifest_file(&manifest)?)?)
                 }
@@ -522,7 +557,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
         Cmd::HelpInfo => {
             return emit(
                 cli,
-                json!({"help":t(cli.lang.as_deref()==Some("en-US"),"Kairo 管理每日激活时间及五小时额度窗口，不能增加额度。默认仅观察；每周额度、服务端拒绝、近期请求和调用前持久化保护不能关闭。生产切换与公开发布须另行批准。使用 --help 查看全部命令。","Kairo manages daily activation times and five-hour allowance windows; it cannot increase quota. Observation is the default. Weekly limits, server denial, recent-request guards and durable reservations cannot be disabled. Production cutover and public release require separate approval. Use --help for commands.")}),
+                json!({"help":t(cli.lang.as_deref()==Some("en-US"),"Kairo 管理每日激活时间及五小时额度窗口，不能增加额度。默认仅观察；每周额度、服务端拒绝、近期请求和调用前持久化保护不能关闭。启用调度前请完成授权、额度和请求历史安全检查。使用 --help 查看全部命令。","Kairo manages daily activation times and five-hour allowance windows; it cannot increase quota. Observation is the default. Weekly limits, server denial, recent-request guards and durable reservations cannot be disabled. Complete authorization, quota and request-history checks before enabling scheduling. Use --help for commands.")}),
             )
         }
         Cmd::Migrate {
@@ -566,6 +601,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     let mut c = store.config()?;
     match cmd {
         Cmd::Init
+        | Cmd::SystemUninstall { .. }
         | Cmd::Install { .. }
         | Cmd::Uninstall { .. }
         | Cmd::Update { .. }
@@ -1166,15 +1202,7 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
                     sha256: input("SHA256 > ")?,
                     prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
                 },
-                "3" => Update::Fetch {
-                    manifest: input(t(en, "清单路径 > ", "Manifest path > "))?.into(),
-                    manifest_sha256: input(t(
-                        en,
-                        "独立可信的清单 SHA256 > ",
-                        "Independently trusted manifest SHA256 > ",
-                    ))?,
-                    prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
-                },
+                "3" => Update::Online,
                 "4" => Update::Rollback {
                     prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
                 },
@@ -1189,6 +1217,17 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
             language: if en { "zh-CN" } else { "en-US" }.into(),
         },
         "11" => Cmd::HelpInfo,
+        "12" => {
+            if input(t(
+                en,
+                "输入 uninstall 确认卸载（保留状态） > ",
+                "Type uninstall to remove (preserves state) > ",
+            ))? != "uninstall"
+            {
+                return Ok(None);
+            }
+            Cmd::SystemUninstall { yes: true }
+        }
         _ => bail!("menu_choice_invalid / 菜单选项无效"),
     }))
 }
@@ -1230,6 +1269,7 @@ fn menu(cli: &mut Cli) -> Result<()> {
                 "检查更新 / 升级程序",
                 "中文 / English 切换",
                 "帮助与项目说明",
+                "卸载 Kairo（保留状态）",
             ],
             &[
                 "Status",
@@ -1243,6 +1283,7 @@ fn menu(cli: &mut Cli) -> Result<()> {
                 "Check updates / upgrade",
                 "中文 / English",
                 "Help and project information",
+                "Uninstall Kairo (preserve state)",
             ],
             t(en, "退出 Kairo", "Exit Kairo"),
         )?;

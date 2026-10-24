@@ -1,9 +1,9 @@
-# Release key custody and trust
+# Optional advanced signature tools / 可选高级签名
 
-The public key is pinned in packaging/RELEASE-PUBLIC-KEY.pem and embedded in bootstrap-signed.sh/release-auth.sh. Its PEM-byte SHA256 must be independently authenticated by the owner; test signatures and a colocated public key do not establish publisher identity. The candidate key's publisher identity/custody confirmation remains pending.
+默认安装和更新采用GitHub HTTPS＋SHA256，不要求发行签名、离线私钥、备份或吊销体系。此文件不是首发审批门槛。
 
-Keep the real private key outside all checkouts, build artifacts, logs and images, in an owner-only directory/file. Use an encrypted offline backup and perform an owner recovery drill that compares only public fingerprints and signs a harmless challenge. Do not put a secret/passphrase in CLI arguments or shell tracing. The signer enforces private permissions, checkout exclusion and a matching pinned public key.
+Default installation and updates use GitHub HTTPS and SHA256. No publisher signing key is required for the standard release process.
 
-Planned rotation requires an exact statement with old/new PEM fingerprints, sequence, effective version and new bootstrap digest. When the old key remains trusted, cross-sign identical statement bytes with both keys and authenticate the transition independently. Update both embedded keys together and rerun affected trust/install checks; old installed verifiers reject new-key signatures until explicitly replaced through the authenticated bootstrap.
+原packaging/bootstrap-signed.sh、release-auth.sh、signed-update.sh及scripts/sign-release.py保留供明确选择固定公钥签名路径的高级维护者。该路径失败会拒绝，不自动切换到默认安装；默认路径也不会将签名错误当作成功。不要把两种信任模型混称为独立认证。
 
-On compromise, halt signing/publishing, disable affected hosted secrets, and issue an independently authenticated revocation identifying affected fingerprints/releases and recovery steps. An old-key signature alone is insufficient once that key is compromised. Offline bootstrap has no automatic revocation lookup or expiry: an isolated old copy cannot learn revocation. Users must consult the independent owner channel and authenticate the replacement bootstrap. Do not claim automatic revocation enforcement.
+Advanced users may explicitly choose the retained fixed-key signature tools. Signature failures remain fatal on that path, with no automatic checksum-only fallback. These tools never justify uploading a private key to a repository, artifact, log or test image. Tests use disposable synthetic keys only.
