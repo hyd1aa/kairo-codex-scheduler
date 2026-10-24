@@ -14,7 +14,7 @@
   "early_python_full_lineage_verified": false,
   "owner_licensing_authority_confirmed": false,
   "publisher_identity_confirmed": false,
-  "public_endpoint_verified": false,
+  "public_endpoint_verified": true,
   "runtime_policy": "Original export retained runtime/installer bytes except anonymized test fixtures. Subsequent genuine private acceptance commits fix timezone-aware tests, ARM64 libc::O_NOFOLLOW, and container CI. Installer bytes remain unchanged.",
   "post_export_changes": {
     "independent_root": "c5c287f9ce409328ba5562691ad2b6fbfe5e8394",
@@ -32,5 +32,14 @@
     "default_trust": "GitHub HTTPS and SHA256 integrity; not independent publisher authentication",
     "signature_tools": "explicit optional path; no automatic fallback",
     "scope": "Installer, CLI maintenance wiring, release preparation, docs and focused tests; Rust scheduling state machine unchanged"
+  },
+  "publication": {
+    "owner_authorized": true,
+    "release_version": "0.2.1",
+    "tag_source_commit": "bfcdb9587a70cda3968e3e3436198bca0356959b",
+    "release_url": "https://github.com/hyd1aa/kairo-codex-scheduler/releases/tag/v0.2.1",
+    "public_install_validation": "Debian12 x86_64 clean QEMU TCG, actual GitHub HTTPS; native APT and same-guest recovery, compatible RC update/rollback, SHA256 refusal, real observation-only systemd; zero model requests",
+    "other_public_online_platforms": "not claimed",
+    "scope_of_followup": "Post-release documentation/provenance only; v0.2.1 runtime and installer bytes unchanged"
   }
 }

@@ -2,7 +2,7 @@
 
 Never post OAuth tokens, credentials, account journals, private signing keys or production state in public issues. Use synthetic reproductions and redact account identifiers.
 
-This is an unpublished source candidate. A verified private security contact or GitHub private vulnerability reporting has not yet been deployed. Enable and verify GitHub private vulnerability reporting after the repository becomes public, before promoting the first stable release; no address is invented here. See [release gates](docs/RELEASING.md). A SECURITY.md file alone does not enable GitHub reporting.
+Use [GitHub private vulnerability reporting](https://github.com/hyd1aa/kairo-codex-scheduler/security/advisories/new) for confidential reports (sign-in required). It is enabled for this public repository. Do not report credentials or vulnerabilities through public issues. No email address is invented here; separate-account notification delivery has not been independently exercised.
 
 Installation does not authorize model requests. Real dispatch requires account identity/quota validation, explicit deployment approval, lifecycle checks and durable local/account reservations. Unknown outcomes are not automatically retried. Keep services stopped/observation-only during acceptance.
 

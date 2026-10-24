@@ -164,7 +164,7 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "a11774e41b9deb8e13ed52e6adb9cea0197d26e8ca9d759c36f1545ba4dfb92f",
+      "sha256": "14ba1707c49dd7690bcbaa15adc24deb3b53328bb93ad41ed17a14feb86d2d58",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -173,11 +173,12 @@
       "source_sha256": "a16e04ce761e3cc8dc6d523162db1f2221140e0c82730c26ead38f7938e346e9",
       "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
       "previous_reviewed_sha256": "a16e04ce761e3cc8dc6d523162db1f2221140e0c82730c26ead38f7938e346e9",
-      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
+      "post_export_change_basis": "Post-publication verified installation documentation/provenance; no runtime change, MIT unchanged",
+      "previous_release_sha256": "a11774e41b9deb8e13ed52e6adb9cea0197d26e8ca9d759c36f1545ba4dfb92f"
     },
     {
       "path": "README.md",
-      "sha256": "2488b81bb57d5da24c113086fc25f7f329eb984a6f6d6d69ac04b7f7c30ba7b5",
+      "sha256": "dd81743fde361da0cbf18d6851d2de6ff300b3bfa4724bcfe623134c8c7a5eaa",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -186,11 +187,12 @@
       "source_sha256": "0192fff982a9115127c664db5855d22e8a291372b00f0faa79601d9a4da71db9",
       "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
       "previous_reviewed_sha256": "0192fff982a9115127c664db5855d22e8a291372b00f0faa79601d9a4da71db9",
-      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
+      "post_export_change_basis": "Post-publication verified installation documentation/provenance; no runtime change, MIT unchanged",
+      "previous_release_sha256": "2488b81bb57d5da24c113086fc25f7f329eb984a6f6d6d69ac04b7f7c30ba7b5"
     },
     {
       "path": "SECURITY.md",
-      "sha256": "d4a28545214902a44b2a039e9da4a87c8801b0232a8e04ddd4843c5dbab2e5d7",
+      "sha256": "8e735aea96cb9412b7304e08a39f0fed3d6d17bbf1cb122d4a7608790ab45f0a",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -199,11 +201,12 @@
       "source_sha256": "52b71b2d358a24606d80ac7b2abe64ed1dc3f69dc9d91dfc49ba956e9000254f",
       "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
       "previous_reviewed_sha256": "52b71b2d358a24606d80ac7b2abe64ed1dc3f69dc9d91dfc49ba956e9000254f",
-      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
+      "post_export_change_basis": "Post-publication verified installation documentation/provenance; no runtime change, MIT unchanged",
+      "previous_release_sha256": "d4a28545214902a44b2a039e9da4a87c8801b0232a8e04ddd4843c5dbab2e5d7"
     },
     {
       "path": "SOURCE_ORIGIN.json",
-      "sha256": "e78c750717abd587a47ff8bbb91de480e3c4dde487a944ec9487783f57c7d532",
+      "sha256": "ebf4bde6ac31d3e610bd5ed315a5da7bd0f86733d390ab161f84935c2431149c",
       "category": "generated-provenance",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -212,8 +215,9 @@
       "source_sha256": null,
       "transformation": "Exact source checkpoint identifiers; no original history claim",
       "export_snapshot_sha256": "d5ff5716686c35fb7be2002bac3b941187f2c71cd1c6cdb20a6c0d41ee1c47d4",
-      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance",
-      "previous_reviewed_sha256": "5a463428a939bfd72c73c206566ab46243533b845a0c4df1a204ec8533a96ae6"
+      "post_export_change_basis": "Post-publication verified installation documentation/provenance; no runtime change, MIT unchanged",
+      "previous_reviewed_sha256": "5a463428a939bfd72c73c206566ab46243533b845a0c4df1a204ec8533a96ae6",
+      "previous_release_sha256": "e78c750717abd587a47ff8bbb91de480e3c4dde487a944ec9487783f57c7d532"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -465,7 +469,7 @@
     },
     {
       "path": "docs/INSTALL.md",
-      "sha256": "044c6446fd9d46bdc5c90928ed92e2a743cbbe414d3d7fe64c2a0f6689d7dd9e",
+      "sha256": "8031e6546cd412fbdd77993b155d8a51e0fb9444acf8089b830ef5ca4fb4e947",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -474,7 +478,8 @@
       "source_sha256": "bf165d40a461ec70edce87dcfca568d6f30880c021c57b4360551eefcb7a6a0f",
       "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
       "previous_reviewed_sha256": "bf165d40a461ec70edce87dcfca568d6f30880c021c57b4360551eefcb7a6a0f",
-      "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
+      "post_export_change_basis": "Post-publication verified installation documentation/provenance; no runtime change, MIT unchanged",
+      "previous_release_sha256": "044c6446fd9d46bdc5c90928ed92e2a743cbbe414d3d7fe64c2a0f6689d7dd9e"
     },
     {
       "path": "docs/KEY_OPERATIONS.md",
@@ -1140,5 +1145,5 @@
       "post_export_change_basis": "Kairo-authored simplified release/installer/CLI/docs change under MIT; prior source metadata retained as provenance"
     }
   ],
-  "inventory_state": "Current simplified release candidate, bound by enclosing genuine Git commit and external source archive digest; original source fields describe provenance"
+  "inventory_state": "Current main documentation after public v0.2.1 acceptance; immutable release source remains bfcdb9587a70cda3968e3e3436198bca0356959b"
 }
