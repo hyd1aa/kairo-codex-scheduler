@@ -56,6 +56,8 @@ jobs:
         with:
           components: rustfmt, clippy
           toolchain: 1.99.1
+      - name: Trust only this checked-out container workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: sh scripts/verify.sh
       - run: python3 tests/release_trust.py target/release/kairo
       - run: python3 tests/workflow_policy.py && python3 tests/release_inventory.py
