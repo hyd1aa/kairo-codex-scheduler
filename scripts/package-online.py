@@ -23,7 +23,7 @@ for arch,binary in [('x86_64',args.x86),('aarch64',args.arm)]:
    m=tarfile.TarInfo(old.name);m.type=old.type;m.mode=old.mode;m.mtime=1792454400;m.uid=m.gid=0
    if data is not None:m.size=len(data)
    t.addfile(m,io.BytesIO(data) if data is not None else None)
-(out/'install.sh').write_bytes((repo/'install.sh').read_bytes())
+for name in ['install.sh','uninstall.sh']:(out/name).write_bytes((repo/name).read_bytes())
 subprocess.run(['python3',str(repo/'scripts/release-sbom.py'),str(out/'sbom.spdx.json')],check=True)
 (out/'release-metadata.json').write_text(json.dumps({'source_commit':args.source,'version':version,'published':False,'integrity':'github-https-sha256'},indent=2)+'\n')
 (out/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(out.iterdir())))
