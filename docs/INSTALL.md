@@ -1,8 +1,8 @@
 # 安装与维护 / Installation and maintenance
 
-当前私有候选没有已经验收的公开下载入口。上线后才公布在线命令。默认采用GitHub HTTPS＋SHA256，不要求签名私钥或独立信任公告；同源SHA不提供独立发布者身份认证。必须信任仓库管理者及GitHub/TLS。高级签名链路保持可选且独立，失败不降级。
+v0.2.1已公开：[Release](https://github.com/hyd1aa/kairo-codex-scheduler/releases/tag/v0.2.1)。使用[README中的已验证命令](../README.md)明确安装0.2.1。默认GitHub HTTPS＋SHA256完整性检查，不要求发行签名；同源SHA不提供独立发布者身份认证。必须信任仓库管理者及GitHub/TLS。高级签名路径保持独立且失败不降级。
 
-This private candidate has no validated public download endpoint. The default installer trusts GitHub HTTPS/repository control and verifies SHA256 integrity. It does not require offline signing. The advanced signed path remains separate with no fallback.
+v0.2.1 is public. Use the verified version-explicit command in the [README](../README.en.md). Default trust is GitHub HTTPS/repository control with SHA256 integrity, not independent publisher authentication. Optional signatures are a separate, fail-closed path.
 
 ## 首次安装 / First installation
 
@@ -66,3 +66,9 @@ sudo kairo system-uninstall --yes
 ## 验收范围 / Validation scope
 
 既有发行版/QEMU安装矩阵不重复。此次入口修改需要单独的下载校验、幂等、更新/失败恢复、卸载及干净systemd来宾回归，结果以本轮交付报告为准。aarch64采用原生构建；不是物理硬件验收。Debian12/13、Ubuntu22.04/24.04、Alma/Rocky9通过运行探测后可安装；Alma/Rocky10暂拒绝自动首装，避免把minimal依赖的有限证据冒称完整支持。
+
+### v0.2.1真实公开入口结果 / Actual public-entry result
+
+Debian12 x86_64干净QEMU TCG来宾（1vCPU/1024MiB）从真正GitHub公网下载脚本、对应架构包及官方Codex依赖，端到端TLS/发布SHA256校验，验证systemd/global命令、中英文菜单、时间增删改及无OAuth时禁止请求。受限代理只转发真实GitHub/官方Debian源，不替换文件或证书，不是本地回环发行模拟。此来宾完成缺curl时真实APT恢复、兼容旧RC与正式包不同哈希间的在线更新/回滚、损坏SHA256拒绝；历史不兼容0.2.0验证拒绝及自动恢复，不宣称成功迁移。
+
+Debian12 x86_64 public installation passed in a fresh QEMU TCG guest over real public GitHub TLS. Missing-curl APT recovery, compatible RC-to-release binary updates/rollback, checksum rejection and observation-only systemd were checked. The proxy only forwards actual approved upstream traffic; it neither serves fixture releases nor replaces TLS certificates. Historical0.2.0 is incompatible and was tested for safe refusal/recovery. Other OS/ARM64 public-entry installs and physical hardware remain unverified; native ARM64 build/test is not an online system-install pass. Real OAuth/MFA remains installer-controlled and was not performed during acceptance.
