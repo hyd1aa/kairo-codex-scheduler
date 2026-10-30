@@ -539,7 +539,7 @@ pub fn render(v: &Value, en: bool) {
                         "! 服务端拒绝；保持保护，不发送预热请求",
                         "! Server denial; protection remains active, no warmup requests"
                     ),
-                    33
+                    31
                 )
             );
         }
@@ -596,9 +596,30 @@ pub fn render(v: &Value, en: bool) {
                     .and_then(|at| local_time(at, timezone().ok()?))
             };
             i18n::render(
-                &json!({"positive_until":at("positive_until"),"pending":at("pending"),"server_denied":state["server_denied"],"recent_reason":state["attempts"].as_array().and_then(|a|a.last()).map(|a|a["outcome"].clone())}),
+                &json!({"positive_until":at("positive_until"),"pending":at("pending"),"recent_reason":state["attempts"].as_array().and_then(|a|a.last()).map(|a|a["outcome"].clone())}),
                 en,
                 0,
+            );
+            let denied = state["server_denied"] == true;
+            println!(
+                "{}: {}",
+                i18n::label("server_denied", en),
+                color(
+                    t(
+                        en,
+                        if denied {
+                            "已拒绝（自动请求受保护）"
+                        } else {
+                            "未拒绝"
+                        },
+                        if denied {
+                            "Denied (automatic requests blocked)"
+                        } else {
+                            "Not denied"
+                        }
+                    ),
+                    if denied { 31 } else { 32 }
+                )
             );
             quota(
                 &json!({"weekly":state["weekly"],"five_hour":state["observations"].as_array().and_then(|a|a.last()).map(|o|o["quota"].clone())}),
