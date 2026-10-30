@@ -166,6 +166,7 @@ pub fn service(action: &str) -> Result<Value> {
 }
 pub fn validate(store: &Store) -> Result<()> {
     store.config()?;
+    crate::onboarding::execution_paused(store)?;
     if store.root.join("accounts.json").exists() {
         let a = profiles(store)?;
         if a.profiles.values().any(|p| !p.is_absolute())

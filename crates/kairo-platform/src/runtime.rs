@@ -229,7 +229,8 @@ pub fn activate(store: &Store, account: &str, ack: bool) -> Result<()> {
     gate.check_local(&store.root)?;
     d.enabled = true;
     d.approved_at = Some(Utc::now().timestamp());
-    store.write("deployment.json", &d)
+    store.write("deployment.json", &d)?;
+    crate::onboarding::resume_manual(store)
 }
 pub fn pause(store: &Store) -> Result<()> {
     let mut d: Deployment = store.read("deployment.json")?;
@@ -385,7 +386,7 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
         store.write("cursor.json", &cursor)?;
     }
     validate_cursor(&cursor, &c, tz)?;
-    if !d.enabled {
+    if !d.enabled || crate::onboarding::execution_paused(store)? {
         let mut observer = Observer {
             r,
             account: d.account,
@@ -513,7 +514,10 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
     loop {
         let store = Store::open(root)?;
         let result = (|| -> Result<Value> {
-            if !observe_only && store.root.join("deployment.json").exists() {
+            if !observe_only
+                && !crate::onboarding::execution_paused(&store)?
+                && store.root.join("deployment.json").exists()
+            {
                 let d: Deployment = store.read("deployment.json")?;
                 if d.enabled {
                     if d.schema != 1
@@ -534,6 +538,10 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
                     authority = None;
                     authority_account.clear();
                 }
+            }
+            if crate::onboarding::execution_paused(&store)? {
+                authority = None;
+                authority_account.clear();
             }
             iteration(&store, startup, observe_only)
         })();
