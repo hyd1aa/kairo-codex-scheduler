@@ -44,6 +44,10 @@ with tempfile.TemporaryDirectory(prefix='kairo-evidence-') as temp:
   read,write_fd=os.pipe();os.close(read)
   p=subprocess.Popen([binary,'--data-dir',str(data),*args],env=env,stdout=write_fd,stderr=subprocess.PIPE,text=True);os.close(write_fd)
   _,err=p.communicate(timeout=15);assert p.returncode==0 and 'panic' not in err.lower() and 'backtrace' not in err.lower(),(args,p.returncode,err);count+=1
+ for args,expected in [(('--json','schedule','add','bad'),1),(('--json','--invalid-kairo-option'),2)]:
+  read,write_fd=os.pipe();os.close(read)
+  p=subprocess.Popen([binary,'--data-dir',str(data),*args],env=env,stdout=write_fd,stderr=subprocess.PIPE,text=True);os.close(write_fd)
+  _,err=p.communicate(timeout=15);assert p.returncode==expected and 'panic' not in err.lower(),(args,p.returncode,err);count+=1
  assert json.loads(direct('--json','status').stdout)['version']
  assert 'error' in json.loads(direct('--json','schedule','add','bad',ok=False).stdout)
 print(f'{count} warmup-evidence/cache/localization/closed-pipe regressions passed; zero model/service calls')

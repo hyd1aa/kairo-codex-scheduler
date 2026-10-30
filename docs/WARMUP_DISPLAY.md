@@ -24,7 +24,8 @@ reconstructed. This change introduces no new ledger or state schema.
 恢复复查只在 recovery_waiting 且未批准、期限仍在将来时显示。所有普通界面时间
 按系统时区转为本地自然语言；原JSON保留原字段和时间表示。
 
-Linux SIGPIPE uses an async-signal-safe _exit(0) handler, installed before CLI
-output. A consumer closing stdout is ordinary output termination, not a business
+Linux SIGPIPE uses an async-signal-safe exit handler, installed before CLI
+output. Successful output exits0; an already-known business or argument error
+retains exit1 or2 even if its JSON consumer has closed. A consumer closing stdout is ordinary output termination, not a business
 failure or Rust panic. Open-pipe business errors retain their existing error JSON
 and nonzero exit codes. Tests use a closed pipe, without installing jq.

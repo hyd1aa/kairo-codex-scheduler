@@ -280,7 +280,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "cddc1c0e2eb1b885d97a2e3d60e23ec5a62921f644de84275982c5865579ee0f",
+      "sha256": "16a98cb9df1d97d9b2708500f92a126620bf46acbb6c6f8681e555927d9a7b8e",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -698,8 +698,8 @@
       "source_commit": null,
       "source_path": "docs/WARMUP_DISPLAY.md",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "7921c948507d794e1e65af8be92fb5bab9b68a0df1d044a29341a8858186a69c"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "e577e33c0330a9bfa386ae5613db9d2de5f4516f2b3753e9b096feccba204801"
     },
     {
       "path": "install.sh",
@@ -1414,7 +1414,7 @@
       "source_path": "tests/warmup_display.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "802b4be2f05700ffd9ad67e3467163a9047f0dbd61f451c0a304bf4ece827950"
+      "sha256": "d4372e5c2dc8f95fde00df94faabd33e7b14c862a6068104092556c099ae511c"
     },
     {
       "path": "tests/workflow_policy.py",
