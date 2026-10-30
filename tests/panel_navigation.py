@@ -47,7 +47,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   # Every top-level page returns exactly one level; invalid selection remains local.
   for n in (1,2,3,4,5,6,7,8,9,11):
    out=menu(f'{n:02}\n00\n00\n');assert 'Kairo / ' in out
-  out=plain(menu('03\n99\n01\n\n02\n02:00\n\n03\n02:00\n03:00\n\n04\n03:00\n\n05\n\n06\n\n07\n\n00\n00\n'))
+  out=plain(menu('03\n\n99\n01\n\n02\n02:00\n\n03\n02:00\n03:00\n\n04\n03:00\n\n05\n\n06\n\n07\n\n00\n00\n'))
   assert out.count('Codex Window Scheduler')==2,'Actions returned to main'
   out=menu('04\n02\n\n03\n\n04\n\n01\n\n00\n00\n');assert out.count('Codex Window Scheduler')==2
   out=menu('04\n02\n\n00\n00\n',{'MOCK_START_FAIL':'1'});assert ('尚未运行' if lang=='zh-CN' else 'not active') in out
@@ -71,7 +71,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  out=menu('01\n00\n00\n');assert 'Invalid' in out or '无效' in out
  (data/'state.json').unlink()
  out=menu('10\n00\n');assert json.loads((data/'config.json').read_text())['language']=='zh-CN'
- out=menu('00\n',{'NO_COLOR':'1'});assert not re.search(r'\x1b\[[0-9;]*m',out);assert '\x1b[2J' in out and '\x1b[3J' not in out
+ out=menu('\n00\n',{'NO_COLOR':'1'});assert not re.search(r'\x1b\[[0-9;]*m',out);assert '\x1b[2J' in out and '\x1b[3J' not in out
  out=menu('00\n',{'TERM':'dumb'});assert '\x1b' not in out
  menu('\x04');menu('',interrupt=True)
  p=direct(ok=False);assert '\x1b' not in p.stdout+p.stderr

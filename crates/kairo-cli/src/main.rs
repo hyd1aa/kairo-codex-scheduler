@@ -1010,7 +1010,23 @@ fn numbered(en: bool, zh: &[&str], english: &[&str], exit: &str) -> Result<Strin
         println!("{:02}. {}", i + 1, s)
     }
     println!("00. {exit}");
-    input(t(en, "请输入选项 > ", "Select > "))
+    loop {
+        let choice = input(t(en, "请输入选项 > ", "Select > "))?;
+        if !choice.is_empty() {
+            return Ok(choice);
+        }
+        println!(
+            "{}",
+            color(
+                t(
+                    en,
+                    "菜单选项无效；请重新输入",
+                    "Invalid selection; try again"
+                ),
+                31
+            )
+        );
+    }
 }
 fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
     Ok(Some(match choice {

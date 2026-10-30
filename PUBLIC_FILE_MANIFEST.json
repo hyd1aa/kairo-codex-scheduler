@@ -269,7 +269,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "2437071ce8a4d66eedeba5ec563138d0239aded42fa4f968b7efa1c6ca7e5ded",
+      "sha256": "26f7106b70237931d221634179d519324d396316b3be930a2f766e2eb49a017e",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1150,7 +1150,7 @@
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "9358e65693df5ca72119e3d7dd0f3e572862cd12d0d2c815e696f5114aac6be3"
+      "sha256": "1b0186949330aa49f50e00f5a6c0ec41ce5bf98c891236104b145f8cec5e639f"
     },
     {
       "path": "tests/pipe_lifecycle.py",
