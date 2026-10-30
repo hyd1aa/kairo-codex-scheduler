@@ -443,11 +443,15 @@ try:
 except Exception:
  print('未导入管理员凭据；可在账号菜单完成官方登录 / No administrator credential imported; use the account menu for official login')
 PYOAUTH
-  /opt/kairo/current/bin/kairo onboard --request
+  new_auto_intent=0
+  if [[ ! -e /var/lib/kairo/onboarding.json && ! -L /var/lib/kairo/onboarding.json && ! -e /var/lib/kairo/deployment.json && ! -L /var/lib/kairo/deployment.json ]]; then
+   /opt/kairo/current/bin/kairo onboard --request
+   new_auto_intent=1
+  fi
   systemctl enable --now kairo.service
  fi
  systemctl enable --now kairo-onboarding.timer
- if (( fresh_install )) && [[ -r /dev/tty ]] && [[ -w /dev/tty ]]; then
+ if (( fresh_install && new_auto_intent )) && [[ -r /dev/tty ]] && [[ -w /dev/tty ]]; then
   if ! /usr/sbin/runuser -u kairo -- test -r /home/kairo/.codex/auth.json; then
    msg '请完成官方 Codex OAuth 登录。' 'Complete official Codex OAuth login.'
    /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo auth login </dev/tty >/dev/tty 2>&1 || :

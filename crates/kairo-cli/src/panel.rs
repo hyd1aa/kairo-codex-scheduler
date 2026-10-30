@@ -347,10 +347,31 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         if let Some(reason) = auto["reason"].as_str() {
             println!("{}: {}", t(en, "提示", "Notice"), clean(reason));
         }
-        if let Ok(v) = store.read::<Value>("quota-cache.json") {
-            if v.get("five_hour").is_some() {
-                quota(&v, en);
+        let cache = store
+            .read::<Value>("quota-cache.json")
+            .ok()
+            .filter(|v| auth.as_ref().is_some_and(|a| v["account"] == a.fingerprint));
+        if let Some(v) = cache.filter(|v| {
+            v["at"].as_i64().is_some_and(|at| {
+                chrono::Utc::now().timestamp() - at <= 300 && at <= chrono::Utc::now().timestamp()
+            })
+        }) {
+            if let Some(used) = v["five_hour"]["used"].as_f64() {
+                println!(
+                    "{}: {:.1}%",
+                    t(en, "五小时额度剩余", "Five-hour remaining"),
+                    (100.0 - used).clamp(0.0, 100.0)
+                );
             }
+        } else {
+            println!(
+                "{}",
+                t(
+                    en,
+                    "五小时额度：待查询（01）",
+                    "Five-hour quota: query via01"
+                )
+            );
         }
         let tz = timezone()?;
         let next = next_checks(&store, &store.config()?, 48)?;

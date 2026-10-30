@@ -201,6 +201,10 @@ fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
     let account = actions.account(&store);
     let health = actions.inspect(&store)?;
     let step = plan(&i, &health, account.as_deref());
+    if step == Step::Running && i.account.is_none() {
+        i.account = account.clone();
+        store.write("onboarding.json", &i)?;
+    }
     let status = match step {
         Step::Paused => Some("paused"),
         Step::Login => Some("login_required"),

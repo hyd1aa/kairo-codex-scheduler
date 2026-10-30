@@ -44,6 +44,12 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y python3-yaml
       - run: sh scripts/verify.sh
         if: steps.scope.outputs.rust == 'true'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && steps.scope.outputs.rust == 'true'
+        with:
+          name: isolated-test-binary
+          path: target/release/kairo
+          if-no-files-found: ignore
       - name: Verify v0.2.1 baseline assets and focused pipe lifecycle
         run: |
           set -eu

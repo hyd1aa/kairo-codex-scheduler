@@ -43,7 +43,7 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "85839a156983e0805be24c0903b11ee0dbaf2474d2f8e7a0ba0f9b20dd6ef60c",
+      "sha256": "c52ac2eff269f24cbee8fe73ead52f226c562583b9373e9ec3295348e77efd5c",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "182cdfb91c37a9cbfb4780e8a4ee3964b543be70282867b35440daa2806bfda3"
+      "sha256": "cb0be29144025726353cc979f8c44b991743d5b2f45ba928954440347210113c"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -447,7 +447,7 @@
       "source_path": "crates/kairo-platform/src/onboarding.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "f5b03c74d454b371660c8ca78cfff153f74131c39eed45d51350652e56c2a3df"
+      "sha256": "806f644efc731257283b0f98464c68236224ea8cacb3e041217b5f43cea5b163"
     },
     {
       "path": "crates/kairo-platform/src/process.rs",
@@ -512,8 +512,8 @@
       "source_commit": null,
       "source_path": "docs/ADVANCED.en.md",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "ec479483c751da87c7686e4163c2e8e7b72eaf9d1db42c35027b5da29290b666"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "6bd18e2a35bba28c28348b76a0e141ae9a5b9a42f870402f48daddeea9bf7ca0"
     },
     {
       "path": "docs/ADVANCED.md",
@@ -523,8 +523,8 @@
       "source_commit": null,
       "source_path": "docs/ADVANCED.md",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "5d4b22a69988f4c6fa0c1a3e51891fd8ee26f4f1a781818cdcbde3ce98fc3ba3"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "c64c3538f9101d81081adaa48d86a1d15d156c0c9d669a188cd75e1c0bfb6b93"
     },
     {
       "path": "docs/AUTOMATIC_INITIALIZATION.md",
@@ -659,7 +659,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "80cb005704b2bcf530bb4ac2a4fd7b62baa3721725b4a1f2db78fb43dd77d5f0",
+      "sha256": "4b8c1c69a74efa2982b31f9610c22ddeaa3c9eb1a4c618f3863bfd65957ca216",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
