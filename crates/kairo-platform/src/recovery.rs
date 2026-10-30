@@ -179,6 +179,25 @@ fn guard_journal(gate: &Store, account: &str, now: i64) -> Result<AccountJournal
         }),
     }
 }
+fn retain_known_anchors(
+    store: &Store,
+    account: &str,
+    journal: &mut AccountJournal,
+    now: i64,
+) -> Result<()> {
+    if let Ok(state) = store.state() {
+        if state.account != account || state.last_clock > now {
+            bail!("recovery_owner_or_clock / 本地历史账号不匹配或时钟超前，禁止恢复");
+        }
+        journal
+            .anchors
+            .extend(state.attempts.iter().map(|a| a.anchor.clone()));
+        journal
+            .anchors
+            .extend(state.legacy_attempts.iter().map(|a| a.anchor.clone()));
+    }
+    Ok(())
+}
 /// Read-only classification. Absence is never evidence that the account is new.
 pub fn inspect(store: &Store, guards: &Path) -> Result<Value> {
     let mut files = serde_json::Map::new();
@@ -359,6 +378,7 @@ fn begin_verified(
         let missing = !present(&gate.root.join("account.json"))?;
         let mut journal = guard_journal(&gate, account, now)?;
         if missing {
+            retain_known_anchors(store, account, &mut journal, now)?;
             // Interrupted provisioning or lost protection restarts a conservative wait.
             r.not_before = r
                 .not_before
@@ -379,6 +399,7 @@ fn begin_verified(
         return Ok(view(&r, now));
     }
     let mut journal = guard_journal(&gate, account, now)?;
+    retain_known_anchors(store, account, &mut journal, now)?;
     if journal.last_attempt > now {
         bail!("recovery_clock_or_request_pending / 存在未来请求保护或时钟回拨；等待并检查其他调度实例");
     }
@@ -502,6 +523,7 @@ fn check_verified(
         return Ok(result);
     }
     let _authority = rt::authority_lease(&gate)?;
+    retain_known_anchors(store, account, &mut journal, now)?;
     let (boot, up) = clock_anchor(now)?;
     advance_clock(&mut r, now, boot, up);
     if journal.last_attempt > now && journal.last_attempt > r.not_before {
@@ -843,7 +865,7 @@ mod tests {
                     schema: 1,
                     account: f.account.clone(),
                     last_attempt: old,
-                    anchors: ["known-old-anchor".into()].into_iter().collect(),
+                    anchors: ["global-only-anchor".into()].into_iter().collect(),
                 },
             )
             .unwrap();
@@ -860,6 +882,11 @@ mod tests {
                 .unwrap()
                 .anchors
                 .contains("known-old-anchor"));
+            assert!(gate
+                .read::<AccountJournal>("account.json")
+                .unwrap()
+                .anchors
+                .contains("global-only-anchor"));
         }
         let broken = Fixture::new();
         let raw = b"{broken-local-state";
@@ -885,6 +912,36 @@ mod tests {
                 && fs::read(e.path()).ok().as_deref() == Some(raw)));
         assert!(broken.store.state().unwrap().attempts.is_empty());
         assert_eq!(broken.record().history_before_start, "unknown");
+    }
+    #[test]
+    fn reconstructing_a_missing_global_guard_retains_verified_local_request_anchors() {
+        let f = Fixture::new();
+        let old = f.start - 50000;
+        let (five, _) = f.quotas(old);
+        let mut state = State {
+            schema: 1,
+            account: f.account.clone(),
+            ..Default::default()
+        };
+        kairo_core::reserve(&mut state, "known-without-global", old, five);
+        f.store.write("state.json", &state).unwrap();
+        f.begin(f.start).unwrap();
+        {
+            let gate = Store::open(&f.guards.join(&f.account)).unwrap();
+            assert!(gate
+                .read::<AccountJournal>("account.json")
+                .unwrap()
+                .anchors
+                .contains("known-without-global"));
+        }
+        f.check(f.start + QUIET_SECONDS, true).unwrap();
+        let gate = Store::open(&f.guards.join(&f.account)).unwrap();
+        assert!(gate
+            .read::<AccountJournal>("account.json")
+            .unwrap()
+            .anchors
+            .contains("known-without-global"));
+        assert_eq!(f.store.state().unwrap().attempts.len(), 1);
     }
     #[test]
     fn partial_baseline_writes_are_closed_and_retryable() {

@@ -458,7 +458,7 @@
       "source_path": "crates/kairo-platform/src/recovery.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "b4a068e27903c93fefc8cfdad73536f14c3e6f5ca269fe1e0df2dae6587ed418"
+      "sha256": "f05ff2e59c71f19facdadf1784c4bf89d73b4957d55fc7cba2d9d5dfce60c9f2"
     },
     {
       "path": "crates/kairo-platform/src/replay.rs",
