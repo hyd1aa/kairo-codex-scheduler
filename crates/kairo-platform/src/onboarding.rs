@@ -73,6 +73,29 @@ pub fn request(store: &Store, exclusive: bool) -> Result<Value> {
         json!({"automatic_initialization_requested":true,"exclusive_account_confirmed":intent.exclusive_account}),
     )
 }
+/// Successful official login only resets transport retry timing, never consent or recovery.
+pub fn credentials_changed(store: &Store) -> Result<()> {
+    if recovery::present(&store.root.join("onboarding.json"))? {
+        let mut i: Intent = store.read("onboarding.json")?;
+        i.validate()?;
+        i.next_attempt = 0;
+        i.failures = 0;
+        store.write("onboarding.json", &i)?;
+    }
+    Ok(())
+}
+fn failure_status(code: &str) -> &'static str {
+    if code.contains("HTTP 401") || code.contains("HTTP 403") || code.starts_with("OAuth") {
+        "login_required"
+    } else if code.contains("account_mismatch")
+        || code.contains("_invalid")
+        || code.contains("_unsafe")
+    {
+        "repair_required"
+    } else {
+        "retry_wait"
+    }
+}
 pub fn pause(store: &Store) -> Result<()> {
     if recovery::present(&store.root.join("onboarding.json"))? {
         let mut i: Intent = store.read("onboarding.json")?;
@@ -258,13 +281,18 @@ fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
             drop(store);
             return actions.enable(root);
         }
-        if step == Step::Running && actions.refresh_quota(&store, now).is_err() {
-            return event(
-                &store,
-                status,
-                now + 60,
-                Some("quota_refresh_failed / 额度查询失败，将自动重试；预热仍受安全门禁约束"),
-            );
+        if step == Step::Running {
+            if let Err(e) = actions.refresh_quota(&store, now) {
+                let code = e
+                    .to_string()
+                    .split(" / ")
+                    .next()
+                    .unwrap_or("quota_refresh_failed")
+                    .chars()
+                    .take(100)
+                    .collect::<String>();
+                return event(&store, failure_status(&code), now + 60, Some(&code));
+            }
         }
         return event(&store, status, 0, None);
     }
@@ -303,7 +331,7 @@ fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
                 .chars()
                 .take(100)
                 .collect::<String>();
-            return event(&store, "retry_wait", i.next_attempt, Some(&code));
+            return event(&store, failure_status(&code), i.next_attempt, Some(&code));
         }
     };
     drop(store);
@@ -490,6 +518,37 @@ mod tests {
                 enables: 0,
             },
         )
+    }
+    #[test]
+    fn expired_oauth_is_login_required_and_transient_network_errors_retry() {
+        assert_eq!(
+            failure_status("Quota HTTP 401 Unauthorized"),
+            "login_required"
+        );
+        assert_eq!(failure_status("Quota HTTP 403 Forbidden"), "login_required");
+        assert_eq!(failure_status("Quota transport failed"), "retry_wait");
+        assert_eq!(failure_status("account_mismatch"), "repair_required");
+    }
+    #[test]
+    fn successful_login_resets_backoff_without_cancelling_pause_or_recovery() {
+        let (root, _) = fixture();
+        let s = Store::open(&root).unwrap();
+        let mut i: Intent = s.read("onboarding.json").unwrap();
+        i.requested = false;
+        i.next_attempt = 9999;
+        i.failures = 6;
+        s.write("onboarding.json", &i).unwrap();
+        s.write("recovery.json", &json!({"synthetic_wait_deadline":23456}))
+            .unwrap();
+        let before = std::fs::read(root.join("recovery.json")).unwrap();
+        credentials_changed(&s).unwrap();
+        let after: Intent = s.read("onboarding.json").unwrap();
+        assert!(!after.requested);
+        assert_eq!(after.next_attempt, 0);
+        assert_eq!(after.failures, 0);
+        assert_eq!(std::fs::read(root.join("recovery.json")).unwrap(), before);
+        drop(s);
+        std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
     fn service_credential_validation_rejects_symlinks_and_unprivate_files() {

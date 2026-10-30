@@ -927,6 +927,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                     bail!("interactive_login_required / OAuth 登录需要交互终端，由用户完成人工认证")
                 };
                 mg::login(&store)?;
+                kairo_platform::onboarding::credentials_changed(&store)?;
                 emit(cli, json!({"success":true}))
             }
             "bind" => emit(cli, rt::bind(&store, acknowledge_fresh)?),

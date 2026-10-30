@@ -269,7 +269,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "10cfee177911529e389c4cd287fca840812dc9690e993646fa9a1eafab0600ec",
+      "sha256": "9606cea70c13ddab0c44c86bb2559d9d3f8ddb198959bb28590115abbf259518",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -282,7 +282,7 @@
     },
     {
       "path": "crates/kairo-cli/src/messages.json",
-      "sha256": "cdc8ead2de2d243d10c53cd48bf470a29f6bbad739eac7e6944831f94eaac9e4",
+      "sha256": "fe4c280ed916da6dc6d47254faebbae6c04ab2ad5d65a14c45dd9b0af5ded451",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "2fad31b8b3c65e200f3c85b4c6c526faa9f3d572e918e04722f803638b06ea2a"
+      "sha256": "f39b60dc9c42bb32114c4206a1b680e2d92f6c9b0c1c187705c121fdb8a0b912"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -447,7 +447,7 @@
       "source_path": "crates/kairo-platform/src/onboarding.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "a036a0e763abfbb0f13b60627d8ec95d975cf7737e9e99ab9fd0f22ce6b5bcb7"
+      "sha256": "d275500923d1c5ea02f3185e7428d0db68f3cbd6e359ce7b24b05584885f21bd"
     },
     {
       "path": "crates/kairo-platform/src/process.rs",
