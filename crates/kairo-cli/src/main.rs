@@ -274,8 +274,50 @@ enum Cmd {
         )]
         approve_production_cutover: bool,
     },
+    #[command(
+        about = "Recover existing accounts with unknown local history / 安全恢复本地历史丢失的已有账号"
+    )]
+    Recover {
+        #[command(subcommand)]
+        action: RecoveryAction,
+    },
+    #[command(
+        about = "Authorize and verify managed production scheduling / 明确授权并验证 systemd 正式调度"
+    )]
+    Enable {
+        #[arg(
+            long,
+            help = "Explicit production approval; may allow future model requests / 明确生产授权，之后可能发生预热请求"
+        )]
+        approve_production_cutover: bool,
+    },
     #[command(about = "Pause Kairo model requests / 暂停 Kairo 模型请求")]
     Pause,
+}
+#[derive(Subcommand)]
+enum RecoveryAction {
+    #[command(
+        about = "Inspect missing files and recovery stage without network requests / 无网络检查缺失文件与恢复阶段"
+    )]
+    Status,
+    #[command(
+        about = "Start conservative recovery after stopping other schedulers / 停用其他调度器后开始保守恢复"
+    )]
+    Begin {
+        #[arg(
+            long,
+            help = "History is unknown and other automatic/manual requests have stopped / 确认历史未知，其他自动和手动请求已停止"
+        )]
+        acknowledge_unknown_history: bool,
+    },
+    #[command(
+        about = "Revalidate identity and quota; extend waiting after activity / 重新校验身份与额度，发现活动延长等待"
+    )]
+    Check,
+    #[command(
+        about = "Interactive first-use and reinstall recovery wizard / 首次启用与重装恢复交互向导"
+    )]
+    Wizard,
 }
 #[derive(Subcommand)]
 enum Schedule {
@@ -346,6 +388,14 @@ fn emit(cli: &Cli, v: Value) -> Result<()> {
         i18n::render(&v, cli.lang.as_deref() == Some("en-US"), 0)
     }
     Ok(())
+}
+fn recovery_output(cli: &Cli, v: Value) -> Result<()> {
+    if cli.json {
+        emit(cli, v)
+    } else {
+        panel::render_recovery(&v, cli.lang.as_deref() == Some("en-US"));
+        Ok(())
+    }
 }
 fn configured(cli: &Cli) -> Result<Store> {
     if cli.data_dir.join(".upgrade-lock").exists() {
@@ -442,6 +492,31 @@ fn possible_prewarm(
 }
 fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     match cmd {
+        Cmd::Enable {
+            approve_production_cutover,
+        } => {
+            return recovery_output(
+                cli,
+                kairo_platform::activation::enable(&cli.data_dir, approve_production_cutover)?,
+            )
+        }
+        Cmd::Recover {
+            action: RecoveryAction::Wizard,
+        } => return panel::recovery_wizard(cli),
+        Cmd::Recover { action } => {
+            let store = configured(cli)?;
+            let v = match action {
+                RecoveryAction::Status => {
+                    kairo_platform::recovery::inspect(&store, &rt::guard_root())?
+                }
+                RecoveryAction::Begin {
+                    acknowledge_unknown_history,
+                } => kairo_platform::recovery::begin(&store, acknowledge_unknown_history)?,
+                RecoveryAction::Check => kairo_platform::recovery::check(&store)?,
+                RecoveryAction::Wizard => unreachable!(),
+            };
+            return recovery_output(cli, v);
+        }
         Cmd::Daemon {
             observe,
             once,
@@ -608,7 +683,9 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     }
     let mut c = store.config()?;
     match cmd {
-        Cmd::Init
+        Cmd::Recover { .. }
+        | Cmd::Enable { .. }
+        | Cmd::Init
         | Cmd::SystemUninstall { .. }
         | Cmd::Install { .. }
         | Cmd::Uninstall { .. }
@@ -617,6 +694,10 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
         | Cmd::Daemon { .. }
         | Cmd::Validate => unreachable!(),
         Cmd::Status => {
+            let recovery = kairo_platform::recovery::inspect(&store, &rt::guard_root())?;
+            let service_mode = kairo_platform::activation::status(&store.root);
+            let automatic_warmup_enabled = recovery["production_authorized"] == true
+                && service_mode["daemon_live_confirmed"] == true;
             let tz = timezone()?;
             let mut checks = next_checks(&store, &c, 48)?;
             let next = checks["checks"]
@@ -667,7 +748,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                 .and_then(|v| v["error"].as_str().or_else(|| v["event"].as_str()));
             emit(
                 cli,
-                json!({"version":env!("CARGO_PKG_VERSION"),"timezone":tz.to_string(),"config":c,"next_check":next,"next_possible_prewarm":next_possible,"prewarm_conditional":true,"state_valid":state.is_ok(),"status_file":status_file,"recent_reason":recent_reason,"deployment":deployment,"acceptance":acceptance,"current_quota":current_quota}),
+                json!({"version":env!("CARGO_PKG_VERSION"),"timezone":tz.to_string(),"config":c,"next_check":next,"next_possible_prewarm":next_possible,"prewarm_conditional":true,"state_valid":recovery["scheduler_state_ready"],"state_file_valid":state.is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"recovery_status":recovery,"service_mode":service_mode,"automatic_warmup_enabled":automatic_warmup_enabled,"status_file":status_file,"recent_reason":recent_reason,"deployment":deployment,"acceptance":acceptance,"current_quota":current_quota}),
             )
         }
         Cmd::Acceptance => {
@@ -1113,6 +1194,7 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
                     "切换账号配置",
                     "删除账号配置",
                     "首次账号绑定（需确认无旧服务）",
+                    "首次启用 / 旧账号重装恢复向导",
                 ],
                 &[
                     "Local account status",
@@ -1123,8 +1205,14 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
                     "Select profile",
                     "Remove profile",
                     "Fresh account binding (legacy must be stopped)",
+                    "First-use / existing-account recovery wizard",
                 ],
             )?;
+            if a.trim_start_matches('0') == "9" {
+                return Ok(Some(Cmd::Recover {
+                    action: RecoveryAction::Wizard,
+                }));
+            }
             let action = match a.trim_start_matches('0') {
                 "1" => "status",
                 "2" => "verify",

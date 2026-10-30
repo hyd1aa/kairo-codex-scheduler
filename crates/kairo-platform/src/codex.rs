@@ -21,6 +21,7 @@ pub struct AccountGate {
     store: Store,
     journal: AccountJournal,
     reserved_at: Option<i64>,
+    recovery: Option<crate::recovery::Recovery>,
 }
 impl AccountGate {
     /// Gate must have been explicitly provisioned during an approved migration.
@@ -36,14 +37,45 @@ impl AccountGate {
         if journal.schema != 1 || journal.account != account {
             bail!("Account gate mismatch / 账号门禁不匹配")
         }
+        let recovery = if crate::recovery::present(&store.root.join("recovery.json"))? {
+            let r: crate::recovery::Recovery = store.read("recovery.json")?;
+            r.validate(account)?;
+            if !r.approved {
+                bail!("recovery_approval_required / 历史未知恢复尚未获准；请完成等待和恢复向导");
+            }
+            Some(r)
+        } else {
+            None
+        };
         Ok(Self {
             store,
             journal,
             reserved_at: None,
+            recovery,
         })
     }
     pub fn not_before(&self, buffer: i64) -> i64 {
-        self.journal.last_attempt.saturating_add(18000 + buffer)
+        self.journal
+            .last_attempt
+            .saturating_add(18000 + buffer)
+            .max(self.recovery.as_ref().map_or(0, |r| r.not_before))
+    }
+    pub fn check_local(&self, root: &Path) -> Result<()> {
+        let owner = std::fs::canonicalize(root)?;
+        let local_path = root.join("recovery.json");
+        let local = if crate::recovery::present(&local_path)? {
+            let bytes = crate::private_bytes(&local_path, 1024 * 1024)?;
+            let r: crate::recovery::Recovery = serde_json::from_slice(&bytes)?;
+            r.validate(&self.journal.account)?;
+            Some(r)
+        } else {
+            None
+        };
+        match (self.recovery.as_ref(),local) {
+            (None,None)=>Ok(()),
+            (Some(r),Some(local)) if r.owner==owner && local.owner==owner && local.started_at==r.started_at && local.approved=>Ok(()),
+            _=>bail!("recovery_owner_mismatch / 全局恢复授权与本地目录或记录不匹配；请运行 recover check，禁止执行"),
+        }
     }
     pub fn reserve_budget(
         &mut self,
@@ -72,10 +104,7 @@ impl AccountGate {
         if !(0..=300).contains(&buffer) || self.journal.last_attempt < 0 {
             bail!("Invalid gate parameters / 门禁参数无效")
         }
-        if now < self.journal.last_attempt
-            || now - self.journal.last_attempt < 18000 + buffer
-            || self.journal.anchors.contains(anchor)
-        {
+        if now < self.not_before(buffer) || self.journal.anchors.contains(anchor) {
             bail!("Account duplicate guard / 账号级重复请求保护")
         }
         self.journal.last_attempt = now;
@@ -151,6 +180,7 @@ impl CodexExecutor {
         buffer: i64,
         local: &Store,
     ) -> Result<bool> {
+        gate.check_local(&local.root)?;
         let s = local.state()?;
         let a = s
             .attempts

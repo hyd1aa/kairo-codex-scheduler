@@ -22,28 +22,50 @@ The installer selects the latest stable GitHub Release, excluding drafts/prerele
 
 The initial download requires curl, trusted CA certificates, bash and root/sudo access. `pipefail` is essential: bare `curl … | sudo bash` can return success from an empty bash when curl fails before sending any bytes. The wrapper propagates that failure. The complete script is parsed before execution; child processes cannot consume shell source as interactive input. Pinned-version options remain in the [installation guide](docs/INSTALL.md).
 
-## First OAuth login and activation
+## First use and reinstall recovery
 
-1. An existing official Codex CLI is preserved; otherwise the installer downloads a pinned official native CLI with SHA256 verification.
-2. Complete official device/browser authorization and MFA yourself:
+After installation/upgrade, run the administrator wizard:
 
 ```sh
-sudo kairo auth login
-sudo kairo auth verify
+sudo kairo recover wizard
+```
+
+Alternatively open `sudo kairo` and select **06 → 09**. The wizard covers human OAuth login, official read-only identity/quota verification, fresh binding, existing-account recovery, rechecks and explicit production enablement. No hand-written JSON or manual systemd-file removal is required.
+
+**A genuinely new account:** log in and verify the server identity, then select fresh binding and type `FRESH` only if this account has never run Kairo and has no previous scheduler/recent requests. This is an administrator declaration: the quota API cannot prove complete history. Existing records/guards are never overwritten by FRESH. Finally type `ENABLE` in the wizard. Existing fresh-binding cooldown, deduplication, weekly limits and denial guards remain in force.
+
+**An existing account reinstalled without recoverable local history:** never use FRESH. Stop schedulers on other machines/data directories and stop other automatic/manual model requests during recovery. Select existing-account recovery and type `RECOVER`, or run:
+
+```sh
+sudo kairo recover begin --acknowledge-unknown-history
+sudo kairo recover status
+```
+
+This persists an unknown-history risk barrier. **It neither authorizes model requests nor treats old history as empty.** Wait at least **5 hours 6 minutes 30 seconds** (one full five-hour window + maximum300-second buffer +90-second execution timeout). Observed windows, previous guards and configured buffers may delay actual requests further. Restarts/repeated begin never shorten or restart a normal wait. If protection disappears during quarantine, explicitly beginning again restarts conservative waiting.
+
+At the displayed deadline, recheck:
+
+```sh
+sudo kairo recover check
+```
+
+The official read-only quota endpoint revalidates the current identity, five-hour and weekly windows. Mismatched identity, unknown quota, denial, weekly exhaustion and backward clocks block approval. New usage or active-window changes extend quarantine; normally moving zero-usage idle resets do not extend it forever. Time passing never grants approval automatically.
+
+Then explicitly authorize production:
+
+```sh
+sudo kairo enable --approve-production-cutover
+sudo kairo status
 sudo kairo doctor
 ```
 
-3. `06 → 08` is for a genuinely fresh binding with no legacy scheduler/recent requests: type `FRESH`. Never clear existing state to rebind. Retain the returned `account_fingerprint`; conservative initial waiting periods remain in force.
-4. After reviewing the identity, quota and history, explicitly enable actual scheduling with that fingerprint:
+Typing `ENABLE` in the wizard does the same. Automatic handoff supports only standard installer-managed root/systemd installations: validate unit/paths, stop the service, persist the recovery baseline/approval, remove only the unchanged installer observation override, reload/start, and verify a **fresh live status for the current PID**. Custom units/overrides are preserved and refused. Failure revokes approval and restores observation configuration; incomplete rollback is reported explicitly. Natural scheduling may issue real requests after enablement; rollback cannot undo a request already sent, and durable request guards are retained. The wizard never sends a forced model test.
 
-```sh
-sudo kairo activate --account 'paste-the-returned-fingerprint' --approve-production-cutover &&
-sudo rm -f /etc/systemd/system/kairo.service.d/20-mode.conf &&
-sudo systemctl daemon-reload &&
-sudo systemctl enable --now kairo.service
-```
+To confirm production, `kairo --json status` must show `scheduler_state_ready: true`, `recovery_status.production_authorized: true`, `service_mode.daemon_live_confirmed: true` and `automatic_warmup_enabled: true`, with `status_file.execution: live` and `status_file.daemon_pid` matching systemd's current PID. systemd active or verified OAuth alone is insufficient. Stale status, startup without confirmation or an effective `--observe` never reports confirmed production.
 
-This is the existing runtime safety acknowledgment, not a release approval workflow. Logging in or starting the service alone does not remove the initial observation override. Never copy another server's credentials/journals or run competing automatic schedulers on the same account. Development acceptance sends no real model requests.
+Valid requests/account anchors are retained. Original damaged local bytes are preserved in private `recovery-evidence-*` files before replacement. Corrupt global ledgers, account mismatches and unsafe file types/permissions require backup review, never automatic overwrite. Pre-baseline history remains marked unknown after recovery. Global cooldown fields hold risk/budget reservations, never invented successful/old requests. Account locks and deduplication cover **all data directories on the same host**. The quota API supplies neither a complete ledger nor proof that another machine has stopped; administrators must prevent competing schedulers.
+
+In doctor, `existing_records_valid` means existing configuration/records validate. `state_valid` and `scheduler_state_ready` require a complete binding/state/cursor/global guard, and still do not imply production approval or an actual live daemon. A zero doctor exit status means the report was generated, not every item is ready.
 
 ## The complete kairo command menu
 
@@ -56,7 +78,7 @@ Run `kairo` as root, or `sudo kairo` as a non-root administrator. An interactive
 | 03 | Activation schedule | Open the time submenu below | Data access |
 | 04 | Service management | 01 status,02 start,03 stop,04 restart; starting is not authorization | root |
 | 05 | Logs | 20 readable records per page; refresh, page, filter warnings/errors and toggle details | root/log access |
-| 06 | OAuth login and accounts | 01 local status,02 server verification,03 human login,04 profiles,05 add,06 select,07 remove profile,08 fresh binding | Data access/human OAuth |
+| 06 | OAuth login and accounts | 01 local status,02 server verification,03 human login,04 profiles,05 add,06 select,07 remove profile,08 fresh binding,09 first-use/recovery wizard | Data access/human OAuth |
 | 07 | Diagnostics and repair | 01 diagnose;02 restore defaults while retaining request history | Data access |
 | 08 | Prewarm settings | 01 view,02 idle toggle,03 buffer seconds,04 weekly/denial guards,05 lifecycle,06 request-free preview,07 reset | Data access |
 | 09 | Check updates / upgrade | Usually03 automatic update;01/02 advanced local manifest/file operations,04 rollback,05 transaction recovery,06 check latest stable without upgrading | root |
@@ -67,14 +89,14 @@ Run `kairo` as root, or `sudo kairo` as a non-root administrator. An interactive
 
 Example: enter `03`, then `02`, then `02:00` to add a time. Enter `00` in a submenu to return; `10` at the main menu switches language; `00` at the main menu exits. 
 
-## v0.2.2 interactive panel
+## Interactive panel
 
 Number + Enter opens a separate page. `00` returns one level; only the main menu exits. After an action, Enter returns to the same submenu. Invalid input stays local. The logo appears only on the main page. Interactive redraw clears the visible screen, retains scrollback and keeps normal terminal input/echo. Use subcommands without a TTY; `NO_COLOR` disables colors.
 
 ```text
 [ K A I R O ]
 Codex Window Scheduler
-v0.2.2 | Asia/Shanghai
+v0.2.3 | Asia/Shanghai
 Service: ● Running
 Scheduling: Read-only observation
 Automatic warmup: Not enabled
@@ -95,7 +117,7 @@ Press Enter to return to this menu...
 
 `01` shows a summary with detailed local JSON in a separate option. `02 → 01` queries quota without model requests. `05` shows20 records per page within the latest200 records; detail length is also bounded. `11` groups help by topic. `09 → 06` checks the latest stable GitHub release without upgrading; select `09 → 03` to upgrade explicitly.
 
-OAuth discovery, server verification, local binding and production approval are separate states. Missing, corrupt and unreadable deployment/history files receive explicit explanations. Start with OAuth verification and diagnostics above. Review account history before any fresh binding; never fabricate history or clear account guards. This panel does not implement a new historical-state recovery algorithm.
+OAuth discovery, server verification, local binding and production approval are separate states. Missing, corrupt and unreadable deployment/history files receive explicit explanations. Start with OAuth verification and diagnostics above. Review account history before any fresh binding; never fabricate history or clear account guards. The recovery wizard keeps pre-baseline history unknown and establishes a conservative guarded baseline; it never reconstructs old requests.
 
 ## Custom activation times (03)
 

@@ -250,9 +250,6 @@ fn service_summary(en: bool) {
 fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
     service_summary(en);
     let store = configured(cli)?;
-    let d = fs::read(cli.data_dir.join("deployment.json"))
-        .ok()
-        .and_then(|b| serde_json::from_slice::<rt::Deployment>(&b).ok());
     let state = store.state();
     let auth = rt::runtime(&store)
         .ok()
@@ -261,28 +258,10 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         .as_ref()
         .zip(state.as_ref().ok())
         .is_some_and(|(id, s)| id.fingerprint == s.account);
-    let authorized = d.as_ref().is_some_and(|d| {
-        d.schema == 1
-            && d.enabled
-            && d.approved_at.is_some()
-            && bound
-            && state.as_ref().is_ok_and(|s| s.account == d.account)
-    }) && mg::validate(&store).is_ok();
-    // --observe in the unit overrides deployment approval. Status alone can be stale.
-    let unit = std::process::Command::new("systemctl")
-        .args([
-            "show",
-            "kairo.service",
-            "--property=ExecStart",
-            "--property=Environment",
-        ])
-        .output()
-        .ok()
-        .filter(|o| o.status.success());
-    let observed = unit
-        .as_ref()
-        .is_none_or(|o| String::from_utf8_lossy(&o.stdout).contains("--observe"));
-    let live = authorized && !observed;
+    let health = kairo_platform::recovery::inspect(&store, &rt::guard_root())?;
+    let authorized = health["production_authorized"] == true;
+    let service_mode = kairo_platform::activation::status(&store.root);
+    let live = authorized && service_mode["daemon_live_confirmed"] == true;
     println!(
         "{}: {}",
         t(en, "调度模式", "Scheduling"),
@@ -416,6 +395,9 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
             )
             .into())
     );
+    if !compact {
+        render_recovery(&health, en);
+    }
     if detailed {
         println!(
             "v{} | {}",
@@ -430,7 +412,7 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         ] {
             file_state(cli, name, en);
         }
-        println!("{}",t(en,"缺失部署/历史状态不等于 OAuth 失效。请先 06 → 02 校验、07 诊断，并核对历史；不要自动 FRESH 或删除保护记录。","Missing deployment/history does not imply invalid OAuth. Verify via 06 → 02, diagnose via 07 and review history; never automatically FRESH-bind or delete guards."));
+        println!("{}",t(en,"缺失部署/历史状态不等于 OAuth 失效。旧账号请进入 06 → 09 恢复向导，不要 FRESH 或删除保护记录。","Missing deployment/history does not imply invalid OAuth. Existing accounts: use recovery wizard 06 → 09; never FRESH-bind or delete guards."));
         if store.root.join("state.json").exists() && state.is_err() {
             println!("{}",color(t(en,"✗ 调度状态无效或读取失败；请运行 doctor 并保留请求历史","✗ Invalid or unreadable scheduler state; run doctor and retain request history"),31));
         }
@@ -971,6 +953,9 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
                 let command = choose(en, &format!("{n:02}"));
                 match command {
                     Ok(None) => return Ok(()),
+                    Ok(Some(Cmd::Recover {
+                        action: RecoveryAction::Wizard,
+                    })) => recovery_wizard(cli)?,
                     Ok(Some(cmd)) => report(execute(cli, cmd, en), en)?,
                     Err(e) => report(Err(e), en)?,
                 }
@@ -1053,4 +1038,177 @@ mod tests {
     fn external_text_cannot_inject_terminal_controls() {
         assert_eq!(clean("event\x1b[3J\r\n"), "event[3J");
     }
+}
+
+pub fn render_recovery(v: &Value, en: bool) {
+    if let Some(class) = v["classification"].as_str() {
+        let message=match class {
+            "oauth_missing"=>t(en,"未发现有效 OAuth；请先人工登录并进行服务端校验","No valid local OAuth; log in and verify the server identity"),
+            "data_corrupt"=>t(en,"记录损坏或读取失败；本地恢复会保留证据，全局门禁损坏必须人工核查备份","Corrupt or unreadable records; local recovery preserves evidence; corrupt global guards require backup review"),
+            "recovery_waiting"=>t(en,"已有账号恢复中：历史仍未知，等待结束后必须再次校验及明确授权","Existing-account recovery: history remains unknown; recheck and explicitly approve after waiting"),
+            "not_authorized"=>t(en,"调度状态就绪，但尚未生产授权；请在向导中明确启用","Scheduler records ready, production not authorized; explicitly enable in the wizard"),
+            "authorized"=>t(en,"已取得生产授权；是否真正运行请检查服务与新的 live 状态","Production authorized; verify the service and a fresh live status to confirm actual operation"),
+            _=>t(en,"调度历史缺失或不完整；不能凭额度判断新旧账号。旧账号请恢复；仅从未运行的账号可声明 FRESH","Scheduler history missing/incomplete; quota cannot prove an account is new. Recover existing accounts; only never-used accounts may declare FRESH"),
+        };
+        println!("{}", color(message, 33));
+        if let Some(files) = v["files"].as_object() {
+            for (file, value) in files {
+                if value != "valid" {
+                    println!(
+                        "! {file}: {}",
+                        t(
+                            en,
+                            if value == "missing" {
+                                "文件缺失"
+                            } else {
+                                "无效或无法读取"
+                            },
+                            if value == "missing" {
+                                "Missing"
+                            } else {
+                                "Invalid or unreadable"
+                            }
+                        )
+                    );
+                }
+            }
+        }
+        if v["account_guard_valid"] != true {
+            println!(
+                "{}",
+                t(
+                    en,
+                    "! 账号保护记录未就绪；请勿清空或当作 FRESH",
+                    "! Account guard not ready; never clear it or assume FRESH"
+                )
+            );
+        }
+    }
+    let recovery = &v["recovery"];
+    if recovery.is_object() {
+        let now = chrono::Utc::now().timestamp();
+        let at = recovery["not_before"].as_i64();
+        println!(
+            "{}: {}",
+            t(
+                en,
+                "未知历史保守等待截止",
+                "Unknown-history quarantine until"
+            ),
+            at.and_then(|at| local_time(at, timezone().ok()?))
+                .unwrap_or_else(|| "?".into())
+        );
+        println!(
+            "{}: {}",
+            t(
+                en,
+                "剩余秒数（活动可能延长）",
+                "Remaining seconds (activity can extend)"
+            ),
+            at.unwrap_or(now).saturating_sub(now).max(0)
+        );
+        println!("{}",t(en,"等待不是自动授权；旧历史未恢复或证明为空。停止其他调度器和手动调用后，再选择复查与明确启用。","Waiting is not authorization; old history remains unknown. Stop other schedulers/manual requests, then recheck and explicitly enable."));
+    }
+    if v["automatic_warmup_enabled"] == true && v["daemon_live_confirmed"] == true {
+        println!("{}",color(t(en,"✓ 已确认正式运行，自动预热已启用；仍受额度、窗口及全局防重保护，不强制测试模型请求","✓ Production daemon confirmed; automatic warmup enabled with quota/window/global guards; no forced model test"),32));
+    } else if v.get("automatic_warmup_enabled").is_some() {
+        println!("{}",color(t(en,"自动预热尚未启用；准备、复查及等待不会授权模型请求","Automatic warmup is not enabled; preparation, rechecks and waiting do not authorize model requests"),33));
+    }
+}
+pub fn recovery_wizard(cli: &Cli) -> Result<()> {
+    if !io::stdin().is_terminal() || cli.json {
+        bail!("interactive_wizard_required / 向导需要交互终端；脚本请使用 recover status、begin、check 和 enable");
+    }
+    let en = cli.lang.as_deref() == Some("en-US");
+    let previous_active = ACTIVE.swap(true, Ordering::Relaxed);
+    let previous = TITLE.with(|t| t.replace(titled(en)));
+    let result = (|| -> Result<()> {
+        loop {
+            action_page(en);
+            let state = {
+                let store = configured(cli)?;
+                kairo_platform::recovery::inspect(&store, &rt::guard_root())?
+            };
+            render_recovery(&state, en);
+            let choice = submenu(
+                en,
+                &[
+                    "OAuth 人工登录",
+                    "服务端校验身份与额度",
+                    "首次新账号绑定（FRESH，仅从未运行）",
+                    "旧账号历史丢失：准备保守恢复",
+                    "复查恢复等待及最新额度",
+                    "明确授权并验证正式运行",
+                    "查看真实运行状态",
+                ],
+                &[
+                    "Human OAuth login",
+                    "Verify server identity and quota",
+                    "First account binding (FRESH, never used only)",
+                    "Existing account: begin unknown-history recovery",
+                    "Recheck recovery wait and latest quota",
+                    "Explicitly authorize and verify production",
+                    "Show actual runtime status",
+                ],
+            )?;
+            let cmd = match choice.trim_start_matches('0') {
+                "" => return Ok(()),
+                "1" => Cmd::Auth {
+                    action: "login".into(),
+                    name: None,
+                    home: None,
+                    acknowledge_fresh: false,
+                },
+                "2" => Cmd::Auth {
+                    action: "verify".into(),
+                    name: None,
+                    home: None,
+                    acknowledge_fresh: false,
+                },
+                "3" => {
+                    let ack=input(t(en,"仅确认从未运行过本账号，才输入 FRESH；旧账号禁止使用 > ","Type FRESH only if this account has never run Kairo; existing accounts must not use it > "))?=="FRESH";
+                    Cmd::Auth {
+                        action: "bind".into(),
+                        name: None,
+                        home: None,
+                        acknowledge_fresh: ack,
+                    }
+                }
+                "4" => {
+                    let ack=input(t(en,"先停止其他设备/调度器的自动与手动调用。确认旧历史未知，输入 RECOVER > ","Stop automatic/manual requests on other devices/schedulers. Acknowledge unknown history: type RECOVER > "))?=="RECOVER";
+                    Cmd::Recover {
+                        action: RecoveryAction::Begin {
+                            acknowledge_unknown_history: ack,
+                        },
+                    }
+                }
+                "5" => Cmd::Recover {
+                    action: RecoveryAction::Check,
+                },
+                "6" => {
+                    let ack=input(t(en,"等待结束并校验通过后，将切换真实服务，未来可能发送预热请求。输入 ENABLE 明确授权 > ","After waiting/verification, switches the real service and permits future warmup requests. Type ENABLE to approve > "))?=="ENABLE";
+                    Cmd::Enable {
+                        approve_production_cutover: ack,
+                    }
+                }
+                "7" => {
+                    report(summary(cli, en, true, false), en)?;
+                    continue;
+                }
+                _ => unreachable!(),
+            };
+            report(run(cli, cmd), en)?;
+        }
+    })();
+    TITLE.with(|t| *t.borrow_mut() = previous);
+    ACTIVE.store(previous_active, Ordering::Relaxed);
+    result
+}
+fn titled(en: bool) -> String {
+    t(
+        en,
+        "首次启用与已有账号恢复",
+        "First use and existing-account recovery",
+    )
+    .into()
 }

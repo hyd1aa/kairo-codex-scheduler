@@ -410,6 +410,8 @@ mod usage_tests {
     }
 }
 
+pub mod activation;
+pub mod recovery;
 pub mod runtime;
 
 pub mod update;

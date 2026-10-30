@@ -8,6 +8,7 @@ with tempfile.TemporaryDirectory(prefix='kairo-panel-') as temp:
   p=tools/name;p.write_text('#!/usr/bin/env python3\n'+body);p.chmod(0o700)
  tool('systemctl', '''import os,pathlib,sys
 p=pathlib.Path(os.environ['MOCK_SERVICE']); a=sys.argv[1]
+if 'codex-window-scheduler.service' in sys.argv:print('inactive');sys.exit(0)
 if a in ('start','restart','stop'): p.write_text('inactive' if a=='stop' or os.environ.get('MOCK_START_FAIL') else 'active')
 if a=='show': print('ActiveState='+ (p.read_text() if p.exists() else 'inactive')+'\\nLoadState=loaded\\nMainPID=42\\nExecStart=daemon --observe')
 if a=='is-enabled':print('enabled')
@@ -53,6 +54,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   out=menu('04\n02\n\n00\n00\n',{'MOCK_START_FAIL':'1'});assert ('尚未运行' if lang=='zh-CN' else 'not active') in out
   out=menu('05\n02\n03\n04\n05\n01\n00\n00\n');assert 'observation only' in out or '只读观察' in out or 'observation_only' in out
   menu('06\n01\n\n02\n\n03\n\n04\n\n05\nsecondary\n'+temp+'\n\n06\nsecondary\n\n07\nsecondary\n\n08\nNO\n\n00\n00\n')
+  menu('06\n09\n02\n\n03\nNO\n\n04\nRECOVER\n\n05\n\n06\nENABLE\n\n07\n\n00\n00\n00\n')
   menu('07\n01\n\n02\n\n00\n00\n')
   menu('08\n02\ninvalid\n\n03\n301\n\n01\n\n07\n\n00\n00\n')
   menu('08\n02\ntrue\n\n03\n30\n\n04\n\n05\n\n06\n\n00\n00\n')
@@ -77,4 +79,9 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  p=direct(ok=False);assert '\x1b' not in p.stdout+p.stderr
  v=json.loads(direct('--json','status').stdout);assert v['version']==expected_version and 'state_valid' in v
  v=json.loads(direct('--json','schedule','list').stdout);assert len(v['anchors'])==4
+ v=json.loads(direct('--json','recover','status').stdout);assert v['classification']=='history_unknown' and not v['scheduler_state_ready']
+ v=json.loads(direct('--json','doctor').stdout);assert not v['state_valid'] and v['existing_records_valid']
+ for command in [('recover','begin'),('recover','begin','--acknowledge-unknown-history'),('recover','check'),('enable','--approve-production-cutover'),('activate','--account','bad','--approve-production-cutover')]:
+  p=direct('--json',*command,ok=False);assert 'error' in json.loads(p.stdout)
+ assert not (data/'deployment.json').exists() and not (data/'state.json').exists()
 print(f'{checks} isolated bilingual menu/PTY sessions passed; JSON, EOF, SIGINT, NO_COLOR and terminal echo verified')

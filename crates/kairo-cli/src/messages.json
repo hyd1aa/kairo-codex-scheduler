@@ -51,6 +51,10 @@
     "en": "Atomically migrate compatible state or import a normalized transfer",
     "zh": "原子迁移兼容状态或导入标准化迁移包"
   },
+  "Authorize and verify managed production scheduling": {
+    "en": "Authorize and verify managed production scheduling",
+    "zh": "明确授权并验证 systemd 正式调度"
+  },
   "ChatGPT OAuth required": {
     "en": "ChatGPT OAuth required",
     "zh": "需要 ChatGPT OAuth"
@@ -131,6 +135,10 @@
     "en": "Explicit original account fingerprint",
     "zh": "明确的原账号指纹"
   },
+  "Explicit production approval; may allow future model requests": {
+    "en": "Explicit production approval; may allow future model requests",
+    "zh": "明确生产授权，之后可能发生预热请求"
+  },
   "Fetch and apply a checksum-authenticated release manifest": {
     "en": "Fetch and apply a checksum-authenticated release manifest",
     "zh": "按独立可信清单校验值下载并升级"
@@ -143,6 +151,10 @@
     "en": "HH:MM required",
     "zh": "必须使用 HH:MM"
   },
+  "History is unknown and other automatic/manual requests have stopped": {
+    "en": "History is unknown and other automatic/manual requests have stopped",
+    "zh": "确认历史未知，其他自动和手动请求已停止"
+  },
   "Independently trusted SHA256": {
     "en": "Independently trusted SHA256",
     "zh": "独立可信的 SHA256 校验值"
@@ -151,6 +163,10 @@
     "en": "Initialize configuration without starting services",
     "zh": "初始化配置，不启动服务"
   },
+  "Inspect missing files and recovery stage without network requests": {
+    "en": "Inspect missing files and recovery stage without network requests",
+    "zh": "无网络检查缺失文件与恢复阶段"
+  },
   "Install a verified binary without starting services": {
     "en": "Install a verified binary without starting services",
     "zh": "安装校验后的二进制，不启动服务"
@@ -158,6 +174,10 @@
   "Installation prefix": {
     "en": "Installation prefix",
     "zh": "安装目录"
+  },
+  "Interactive first-use and reinstall recovery wizard": {
+    "en": "Interactive first-use and reinstall recovery wizard",
+    "zh": "首次启用与重装恢复交互向导"
   },
   "Interface language: zh-CN or en-US": {
     "en": "Interface language: zh-CN or en-US",
@@ -335,6 +355,10 @@
     "en": "Recover an interrupted update transaction",
     "zh": "恢复中断的升级事务"
   },
+  "Recover existing accounts with unknown local history": {
+    "en": "Recover existing accounts with unknown local history",
+    "zh": "安全恢复本地历史丢失的已有账号"
+  },
   "Remove a time": {
     "en": "Remove a time",
     "zh": "删除时间"
@@ -370,6 +394,10 @@
   "Restore four default times": {
     "en": "Restore four default times",
     "zh": "恢复四个默认时间"
+  },
+  "Revalidate identity and quota; extend waiting after activity": {
+    "en": "Revalidate identity and quota; extend waiting after activity",
+    "zh": "重新校验身份与额度，发现活动延长等待"
   },
   "Roll back the binary while retaining current attempt history": {
     "en": "Roll back the binary while retaining current attempt history",
@@ -410,6 +438,10 @@
   "Source binary": {
     "en": "Source binary",
     "zh": "源二进制程序"
+  },
+  "Start conservative recovery after stopping other schedulers": {
+    "en": "Start conservative recovery after stopping other schedulers",
+    "zh": "停用其他调度器后开始保守恢复"
   },
   "State missing/corrupt: execution blocked": {
     "en": "State missing/corrupt: execution blocked",
@@ -499,6 +531,10 @@
     "en": "Account gate missing; migration required",
     "zh": "账号门禁缺失，需要迁移"
   },
+  "account_guard_corrupt": {
+    "en": "account guard corrupt",
+    "zh": "全局账号保护记录损坏；保留原件并人工恢复备份，禁止覆盖"
+  },
   "account_guard_exists": {
     "en": "account guard exists",
     "zh": "账号安全门禁已存在；不得重建状态"
@@ -506,6 +542,10 @@
   "account_guard_invalid": {
     "en": "account guard invalid",
     "zh": "账号门禁无效"
+  },
+  "account_guard_mismatch": {
+    "en": "account guard mismatch",
+    "zh": "账号保护记录不匹配，禁止跨账号恢复"
   },
   "account_guard_missing": {
     "en": "account guard missing",
@@ -515,9 +555,17 @@
     "en": "account mismatch",
     "zh": "账号不匹配"
   },
+  "account_missing": {
+    "en": "account missing",
+    "zh": "缺少已验证账号"
+  },
   "account_profile_name": {
     "en": "Account profile name",
     "zh": "账号配置名称"
+  },
+  "account_recovery_required": {
+    "en": "account recovery required",
+    "zh": "缺少账号绑定或调度历史；旧账号请运行 recover begin --acknowledge-unknown-history，新账号请使用首次绑定向导"
   },
   "account_required": {
     "en": "account required",
@@ -570,6 +618,10 @@
   "auth_action_invalid": {
     "en": "auth action invalid",
     "zh": "账号操作无效"
+  },
+  "authorize_and_verify_managed_production_scheduling": {
+    "en": "Authorize and verify managed production scheduling",
+    "zh": "明确授权并验证 systemd 正式调度"
   },
   "candidate_invalid": {
     "en": "candidate invalid",
@@ -663,9 +715,17 @@
     "en": "cursor invalid",
     "zh": "调度游标无效"
   },
+  "custom_service_override": {
+    "en": "custom service override",
+    "zh": "存在自定义或运行时覆盖，禁止自动接管"
+  },
   "cutover_approval_required": {
     "en": "cutover approval required",
     "zh": "需要明确生产切换批准"
+  },
+  "cutover_rollback_incomplete": {
+    "en": "cutover rollback incomplete",
+    "zh": "切换失败且回退未完全完成；请检查 kairo.service 和 deployment 授权状态，禁止继续自动尝试"
   },
   "daemon_already_running": {
     "en": "daemon already running",
@@ -739,6 +799,10 @@
     "en": "Explicit original account fingerprint",
     "zh": "明确的原账号指纹"
   },
+  "explicit_production_approval;_may_allow_future_model_requests": {
+    "en": "Explicit production approval; may allow future model requests",
+    "zh": "明确生产授权，之后可能发生预热请求"
+  },
   "fetch_and_apply_a_checksum-authenticated_release_manifest": {
     "en": "Fetch and apply a checksum-authenticated release manifest",
     "zh": "按独立可信清单校验值下载并升级"
@@ -771,6 +835,10 @@
     "en": "HH:MM required",
     "zh": "必须使用 HH:MM"
   },
+  "history_is_unknown_and_other_automatic_manual_requests_have_stopped": {
+    "en": "History is unknown and other automatic/manual requests have stopped",
+    "zh": "确认历史未知，其他自动和手动请求已停止"
+  },
   "independently_trusted_sha256": {
     "en": "Independently trusted SHA256",
     "zh": "独立可信的 SHA256 校验值"
@@ -778,6 +846,10 @@
   "initialize_configuration_without_starting_services": {
     "en": "Initialize configuration without starting services",
     "zh": "初始化配置，不启动服务"
+  },
+  "inspect_missing_files_and_recovery_stage_without_network_requests": {
+    "en": "Inspect missing files and recovery stage without network requests",
+    "zh": "无网络检查缺失文件与恢复阶段"
   },
   "install_a_verified_binary_without_starting_services": {
     "en": "Install a verified binary without starting services",
@@ -787,9 +859,17 @@
     "en": "Installation prefix",
     "zh": "安装目录"
   },
+  "interactive_first-use_and_reinstall_recovery_wizard": {
+    "en": "Interactive first-use and reinstall recovery wizard",
+    "zh": "首次启用与重装恢复交互向导"
+  },
   "interactive_login_required": {
     "en": "interactive login required",
     "zh": "OAuth 登录需要交互终端，由用户完成人工认证"
+  },
+  "interactive_wizard_required": {
+    "en": "interactive wizard required",
+    "zh": "向导需要交互终端；脚本请使用 recover status、begin、check 和 enable"
   },
   "interface_language:_zh-cn_or_en-us": {
     "en": "Interface language: zh-CN or en-US",
@@ -895,6 +975,10 @@
     "en": "List activation times",
     "zh": "查看激活时间"
   },
+  "live_status_unconfirmed": {
+    "en": "live status unconfirmed",
+    "zh": "服务尚未报告新的正式运行状态；授权已回退，查看日志并重试 enable"
+  },
   "local_gate_mismatch": {
     "en": "Local gate mismatch",
     "zh": "本地门禁不匹配"
@@ -919,9 +1003,29 @@
     "en": "Manage daily activation times",
     "zh": "管理每日激活时间"
   },
+  "managed_exec_mismatch": {
+    "en": "managed exec mismatch",
+    "zh": "服务启动命令与 Kairo 数据目录不匹配"
+  },
   "managed_installer_missing": {
     "en": "managed installer missing",
     "zh": "需要通过在线安装器安装"
+  },
+  "managed_root_required": {
+    "en": "managed root required",
+    "zh": "自动切换仅支持 root 和标准 /var/lib/kairo 安装；开发目录不会修改真实服务"
+  },
+  "managed_service_changed": {
+    "en": "managed service changed",
+    "zh": "服务不是标准安装器模板；保留自定义 unit，请人工核对切换"
+  },
+  "managed_service_unsafe": {
+    "en": "managed service unsafe",
+    "zh": "服务覆盖目录不安全"
+  },
+  "managed_unit_mismatch": {
+    "en": "managed unit mismatch",
+    "zh": "systemd 使用了其他服务文件，拒绝接管"
   },
   "manifest_checksum_mismatch": {
     "en": "manifest checksum mismatch",
@@ -979,9 +1083,17 @@
     "en": "OAuth unavailable",
     "zh": "OAuth 未授权"
   },
+  "observation_override_changed": {
+    "en": "observation override changed",
+    "zh": "观察配置在切换期间变化，拒绝删除"
+  },
   "observer_cannot_execute": {
     "en": "observer cannot execute",
     "zh": "观察适配器没有模型执行能力"
+  },
+  "observer_restart_failed": {
+    "en": "observer restart failed",
+    "zh": "授权已关闭，但观察服务未能重启；请检查日志"
   },
   "offline_mode": {
     "en": "offline mode",
@@ -1002,6 +1114,10 @@
   "original_scheduler_timezone,_e.g._asia_shanghai": {
     "en": "Original scheduler timezone, e.g. Asia/Shanghai",
     "zh": "原调度器时区，例如 Asia/Shanghai"
+  },
+  "pause_before_recovery": {
+    "en": "pause before recovery",
+    "zh": "账号不匹配或已有生产授权；请先暂停并检查状态"
   },
   "pause_kairo_model_requests": {
     "en": "Pause Kairo model requests",
@@ -1099,6 +1215,10 @@
     "en": "Quota HTTP {}",
     "zh": "额度请求被拒绝"
   },
+  "quota_invalid": {
+    "en": "quota invalid",
+    "zh": "额度验证失败"
+  },
   "quota_limit_flag_missing": {
     "en": "Quota limit flag missing",
     "zh": "缺少额度限制标志"
@@ -1130,6 +1250,50 @@
   "recover_an_interrupted_update_transaction": {
     "en": "Recover an interrupted update transaction",
     "zh": "恢复中断的升级事务"
+  },
+  "recover_existing_accounts_with_unknown_local_history": {
+    "en": "Recover existing accounts with unknown local history",
+    "zh": "安全恢复本地历史丢失的已有账号"
+  },
+  "recovery_approval_required": {
+    "en": "recovery approval required",
+    "zh": "历史未知恢复尚未获准；请完成等待和恢复向导"
+  },
+  "recovery_clock_or_request_pending": {
+    "en": "recovery clock or request pending",
+    "zh": "本地历史时钟超前，禁止恢复"
+  },
+  "recovery_evidence_changed": {
+    "en": "recovery evidence changed",
+    "zh": "原始记录发生变化，禁止覆盖恢复证据"
+  },
+  "recovery_guard_missing": {
+    "en": "recovery guard missing",
+    "zh": "等待期间账号保护文件丢失；请重新核查，不得直接授权"
+  },
+  "recovery_invalid": {
+    "en": "recovery invalid",
+    "zh": "恢复记录无效；保留证据并检查备份，不得当作新账号"
+  },
+  "recovery_not_started": {
+    "en": "recovery not started",
+    "zh": "尚未开始恢复；请先运行 recover begin"
+  },
+  "recovery_owner_mismatch": {
+    "en": "recovery owner mismatch",
+    "zh": "全局恢复授权与本地目录或记录不匹配；请运行 recover check，禁止执行"
+  },
+  "recovery_owner_or_clock": {
+    "en": "recovery owner or clock",
+    "zh": "恢复目录不匹配或时钟回拨；禁止授权"
+  },
+  "recovery_quota_blocked": {
+    "en": "recovery quota blocked",
+    "zh": "额度未知、每周额度已用尽或服务端拒绝；保留观察，恢复未授权"
+  },
+  "recovery_wait_required": {
+    "en": "recovery wait required",
+    "zh": "保守等待尚未结束或检测到新活动；请运行 recover check 查看新的截止时间"
   },
   "release_invalid": {
     "en": "release invalid",
@@ -1191,6 +1355,10 @@
     "en": "Restore four default times",
     "zh": "恢复四个默认时间"
   },
+  "revalidate_identity_and_quota;_extend_waiting_after_activity": {
+    "en": "Revalidate identity and quota; extend waiting after activity",
+    "zh": "重新校验身份与额度，发现活动延长等待"
+  },
   "roll_back_the_binary_while_retaining_current_attempt_history": {
     "en": "Roll back the binary while retaining current attempt history",
     "zh": "回退二进制并保留当前调用历史"
@@ -1241,7 +1409,11 @@
   },
   "service_not_stopped": {
     "en": "service not stopped",
-    "zh": "服务尚未完全停止，请查看日志"
+    "zh": "服务或子进程尚未停止，未执行生产授权"
+  },
+  "service_still_observing": {
+    "en": "service still observing",
+    "zh": "仍有观察模式或未知启动命令；授权将回退"
   },
   "shadow_incomplete": {
     "en": "shadow incomplete",
@@ -1279,6 +1451,10 @@
     "en": "Source binary",
     "zh": "源二进制程序"
   },
+  "start_conservative_recovery_after_stopping_other_schedulers": {
+    "en": "Start conservative recovery after stopping other schedulers",
+    "zh": "停用其他调度器后开始保守恢复"
+  },
   "state_missing_corrupt:_execution_blocked": {
     "en": "State missing/corrupt: execution blocked",
     "zh": "状态丢失或损坏，执行已阻止"
@@ -1315,6 +1491,14 @@
     "en": "system uninstall failed",
     "zh": "系统卸载失败，请检查权限及日志"
   },
+  "systemd_cutover_failed": {
+    "en": "systemd cutover failed",
+    "zh": "systemd 切换失败；自动请求授权已回退，请检查服务日志"
+  },
+  "systemd_query_failed": {
+    "en": "systemd query failed",
+    "zh": "无法查询 Kairo systemd 状态"
+  },
   "time_missing": {
     "en": "time missing",
     "zh": "时间不存在"
@@ -1327,9 +1511,17 @@
     "en": "transfer required",
     "zh": "需要状态迁移包"
   },
+  "unit_too_large": {
+    "en": "unit too large",
+    "zh": "服务文件过大"
+  },
   "unix_user_home": {
     "en": "Unix user home",
     "zh": "系统用户主目录"
+  },
+  "unknown_history_ack_required": {
+    "en": "unknown history ack required",
+    "zh": "请明确选择已有账号历史未知恢复；停止其他设备或调度器的自动调用，并在等待期间避免手动请求"
   },
   "unknown_system_timezone;_scheduling_blocked": {
     "en": "Unknown system timezone; scheduling blocked",

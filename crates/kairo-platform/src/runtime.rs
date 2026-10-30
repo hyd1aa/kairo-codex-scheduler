@@ -105,7 +105,16 @@ pub fn bind(store: &Store, acknowledge_fresh: bool) -> Result<Value> {
     if !acknowledge_fresh {
         bail!("fresh_account_ack_required / 首次绑定须确认无近期请求；已有服务应使用迁移导入")
     }
-    if store.root.join("deployment.json").exists() || store.root.join("state.json").exists() {
+    if [
+        "deployment.json",
+        "state.json",
+        "cursor.json",
+        "recovery.json",
+        "account-origin.json",
+    ]
+    .iter()
+    .any(|n| crate::recovery::present(&store.root.join(n)).unwrap_or(true))
+    {
         bail!("already_bound / 已绑定或状态需要人工复核")
     }
     ensure_legacy_inactive()?;
@@ -148,6 +157,10 @@ pub fn bind(store: &Store, acknowledge_fresh: bool) -> Result<Value> {
     let mut cursor = Cursor::new(now, timezone()?);
     cursor.arm(&store.config()?, timezone()?, now)?;
     store.write("cursor.json", &cursor)?;
+    store.write(
+        "account-origin.json",
+        &json!({"account":id.fingerprint,"origin":"administrator_declared_fresh","at":now}),
+    )?;
     Ok(
         json!({"bound":true,"account_fingerprint":id.fingerprint,"execution":"observation_only","quarantine_until":now+18300}),
     )
@@ -195,6 +208,12 @@ pub fn activate(store: &Store, account: &str, ack: bool) -> Result<()> {
     if !ack {
         bail!("cutover_approval_required / 需要明确生产切换批准")
     };
+    for name in ["deployment.json", "state.json", "cursor.json"] {
+        if !store.root.join(name).try_exists()? {
+            bail!("account_recovery_required / 缺少账号绑定或调度历史；旧账号请运行 recover begin --acknowledge-unknown-history，新账号请使用首次绑定向导");
+        }
+    }
+    crate::management::validate(store)?;
     ensure_legacy_inactive()?;
     let verified = verify(store)?;
     let mut d: Deployment = store.read("deployment.json")?;
@@ -206,7 +225,8 @@ pub fn activate(store: &Store, account: &str, ack: bool) -> Result<()> {
     {
         bail!("account_mismatch / 账号不匹配")
     };
-    let _gate = AccountGate::open_existing(&guard_root(), account)?;
+    let gate = AccountGate::open_existing(&guard_root(), account)?;
+    gate.check_local(&store.root)?;
     d.enabled = true;
     d.approved_at = Some(Utc::now().timestamp());
     store.write("deployment.json", &d)
@@ -377,7 +397,9 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
     }
     let gate = if d.enabled {
         ensure_legacy_inactive()?;
-        Some(AccountGate::open_existing(&guard_root(), &d.account)?)
+        let gate = AccountGate::open_existing(&guard_root(), &d.account)?;
+        gate.check_local(&store.root)?;
+        Some(gate)
     } else {
         None
     };
@@ -458,6 +480,9 @@ pub fn daemon_lease(root: &Path) -> Result<fs::File> {
 }
 fn execution_lease(root: &Path, account: &str) -> Result<fs::File> {
     let gate = Store::open(&root.join(account))?;
+    authority_lease(&gate)
+}
+pub(crate) fn authority_lease(gate: &Store) -> Result<fs::File> {
     let f = fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -513,7 +538,7 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
             iteration(&store, startup, observe_only)
         })();
         let failed = result.is_err();
-        let value = match result {
+        let mut value = match result {
             Ok(v) => v,
             Err(e) => {
                 let message = e.to_string();
@@ -530,6 +555,7 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
             }
         };
         let signature = format!("{}:{}", value["event"], value["error"]);
+        value["daemon_pid"] = json!(std::process::id());
         store.write("status.json", &value)?;
         if signature != previous || once {
             println!("{}", value);
