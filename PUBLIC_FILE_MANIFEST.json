@@ -1149,8 +1149,8 @@
       "source_commit": null,
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "edfbe981176027e268c0b7dfaecf40929d05e7e7ad359831b75250a42ec3be13"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "a82b6b97e9a027f556a8290e1124965e45b6a09a6a66e9b1b38b6bdb303d09e4"
     },
     {
       "path": "tests/pipe_lifecycle.py",

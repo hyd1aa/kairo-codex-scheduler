@@ -19,6 +19,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  def direct(*args,ok=True):
   p=subprocess.run([binary,'--data-dir',str(data),*args],env=env,capture_output=True,text=True,timeout=10)
   assert (p.returncode==0)==ok,(args,p.stdout,p.stderr);return p
+ (root/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-panel','access_token':'synthetic-panel-placeholder'}}));(root/'auth.json').chmod(0o600)
  direct('init');direct('runtime','--home',temp,'--codex-home',temp,'--codex','/nonexistent-kairo-synthetic')
  def menu(text,extra=None,interrupt=False):
   global checks
@@ -39,7 +40,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   assert p.returncode in ((-signal.SIGINT,130) if interrupt else (0,)),(text,p.returncode,out[-2000:])
   assert termios.tcgetattr(s)==before,'Terminal modes changed'
   os.close(m);os.close(s);checks+=1
-  return out.decode(errors='replace')
+  decoded=out.decode(errors='replace');assert 'synthetic-panel-placeholder' not in decoded,'Credential leaked';return decoded
  def plain(s):return re.sub(r'\x1b\[[0-9;]*[mHJ]','',s).replace('\r','')
  for lang in ('zh-CN','en-US'):
   direct('lang',lang)
@@ -51,9 +52,11 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   out=menu('04\n02\n\n03\n\n04\n\n01\n\n00\n00\n');assert out.count('Codex Window Scheduler')==2
   out=menu('04\n02\n\n00\n00\n',{'MOCK_START_FAIL':'1'});assert ('尚未运行' if lang=='zh-CN' else 'not active') in out
   out=menu('05\n02\n03\n04\n05\n01\n00\n00\n');assert 'observation only' in out or '只读观察' in out or 'observation_only' in out
-  menu('07\n01\n\n00\n00\n')
+  menu('06\n01\n\n02\n\n03\n\n04\n\n05\nsecondary\n'+temp+'\n\n06\nsecondary\n\n07\nsecondary\n\n08\nNO\n\n00\n00\n')
+  menu('07\n01\n\n02\n\n00\n00\n')
   menu('08\n02\ninvalid\n\n03\n301\n\n01\n\n07\n\n00\n00\n')
-  menu('09\n06\n\n00\n00\n') # Offline check fails; never updates.
+  menu('08\n02\ntrue\n\n03\n30\n\n04\n\n05\n\n06\n\n00\n00\n')
+  menu('09\n01\n'+temp+'/missing-manifest\n\n02\n'+temp+'/missing-binary\n'+'0'*64+'\n'+temp+'/prefix\n\n04\n'+temp+'/prefix\n\n05\n'+temp+'/prefix\n\n06\n\n00\n00\n') # Offline check fails; never updates.
   menu('11\n01\n\n02\n\n03\n\n00\n00\n')
   menu('12\nno\n\n00\n');menu('12\nyes\nno\n\n00\n') # No uninstall executor invoked.
  # Distinguish valid OAuth discovery from missing binding/deployment and corrupt state.
