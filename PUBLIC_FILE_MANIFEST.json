@@ -670,7 +670,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "2107db03b52e06e3ef650cf6ef3bf978c9732556b6aac1ad113d75e7d04deda1",
+      "sha256": "5e63d240201826bc8626f9e0d440280d4072dd4cb8f573afa43d6baa5d4dbbca",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
@@ -1231,7 +1231,7 @@
     },
     {
       "path": "tests/online_install_guest.py",
-      "sha256": "69471fa4147b7352c2000fef9ba084d53feecb5c24ce5b05f398250413b30ec1",
+      "sha256": "bd099a92f09d63150ed016e01d974b952f8e58eb428fa1e798d8f0b70ce39526",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
@@ -1365,14 +1365,14 @@
     },
     {
       "path": "uninstall.sh",
-      "sha256": "024afb4d4266e89bc2ae2285fb2e353081449431e70e3a564e5c1f2c5deae741",
+      "sha256": "beacf55d676b9c5231f1ac1da0d68e30af805ca4d4c3f404e7984f2cb556e072",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Independently authored Kairo maintenance script or focused test under project MIT",
       "source_commit": null,
       "source_path": null,
       "source_sha256": null,
-      "transformation": "New maintenance implementation; genuine follow-up history"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance"
     }
   ],
   "inventory_state": "Current maintenance source; runtime release tag remains bfcdb9587a70cda3968e3e3436198bca0356959b"

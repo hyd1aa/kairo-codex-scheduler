@@ -89,6 +89,17 @@ try:
   required=['User=kairo','Group='+grp.getgrgid(pwd.getpwnam('kairo').pw_gid).gr_name,'Environment=HOME=/home/kairo','ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon','KillMode=control-group']
   if any(line not in text.splitlines() for line in required):raise RuntimeError('kairo.service differs from managed service identity; refusing removal')
  if exists(drop) and drop.is_symlink():raise RuntimeError('Unsafe service drop-in directory')
+ for name in ['kairo-onboarding.timer','kairo-onboarding.service']:
+  task=unit.parent/name
+  if exists(task):
+   safe_directory(task.parent)
+   m=task.lstat()
+   if not stat.S_ISREG(m.st_mode) or m.st_uid!=0 or m.st_mode&0o022:raise RuntimeError('Unsafe initialization unit')
+   body=task.read_text()
+   expected='Unit=kairo-onboarding.service' if name.endswith('.timer') else 'ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo onboard'
+   if expected not in body.splitlines():raise RuntimeError('Unknown initialization unit; preserved')
+   system('disable','--now',name) if name.endswith('.timer') else system('stop',name)
+   task.unlink()
  load=show('LoadState')
  if load!='not-found':
   fragment=show('FragmentPath')

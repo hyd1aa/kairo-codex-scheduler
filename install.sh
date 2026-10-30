@@ -451,13 +451,13 @@ PYOAUTH
   systemctl enable --now kairo.service
  fi
  systemctl enable --now kairo-onboarding.timer
- if (( fresh_install && new_auto_intent )) && [[ -r /dev/tty ]] && [[ -w /dev/tty ]]; then
+ if (( fresh_install && new_auto_intent )) && { exec 8<>/dev/tty; } 2>/dev/null && [[ -t 8 ]]; then
   if ! /usr/sbin/runuser -u kairo -- test -r /home/kairo/.codex/auth.json; then
    msg '请完成官方 Codex OAuth 登录。' 'Complete official Codex OAuth login.'
-   /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo auth login </dev/tty >/dev/tty 2>&1 || :
+   /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo auth login <&8 >&8 2>&1 || :
   fi
   msg '其他机器使用同账号无法自动检测。已停止其他调度器，且恢复等待期间不手动请求？[yes/N]' 'Other machines cannot be checked. Other schedulers stopped, and no manual requests during recovery? [yes/N]'
-  answer=; read -r answer </dev/tty || :
+  answer=; read -r answer <&8 || :
   if [[ $answer == yes ]]; then /opt/kairo/current/bin/kairo onboard --request --confirm-exclusive-account || msg '请先完成登录，再在菜单04确认。' 'Complete login, then confirm once in menu04.'; fi
  fi
  systemctl start --no-block kairo-onboarding.service
