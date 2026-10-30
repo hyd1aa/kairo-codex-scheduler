@@ -70,7 +70,7 @@
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "69bdfaa380b91d8aa6b6edf29309caa482bdc0cbc3a8df8988cc94f54dba8a9d",
+      "sha256": "6f28713de2bdba53e5ece9330f5d6e76c0b1ff800fc25072b18c35e2c3a1bcc2",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -670,7 +670,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "83a27422de714cdb75450ae0c1f0123009a925bd0c5b3f0164a2846cea653994",
+      "sha256": "78e4ba4a18aec6c360b951d05d779db3edef1dd10c1d12cde0db0a86b35d2f73",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
@@ -1130,7 +1130,7 @@
     },
     {
       "path": "scripts/verify.sh",
-      "sha256": "792736b70cf8579bac5f68cdbf14625b7e56d65a6270fc91554de153b46e5c63",
+      "sha256": "a7207d67c10190da6bdd828b0f0d2dcebc234e3652f7d60fe6a83353b9a06224",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1184,6 +1184,17 @@
       "source_path": "tests/i18n_catalog.py",
       "source_sha256": "8ecedee724637ea953cc99801bad7b97393ad8dbd5adb4d2d41956d985070f72",
       "transformation": "byte-identical"
+    },
+    {
+      "path": "tests/installer_serialization.py",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "tests/installer_serialization.py",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "0adb4c935f7814bf666514e99bc2223181997a9ddfaa0e8a8f6ef6f80f07d41c"
     },
     {
       "path": "tests/license_inventory_notices.py",

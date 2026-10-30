@@ -459,13 +459,14 @@ PYOAUTH
    login_needed=1
   elif ! /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo --lang en-US --json auth verify >"$stage/oauth-check.json" 2>/dev/null; then
    # Transport failures must not discard a valid login or force reauthentication.
-   if python3 - "$stage/oauth-check.json" <<'PYAUTHCHECK'
+   needs_reauth=$(python3 - "$stage/oauth-check.json" <<'PYAUTHCHECK'
 import json,sys
 try:code=json.load(open(sys.argv[1]))['error']['code']
-except Exception:sys.exit(1)
-sys.exit(0 if code.startswith(('quota_http_401','quota_http_403','oauth_','chatgpt_oauth')) or code in ('io_error','json_invalid','private_permissions_required') else 1)
+except Exception:code=''
+print('yes' if code.startswith(('quota_http_401','quota_http_403','oauth_','chatgpt_oauth')) or code in ('io_error','json_invalid','private_permissions_required') else 'no')
 PYAUTHCHECK
-   then login_needed=1; fi
+   )
+   if [[ $needs_reauth == yes ]]; then login_needed=1; fi
   fi
   if (( login_needed )); then
    msg '请完成官方 Codex OAuth 登录。' 'Complete official Codex OAuth login.'

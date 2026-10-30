@@ -53,6 +53,7 @@ jobs:
           toolchain: 1.99.1
       - name: Trust only this checked-out container workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: python3 tests/installer_serialization.py
       - run: cargo fmt --check
       - run: cargo test --workspace --locked
       - run: cargo build --release --locked -p kairo-cli
