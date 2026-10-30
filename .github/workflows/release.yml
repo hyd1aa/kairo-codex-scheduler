@@ -67,8 +67,16 @@ jobs:
           (cd previous && grep '  kairo-0.2.3-${{ matrix.target }}$' SHA256SUMS | sha256sum -c -)
           chmod 755 previous/kairo-0.2.3-${{ matrix.target }}
           python3 tests/upgrade_compatibility.py previous/kairo-0.2.3-${{ matrix.target }} target/release/kairo
+          base=https://github.com/hyd1aa/kairo-codex-scheduler/releases/download/v0.2.4
+          for name in SHA256SUMS kairo-0.2.4-${{ matrix.target }}; do
+            curl -fLsS --proto '=https' --proto-redir '=https' --max-time 120 -o "previous/$name" "$base/$name"
+          done
+          (cd previous && grep '  kairo-0.2.4-${{ matrix.target }}$' SHA256SUMS | sha256sum -c -)
+          chmod 755 previous/kairo-0.2.4-${{ matrix.target }}
+          python3 tests/upgrade_compatibility.py previous/kairo-0.2.4-${{ matrix.target }} target/release/kairo
       - run: python3 tests/online_cli.py target/release/kairo
       - run: python3 tests/panel_navigation.py target/release/kairo
+      - run: python3 tests/warmup_display.py target/release/kairo
       - run: python3 tests/workflow_policy.py
       - run: |
           mkdir dist
@@ -102,7 +110,7 @@ jobs:
           curl -fLsS --max-time 60 https://raw.githubusercontent.com/spdx/spdx-spec/v2.3/schemas/spdx-schema.json -o "$RUNNER_TEMP/spdx.schema.json"
           printf '%s  %s\n' 239208b7ac287b3cf5d9a9af23f9d69863971102a5e1587a27a398b43490b89b "$RUNNER_TEMP/spdx.schema.json" | sha256sum -c -
           python3 tests/validate_sbom.py dist/sbom.spdx.json "$RUNNER_TEMP/spdx.schema.json"
-          python3 tests/package_contents.py dist/kairo-0.2.4.tar.gz
+          python3 tests/package_contents.py dist/kairo-0.2.5.tar.gz
           python3 scripts/check-release-secrets.py dist
           (cd dist && sha256sum -c SHA256SUMS)
           docker build -f tests/Dockerfile.online -t kairo-online-test .

@@ -68,8 +68,8 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   for n in (1,2,3,4,5,6,7,8,9,11):
    out=menu(f'{n:02}\n00\n00\n');assert 'Kairo / ' in out
   out=plain(menu('03\n\n99\n01\n\n02\n02:00\n\n03\n02:00\n03:00\n\n04\n03:00\n\n05\n\n06\n\n07\n\n00\n00\n'))
-  assert out.count('Codex Window Scheduler')==2,'Actions returned to main'
-  out=menu('04\n02\n\n03\n\n04\n\n01\n\n00\n00\n');assert out.count('Codex Window Scheduler')==2
+  assert out.count('[ K A I R O ]')==2,'Actions returned to main'
+  out=menu('04\n02\n\n03\n\n04\n\n01\n\n00\n00\n');assert out.count('[ K A I R O ]')==2
   out=menu('04\n02\n\n00\n00\n',{'MOCK_START_FAIL':'1'});assert ('尚未运行' if lang=='zh-CN' else 'not active') in out
   out=menu('05\n02\n03\n04\n05\n01\n00\n00\n');assert 'observation only' in out or '只读观察' in out or 'observation_only' in out
   menu('06\n01\n\n02\n\n03\n\n04\n\n05\nsecondary\n'+temp+'\n\n06\nsecondary\n\n07\nsecondary\n\n08\nNO\n\n00\n00\n')
@@ -87,7 +87,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  # A saved lifecycle remains visible under 08, while 01 details uses full status JSON.
  (data/'state.json').write_text(json.dumps({'schema':1,'account':'synthetic-panel','last_clock':0,'attempts':[],'positive_until':1793300000,'pending':None,'observations':[],'weekly':None,'server_denied':True,'legacy_attempts':[]}));(data/'state.json').chmod(0o600)
  out=menu('08\n05\n\n00\n00\n');assert 'Window lifecycle (last saved state)' in out and '2026-' in out and 'Denied (automatic requests blocked)' in out
- out=menu('01\n02\n\n00\n00\n');assert '"prewarm_conditional": true' in out and f'"version": "{expected_version}"' in out and '"saved_state"' in out
+ out=menu('06\n10\n\n00\n00\n',modern=True);assert '"prewarm_conditional": true' in out and f'"version": "{expected_version}"' in out and '"saved_state"' in out
  (data/'state.json').write_text('{invalid')
  out=menu('01\n00\n00\n');assert 'Repair required' in out or '需要修复' in out
  (data/'state.json').unlink()

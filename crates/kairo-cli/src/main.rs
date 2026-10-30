@@ -1,3 +1,4 @@
+mod history;
 mod i18n;
 mod panel;
 use anyhow::{bail, Context, Result};
@@ -1515,7 +1516,19 @@ fn prescan() -> (String, bool, PathBuf) {
         root,
     )
 }
+static PIPE_EXIT_CODE: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(0);
+extern "C" fn output_closed(_: libc::c_int) {
+    // Async-signal-safe: a closed consumer is normal CLI termination, not a Rust panic.
+    unsafe { libc::_exit(PIPE_EXIT_CODE.load(std::sync::atomic::Ordering::Relaxed)) }
+}
 fn main() {
+    unsafe {
+        libc::signal(
+            libc::SIGPIPE,
+            output_closed as *const () as libc::sighandler_t,
+        );
+    }
+
     let (lang, json, _) = prescan();
     let en = lang == "en-US";
     let matches = match localize(Cli::command(), en, json).try_get_matches() {
@@ -1534,6 +1547,7 @@ fn main() {
                 }
                 return;
             }
+            PIPE_EXIT_CODE.store(2, std::sync::atomic::Ordering::Relaxed);
             let msg = t(
                 en,
                 "命令或参数无效；请使用 --help 查看帮助",
@@ -1562,6 +1576,7 @@ fn main() {
         menu(&mut cli)
     };
     if let Err(e) = result {
+        PIPE_EXIT_CODE.store(1, std::sync::atomic::Ordering::Relaxed);
         let (code, message) = i18n::error(&e, en);
         if cli.json {
             println!(

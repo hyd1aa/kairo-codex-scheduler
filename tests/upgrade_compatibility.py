@@ -1,6 +1,7 @@
-"""Execute v0.2.3 -> current -> rollback in private directories; no services/network/models."""
+"""Execute previous release -> current -> rollback in private directories; no services/network/models."""
 import hashlib,json,os,pathlib,subprocess,sys,tempfile
 old,new=map(lambda p:str(pathlib.Path(p).resolve()),sys.argv[1:])
+previous_version=subprocess.check_output([old,'--version'],text=True).strip().split()[-1]
 env={**os.environ,'KAIRO_OFFLINE':'1','NO_COLOR':'1'}
 def digest(p):return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
 with tempfile.TemporaryDirectory(prefix='kairo-upgrade-policy-') as temp:
@@ -15,6 +16,11 @@ with tempfile.TemporaryDirectory(prefix='kairo-upgrade-policy-') as temp:
   account=hashlib.sha256(b'synthetic-upgrade-account').hexdigest()
   quota=dict(duration=18000,used=0.,reset_at=19000,remaining=18000)
   write('state.json',dict(schema=1,account=account,last_clock=1000,attempts=[dict(anchor='synthetic-known-anchor',at=1000,completed_at=None,before=quota,after=None,outcome='attempt_persisted_unknown')],positive_until=19000,pending=None,observations=[],weekly=None,server_denied=False,legacy_attempts=[]))
+  # Persist a verified successful request alongside the unknown older reservation.
+  saved=json.loads((data/'state.json').read_text());saved['last_clock']=2154
+  saved['attempts'].append(dict(anchor='synthetic-confirmed-anchor',at=2000,completed_at=2002,before=dict(duration=18000,used=0.,reset_at=20000,remaining=18000),after=None,outcome='request_ok_window_unconfirmed'))
+  write('state.json',saved)
+  write('confirmations.json',dict(schema=1,account=account,tasks=[dict(anchor='synthetic-confirmed-anchor',request_at=2000,completed_at=2002,status='countdown_confirmed_time_correlated',request_success=True,countdown_confirmed=True,time_correlated=True,attribution_uncertain=True,next_check=None,deadline=20002,checks=2,samples=[dict(checked_at=2002+d,reset_at=20002,remaining=18000-d,used_percent=0.) for d in [60,152]],events=[])]))
   write('deployment.json',dict(schema=1,account=account,enabled=policy=='running',approved_at=900 if policy=='running' else None))
   write('cursor.json',dict(schema=1,timezone='Etc/UTC',observed=1000,due=None,anchor=None,cutoff=0,finished=['synthetic-known-anchor'],config_signature=''))
   if 'recovering' in policy:
@@ -22,13 +28,14 @@ with tempfile.TemporaryDirectory(prefix='kairo-upgrade-policy-') as temp:
   if policy.startswith('auto-'):
    write('onboarding.json',dict(schema=1,account=account,requested=policy=='auto-recovering',exclusive_account=True,next_attempt=19000,failures=2))
   call(old,'install','--binary',old,'--sha256',digest(old),'--prefix',str(prefix))
-  names=['config.json','runtime.json','state.json','deployment.json','cursor.json','recovery.json','onboarding.json']
+  names=['config.json','runtime.json','state.json','deployment.json','cursor.json','recovery.json','onboarding.json','confirmations.json']
   before={name:(data/name).read_bytes() if (data/name).exists() else None for name in names}
   def preserved():
    for name,expected in before.items():assert ((data/name).read_bytes() if (data/name).exists() else None)==expected,(policy,name)
   call(old,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix));preserved()
+  evidence=json.loads(subprocess.check_output([new,'--data-dir',str(data),'--json','acceptance'],env=env,text=True));assert evidence['countdown_confirmed'] is True and evidence['request_success'] is True
   call(new,'update','rollback','--prefix',str(prefix));preserved()
   assert digest(prefix/'bin/kairo')==digest(old)
   call(old,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix));preserved()
   call(new,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix));preserved()
-print('20 v0.2.3 upgrade/rollback/repeat checks passed across running, paused and recovery policies; byte-identical history, identity, schedules and wait progress; zero model/service calls')
+print(f'20 v{previous_version} upgrade/rollback/repeat checks passed across running, paused and recovery policies; byte-identical history, identity, schedules and wait progress; zero model/service calls')

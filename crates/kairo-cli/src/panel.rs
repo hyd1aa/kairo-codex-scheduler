@@ -63,7 +63,14 @@ fn page(title: &str, main: bool) {
     }
     if main {
         println!("{}", color("[ K A I R O ]", 34));
-        println!("Codex Window Scheduler");
+        println!(
+            "{}",
+            if title.is_empty() {
+                "Codex Window Scheduler"
+            } else {
+                title
+            }
+        );
         println!(
             "v{} | {}",
             env!("CARGO_PKG_VERSION"),
@@ -248,7 +255,9 @@ fn service_summary(en: bool) {
     }
 }
 fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
-    service_summary(en);
+    if !compact {
+        service_summary(en);
+    }
     let store = configured(cli)?;
     let state = store.state();
     let auth = rt::runtime(&store)
@@ -267,6 +276,7 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         .is_ok_and(|d| d.enabled);
     let uncertain = requested && !live && service_mode["observation_override"] != true;
     if compact {
+        let view = history::load(&store, auth.as_ref().map(|a| a.fingerprint.as_str()));
         let intent = store
             .read::<kairo_platform::onboarding::Intent>("onboarding.json")
             .ok();
@@ -285,8 +295,30 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                 "Log in to Codex (03 Account)",
                 33,
             )
+        } else if live
+            && view.latest.kind == history::Kind::Blocked
+            && view.latest.at >= view.request.as_ref().and_then(|r| r.at)
+        {
+            (
+                "已开启，最近检查受安全门禁保护",
+                "Enabled; latest check blocked by safety guards",
+                33,
+            )
+        } else if live
+            && view
+                .request
+                .as_ref()
+                .is_some_and(|r| r.kind == history::Kind::Failed)
+        {
+            (
+                "已开启，最近一次预热失败",
+                "Enabled; latest warmup failed",
+                31,
+            )
+        } else if live && view.request.is_none() {
+            ("已开启，等待首次预热", "Enabled; awaiting first warmup", 33)
         } else if live {
-            ("自动预热运行中", "Automatic warmup running", 32)
+            ("已开启，运行正常", "Enabled; running normally", 32)
         } else if intent.as_ref().is_some_and(|i| !i.requested) {
             ("已暂停", "Paused", 33)
         } else if auto["status"] == "exclusive_account_confirmation_required"
@@ -325,7 +357,7 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         };
         println!(
             "{}: {}",
-            t(en, "状态", "Status"),
+            t(en, "自动预热", "Automatic warmup"),
             color(t(en, zh, english), code)
         );
         if health["classification"] == "data_corrupt" && code != 31 {
@@ -358,12 +390,17 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                 }
             )
         );
-        if let Some(deadline) = health["effective_not_before"].as_i64() {
-            println!(
-                "{}: {}",
-                t(en, "预计复查", "Estimated recheck"),
-                local_time(deadline, timezone()?).unwrap_or_else(|| deadline.to_string())
-            );
+        if recovery_waiting(&health) {
+            if let Some(deadline) = health["effective_not_before"]
+                .as_i64()
+                .filter(|at| *at > chrono::Utc::now().timestamp())
+            {
+                println!(
+                    "{}: {}",
+                    t(en, "安全恢复复查", "Recovery recheck"),
+                    human(deadline, en)
+                );
+            }
             if intent.as_ref().is_some_and(|i| {
                 i.requested
                     && i.exclusive_account
@@ -375,49 +412,23 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                     "{}",
                     t(
                         en,
-                        "恢复方式：自动复查并启用；无需人工操作",
-                        "Recovery: automatic recheck and enable; no manual action needed"
+                        "安全恢复由后台自动复查，无需到点操作。",
+                        "Recovery rechecks automatically; no deadline command needed."
                     )
                 );
             }
         }
+        request_summary(&view, en);
         if let Some(reason) = auto["reason"].as_str() {
             println!("{}: {}", t(en, "提示", "Notice"), notice(en, reason));
         }
-        let cache = store
-            .read::<Value>("quota-cache.json")
-            .ok()
-            .filter(|v| auth.as_ref().is_some_and(|a| v["account"] == a.fingerprint));
-        if let Some(v) = cache.filter(|v| {
-            v["at"].as_i64().is_some_and(|at| {
-                chrono::Utc::now().timestamp() - at <= 300 && at <= chrono::Utc::now().timestamp()
-            })
-        }) {
-            if let Some(used) = v["five_hour"]["used"].as_f64() {
-                println!(
-                    "{}: {:.1}%",
-                    t(en, "五小时额度剩余", "Five-hour remaining"),
-                    (100.0 - used).clamp(0.0, 100.0)
-                );
-            }
-        } else {
-            println!(
-                "{}",
-                t(
-                    en,
-                    "五小时额度：待查询（01）",
-                    "Five-hour quota: query via01"
-                )
-            );
-        }
-        let next = next_checks(&store, &store.config()?, 48)?;
-        if let Some(at) = next["checks"]
-            .as_array()
-            .and_then(|a| a.first())
-            .and_then(Value::as_str)
-        {
-            println!("{}: {}", t(en, "下次检查", "Next check"), clean(at));
-        }
+        next_schedule(&store, en)?;
+        cached_quota(
+            &store,
+            auth.as_ref().map(|a| a.fingerprint.as_str()),
+            en,
+            false,
+        );
         return Ok(());
     }
 
@@ -640,7 +651,7 @@ fn quota(v: &Value, en: bool) {
             );
             let reset = v[key]["reset_at"]
                 .as_i64()
-                .and_then(|at| local_time(at, timezone().ok()?))
+                .map(|at| human(at, en))
                 .unwrap_or_else(|| "?".into());
             println!("{}: {reset}", t(en, "重置时间", "Resets"));
         } else {
@@ -656,6 +667,28 @@ fn quota(v: &Value, en: bool) {
     }
 }
 pub fn render(v: &Value, en: bool) {
+    if let Some(checks) = v["checks"].as_array() {
+        println!(
+            "{}",
+            color(
+                t(
+                    en,
+                    "调度检查计划（不保证发送请求）",
+                    "Scheduled checks (requests are conditional)"
+                ),
+                34
+            )
+        );
+        for at in checks
+            .iter()
+            .filter_map(Value::as_str)
+            .filter_map(|v| chrono::DateTime::parse_from_rfc3339(v).ok())
+        {
+            println!("{}", human(at.timestamp(), en));
+        }
+        return;
+    }
+
     if v.get("tag_name").is_some() {
         println!(
             "{}: v{}",
@@ -1067,37 +1100,12 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
     if n == 5 {
         return logs(cli, en);
     }
+    if n == 1 {
+        return records_page(cli, en);
+    }
     loop {
         page(title, false);
         match n {
-            1 => {
-                if let Err(e) = summary(cli, en, false, true) {
-                    let (_, m) = i18n::error(&e, en);
-                    println!("{}", color(&m, 31));
-                }
-                match submenu(
-                    en,
-                    &["刷新摘要", "查看详细状态（JSON）", "查询实时额度（只读）"],
-                    &[
-                        "Refresh summary",
-                        "Detailed status (JSON)",
-                        "Query live quota (read only)",
-                    ],
-                )?
-                .trim_start_matches('0')
-                {
-                    "" => return Ok(()),
-                    "1" => continue,
-                    "3" => report(execute(cli, Cmd::Quota { fixture: None }, en), en)?,
-                    "2" => {
-                        DETAILS.store(true, Ordering::Relaxed);
-                        let result = run(cli, Cmd::Status);
-                        DETAILS.store(false, Ordering::Relaxed);
-                        report(result, en)?;
-                    }
-                    _ => unreachable!(),
-                }
-            }
             2 => {
                 match submenu(
                     en,
@@ -1179,7 +1187,14 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
             };
             let en = c.language == "en-US";
             cli.lang = Some(c.language);
-            page("", true);
+            page(
+                t(
+                    en,
+                    "Codex 五小时额度自动预热",
+                    "Codex five-hour window warmup",
+                ),
+                true,
+            );
             if let Err(e) = summary(cli, en, false, true) {
                 let (_, m) = i18n::error(&e, en);
                 println!("{}", color(&m, 33));
@@ -1187,20 +1202,20 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
             let choice = numbered(
                 en,
                 &[
-                    "查看状态与额度",
+                    "查看额度和预热记录",
                     "设置预热时间",
                     "Codex 账号管理",
                     "启动 / 暂停预热",
                     "检查更新",
-                    "高级设置",
+                    "更多设置",
                 ],
                 &[
-                    "Status and quota",
+                    "Quota and warmup history",
                     "Warmup schedule",
                     "Codex account",
                     "Start / pause warmup",
                     "Check updates",
-                    "Advanced settings",
+                    "More settings",
                 ],
                 t(en, "退出 Kairo", "Exit Kairo"),
             )?;
@@ -1423,6 +1438,205 @@ fn titled(en: bool) -> String {
     .into()
 }
 
+fn human(at: i64, en: bool) -> String {
+    timezone()
+        .map(|tz| history::natural(at, chrono::Utc::now().timestamp(), tz, en))
+        .unwrap_or_else(|_| "—".into())
+}
+fn recovery_waiting(health: &Value) -> bool {
+    health["classification"] == "recovery_waiting" && health["recovery"]["approved"] != true
+}
+fn request_summary(view: &history::View, en: bool) {
+    println!(
+        "{}: {}",
+        t(en, "上次预热", "Last warmup"),
+        view.request
+            .as_ref()
+            .and_then(|r| r.at)
+            .map(|at| human(at, en))
+            .unwrap_or_else(|| "—".into())
+    );
+    let result = view.request.as_ref().unwrap_or(&view.latest);
+    println!(
+        "{}: {}",
+        t(en, "预热结果", "Warmup result"),
+        color(result.label(en), result.color())
+    );
+    if let Some(at) = result.confirmed_at {
+        println!("{}: {}", t(en, "确认时间", "Confirmed"), human(at, en));
+    }
+    if matches!(
+        view.latest.kind,
+        history::Kind::Skipped | history::Kind::Blocked
+    ) && view.latest.at > view.request.as_ref().and_then(|r| r.at)
+    {
+        println!(
+            "{}: {}",
+            t(en, "最近检查", "Latest check"),
+            color(view.latest.label(en), view.latest.color())
+        );
+    }
+}
+fn next_schedule(store: &Store, en: bool) -> Result<()> {
+    let next = next_checks(store, &store.config()?, 48)?;
+    let at = next["checks"]
+        .as_array()
+        .and_then(|v| v.first())
+        .and_then(Value::as_str)
+        .and_then(|v| chrono::DateTime::parse_from_rfc3339(v).ok())
+        .map(|v| human(v.timestamp(), en))
+        .unwrap_or_else(|| "—".into());
+    println!("{}: {}", t(en, "下次调度检查", "Next scheduled check"), at);
+    Ok(())
+}
+fn cached_quota(store: &Store, account: Option<&str>, en: bool, expanded: bool) {
+    let now = chrono::Utc::now().timestamp();
+    let cache = store.read::<Value>("quota-cache.json").ok().filter(|v| {
+        account.is_some_and(|a| v["account"] == a)
+            && v["at"].as_i64().is_some_and(|at| at > 0 && at <= now)
+    });
+    for (key, zh, english) in [
+        ("five_hour", "五小时额度", "Five-hour quota"),
+        ("weekly", "每周额度", "Weekly quota"),
+    ] {
+        let value = cache
+            .as_ref()
+            .and_then(|v| v[key]["used"].as_f64())
+            .filter(|n| n.is_finite() && (0.0..=100.0).contains(n));
+        match value {
+            Some(used) => {
+                println!(
+                    "{}: {}{:.1}%",
+                    t(en, zh, english),
+                    t(en, "剩余", "Remaining "),
+                    100.0 - used
+                );
+                if expanded {
+                    if let Some(at) = cache.as_ref().and_then(|v| v[key]["reset_at"].as_i64()) {
+                        println!(
+                            "  {}: {}",
+                            t(en, "窗口重置", "Window resets"),
+                            human(at, en)
+                        );
+                    }
+                }
+            }
+            None => println!(
+                "{}: {}",
+                t(en, zh, english),
+                t(en, "待查询（01）", "Query via01")
+            ),
+        }
+    }
+    if let Some(at) = cache.as_ref().and_then(|v| v["at"].as_i64()) {
+        println!(
+            "{}: {}{}",
+            t(en, "额度最近查询", "Quota last queried"),
+            human(at, en),
+            t(
+                en,
+                if now - at > 300 {
+                    "（旧缓存，非实时）"
+                } else {
+                    "（缓存，非实时）"
+                },
+                if now - at > 300 {
+                    " (stale cache, not live)"
+                } else {
+                    " (cached, not live)"
+                }
+            )
+        );
+    }
+}
+fn records_page(cli: &Cli, en: bool) -> Result<()> {
+    loop {
+        let title = t(en, "额度和预热记录", "Quota and warmup history");
+        TITLE.with(|t| *t.borrow_mut() = title.into());
+        page(title, false);
+        {
+            let store = configured(cli)?;
+            let account = rt::runtime(&store)
+                .ok()
+                .and_then(|r| kairo_platform::identity(&r.codex_home.join("auth.json")).ok());
+            println!("{}", color(t(en, "Codex 额度", "Codex quota"), 34));
+            cached_quota(
+                &store,
+                account.as_ref().map(|a| a.fingerprint.as_str()),
+                en,
+                true,
+            );
+            println!(
+                "{}",
+                color(t(en, "自动预热记录", "Automatic warmup history"), 34)
+            );
+            let view = history::load(&store, account.as_ref().map(|a| a.fingerprint.as_str()));
+            request_summary(&view, en);
+            next_schedule(&store, en)?;
+        }
+        let choice = submenu(
+            en,
+            &[
+                "刷新额度（只读）",
+                "查看最近预热记录",
+                "查看失败原因",
+                "返回主菜单",
+            ],
+            &[
+                "Refresh quota (read only)",
+                "Recent warmup history",
+                "Failure details",
+                "Back to main menu",
+            ],
+        )?;
+        match choice.trim_start_matches('0') {
+            "" | "4" => return Ok(()),
+            "1" => report(execute(cli, Cmd::Quota { fixture: None }, en), en)?,
+            "2" | "3" => {
+                let store = configured(cli)?;
+                let account = rt::runtime(&store)
+                    .ok()
+                    .and_then(|r| kairo_platform::identity(&r.codex_home.join("auth.json")).ok());
+                let view = history::load(&store, account.as_ref().map(|a| a.fingerprint.as_str()));
+                if choice.trim_start_matches('0') == "2" {
+                    for r in view.records.iter().rev().take(10) {
+                        println!(
+                            "{}  {}",
+                            r.at.map(|at| human(at, en)).unwrap_or_else(|| "—".into()),
+                            color(r.label(en), r.color())
+                        );
+                    }
+                    if view.records.is_empty() {
+                        println!("{}", view.latest.label(en));
+                    }
+                    println!("{}",t(en,"仅列出已保存记录；早期未保存的跳过记录无法补造。时间关联不等于排他因果证明。","Only saved history is listed; older unsaved skips cannot be reconstructed. Time correlation is not exclusive causation."));
+                } else {
+                    let record = view.records.iter().rev().find(|r| {
+                        matches!(
+                            r.kind,
+                            history::Kind::Failed
+                                | history::Kind::Blocked
+                                | history::Kind::Unknown
+                                | history::Kind::Unconfirmed
+                        )
+                    });
+                    if let Some(r) = record {
+                        println!("{}\n{}", r.label(en), r.explanation(en));
+                    } else {
+                        println!(
+                            "{}",
+                            t(en, "没有已保存的失败原因。", "No saved failure details.")
+                        );
+                    }
+                }
+                drop(store);
+                pause(en)?;
+            }
+            _ => {}
+        }
+    }
+}
+
 fn notice(en: bool, code: &str) -> String {
     let (zh, english) = if code.contains("cutover_rollback_incomplete")
         || code.contains("observer_restart_failed")
@@ -1527,6 +1741,7 @@ fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
                 "帮助",
                 "卸载 Kairo",
                 "高级账号配置",
+                "详细状态（JSON）",
             ],
             &[
                 "Logs",
@@ -1538,6 +1753,7 @@ fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
                 "Help",
                 "Uninstall Kairo",
                 "Advanced account profiles",
+                "Detailed status (JSON)",
             ],
         )?;
         match choice.trim_start_matches('0') {
@@ -1558,6 +1774,12 @@ fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
             }
             "7" => section(cli, en, 11)?,
             "9" => section(cli, en, 6)?,
+            "10" => {
+                DETAILS.store(true, Ordering::Relaxed);
+                let result = run(cli, Cmd::Status);
+                DETAILS.store(false, Ordering::Relaxed);
+                report(result, en)?;
+            }
             "8" => report(
                 choose(en, "12").and_then(|c| c.map_or(Ok(()), |c| execute(cli, c, en))),
                 en,
@@ -1613,6 +1835,18 @@ fn account_menu(cli: &Cli, en: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn completed_recovery_never_shows_its_old_recheck_deadline() {
+        assert!(!recovery_waiting(
+            &json!({"classification":"authorized","effective_not_before":1,"recovery":{"approved":true}})
+        ));
+        assert!(!recovery_waiting(
+            &json!({"classification":"recovery_waiting","effective_not_before":1,"recovery":{"approved":true}})
+        ));
+        assert!(recovery_waiting(
+            &json!({"classification":"recovery_waiting","effective_not_before":9999,"recovery":{"approved":false}})
+        ));
+    }
     #[test]
     fn detail_redaction_covers_nested_credentials_without_hiding_scheduler_state() {
         let mut value = json!({"event":"observation_only","nested":[{"refresh_token":"synthetic-sensitive-value","access_token":"synthetic-access"}],"Authorization":"synthetic-auth","account":"synthetic-account"});
