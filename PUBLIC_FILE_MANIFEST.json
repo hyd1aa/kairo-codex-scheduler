@@ -269,7 +269,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "740cd53eed89313d27a07290c3b0cf398298ae0a2eb9127595fd364a2f0bfc22",
+      "sha256": "5de3a80bead16d4c13795b131cb8e9f8afd056bc787b5c4a4cedd8796a15561a",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1141,7 +1141,7 @@
     },
     {
       "path": "tests/acceptance.py",
-      "sha256": "2d7a5f67800509f7b3ef4f2a77a17b4fc04bab34505b1d14a807dcded0d61fbb",
+      "sha256": "a78b942d12a92142ff04441f1a946b27257a5137e722669281a66ddd230a5b2f",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1220,7 +1220,7 @@
     },
     {
       "path": "tests/online_install_guest.py",
-      "sha256": "65adf11fdf71af6aadeb99fc5b4c60bcf306b681153a2d956d85f0125ffa69ca",
+      "sha256": "69471fa4147b7352c2000fef9ba084d53feecb5c24ce5b05f398250413b30ec1",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",

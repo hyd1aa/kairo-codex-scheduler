@@ -77,7 +77,7 @@ exit 99''')
             except OSError:break
         if p.poll() is not None:break
     assert p.wait(timeout=5)==0;os.close(master);text=out.decode(errors='replace')
-    assert '查看运行状态' in text and 'Status' in text and '\x1b[34m' in text
+    assert '查看状态与额度' in text and 'Status' in text and '\x1b[34m' in text
     checks+=1
     for language,label in [('zh-CN','查看运行状态'),('en-US','Status')]:
         call('lang',language)

@@ -13,7 +13,9 @@ base=f'https://localhost:{server.server_port}/release'
 mock=work/'tools';mock.mkdir();(work/'base').write_text(base)
 (mock/'systemctl').write_text('''#!/bin/sh
 printf '%s\\n' "$*" >> /tmp/systemctl-calls
+case "$*" in *kairo-onboarding*) exit 0;; esac
 case "$1" in
+ enable) case "$*" in *--now*) touch /tmp/service-active;; esac;;
  show)
   case "$*" in
    *LoadState*) test ! -f /etc/systemd/system/kairo.service && echo not-found || echo loaded;;
@@ -61,11 +63,22 @@ entry=['bash','/source/install.sh','--version',version,'--base-url',base]
 call(entry)
 binary=pathlib.Path('/opt/kairo/current/bin/kairo');original=hashlib.sha256(binary.read_bytes()).hexdigest();state=pathlib.Path('/var/lib/kairo')
 assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and pathlib.Path('/etc/systemd/system/kairo.service').exists()
-assert not pathlib.Path('/tmp/service-active').exists() and 'daemon --observe' in pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').read_text()
+automatic = tuple(map(int,version.split('.'))) >= (0,2,4)
+assert pathlib.Path('/tmp/service-active').exists()==automatic
+assert 'daemon --observe' in pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').read_text()
+if automatic:
+ assert json.loads((state/'onboarding.json').read_text())['requested']
+ assert not json.loads((state/'onboarding.json').read_text())['exclusive_account']
+ assert pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
+ call(['kairo','--json','onboard'],False) # Offline prohibits actual root coordinator/network/cutover.
+ # Pause before any deployment exists must cancel automatic initialization durably.
+ call(['kairo','pause'])
+ assert not json.loads((state/'onboarding.json').read_text())['requested']
 assert not pathlib.Path('/home/kairo/.codex/auth.json').exists()
 call(entry);call(['kairo','schedule','add','03:37']);before=(state/'config.json').read_bytes()
 call(['kairo','update','online'])
 assert (state/'config.json').read_bytes()==before
+if automatic:assert not json.loads((state/'onboarding.json').read_text())['requested']
 # Fixed corrupted download rejected before stopping a previously active service.
 pathlib.Path('/tmp/service-active').touch();archive=assets/f'kairo-{version}-x86_64-unknown-linux-gnu.tar.gz';clean=archive.read_bytes();archive.write_bytes(clean+b'changed')
 call(entry,False);assert pathlib.Path('/tmp/service-active').exists() and hashlib.sha256(binary.read_bytes()).hexdigest()==original;archive.write_bytes(clean)
@@ -117,6 +130,7 @@ assert hashlib.sha256(binary.read_bytes()).hexdigest()==original
 call(['kairo','system-uninstall','--yes'])
 assert not pathlib.Path('/usr/local/bin/kairo').exists() and not pathlib.Path('/etc/systemd/system/kairo.service').exists()
 assert state.exists() and (state/'config.json').read_bytes()==before
+if automatic:assert not pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
 call(entry);assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and (state/'config.json').read_bytes()==before
 server.shutdown();key.unlink()
 print(f'{count} focused HTTPS/install/update/refusal/recovery/uninstall checks passed; container with mocked systemd, zero real model requests')
