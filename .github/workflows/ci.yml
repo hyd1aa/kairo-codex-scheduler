@@ -49,7 +49,7 @@ jobs:
           set -eu
           mkdir -p "$RUNNER_TEMP/kairo-stable"
           base=https://github.com/hyd1aa/kairo-codex-scheduler/releases/download/v0.2.1
-          for name in SHA256SUMS kairo-0.2.1-x86_64-unknown-linux-gnu.tar.gz kairo-0.2.1-x86_64-unknown-linux-gnu; do
+          for name in SHA256SUMS release-metadata.json kairo-0.2.1-x86_64-unknown-linux-gnu.tar.gz kairo-0.2.1-x86_64-unknown-linux-gnu; do
             curl -fLsS --proto '=https' --proto-redir '=https' --max-time 120 -o "$RUNNER_TEMP/kairo-stable/$name" "$base/$name"
           done
           (cd "$RUNNER_TEMP/kairo-stable" && grep -E '  kairo-0.2.1-x86_64-unknown-linux-gnu(\.tar\.gz)?$' SHA256SUMS | sha256sum -c -)
@@ -64,5 +64,6 @@ jobs:
           fi
           docker build -f tests/Dockerfile.online -t kairo-pipe-test .
           python3 tests/pipe_lifecycle.py "$RUNNER_TEMP/kairo-stable" --image kairo-pipe-test
+          python3 tests/online_install.py "$RUNNER_TEMP/kairo-stable" --image kairo-pipe-test
       - run: python3 tests/workflow_policy.py && python3 tests/release_inventory.py
       - run: python3 tests/git_secret_scan.py

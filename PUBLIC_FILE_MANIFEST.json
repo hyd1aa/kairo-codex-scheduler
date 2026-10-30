@@ -43,7 +43,7 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "7356add9da1b28fe43aae261ac3f4dcd363403089b6859d160f9e1295f8f4260",
+      "sha256": "85839a156983e0805be24c0903b11ee0dbaf2474d2f8e7a0ba0f9b20dd6ef60c",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1121,7 +1121,7 @@
     },
     {
       "path": "tests/online_install_guest.py",
-      "sha256": "4c5a446fd7bb4ad6037fd601dd545938e3139792692233ad40c11d433a9cd95b",
+      "sha256": "65adf11fdf71af6aadeb99fc5b4c60bcf306b681153a2d956d85f0125ffa69ca",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",

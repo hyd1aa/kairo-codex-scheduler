@@ -14,6 +14,14 @@ mock=work/'tools';mock.mkdir();(work/'base').write_text(base)
 (mock/'systemctl').write_text('''#!/bin/sh
 printf '%s\\n' "$*" >> /tmp/systemctl-calls
 case "$1" in
+ show)
+  case "$*" in
+   *LoadState*) test ! -f /etc/systemd/system/kairo.service && echo not-found || echo loaded;;
+   *FragmentPath*) echo /etc/systemd/system/kairo.service;;
+   *ControlGroup*) echo '';;
+   *MainPID*) echo 0;;
+   *ActiveState*) test -f /tmp/service-active && echo active || echo inactive;;
+  esac;;
  is-active) test -f /tmp/service-active;;
  stop|disable) rm -f /tmp/service-active;;
  start) test ! -f /tmp/fail-start || exit 1; touch /tmp/service-active;;
