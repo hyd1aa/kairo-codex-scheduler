@@ -20,7 +20,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   p=subprocess.run([binary,'--data-dir',str(data),*args],env=env,capture_output=True,text=True,timeout=10)
   assert (p.returncode==0)==ok,(args,p.stdout,p.stderr);return p
  (root/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-panel','access_token':'synthetic-panel-placeholder'}}));(root/'auth.json').chmod(0o600)
- direct('init');direct('runtime','--home',temp,'--codex-home',temp,'--codex','/nonexistent-kairo-synthetic')
+ direct('init');expected_version=direct('--version').stdout.strip().split()[-1];direct('runtime','--home',temp,'--codex-home',temp,'--codex','/nonexistent-kairo-synthetic')
  def menu(text,extra=None,interrupt=False):
   global checks
   m,s=pty.openpty(); before=termios.tcgetattr(s)
@@ -65,8 +65,8 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  out=menu('01\n00\n00\n');assert 'OAuth' in out and 'state.json' in out
  # A saved lifecycle remains visible under 08, while 01 details uses full status JSON.
  (data/'state.json').write_text(json.dumps({'schema':1,'account':'synthetic-panel','last_clock':0,'attempts':[],'positive_until':1793300000,'pending':None,'observations':[],'weekly':None,'server_denied':False,'legacy_attempts':[]}));(data/'state.json').chmod(0o600)
- out=menu('08\n05\n\n00\n00\n');assert 'Window lifecycle' in out or '窗口生命周期' in out
- out=menu('01\n02\n\n00\n00\n');assert '"prewarm_conditional": true' in out and '"version": "0.2.2"' in out and '"saved_state"' in out
+ out=menu('08\n05\n\n00\n00\n');assert 'Window lifecycle (last saved state)' in out and '2026-' in out
+ out=menu('01\n02\n\n00\n00\n');assert '"prewarm_conditional": true' in out and f'"version": "{expected_version}"' in out and '"saved_state"' in out
  (data/'state.json').write_text('{invalid')
  out=menu('01\n00\n00\n');assert 'Invalid' in out or '无效' in out
  (data/'state.json').unlink()
@@ -75,6 +75,6 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  out=menu('00\n',{'TERM':'dumb'});assert '\x1b' not in out
  menu('\x04');menu('',interrupt=True)
  p=direct(ok=False);assert '\x1b' not in p.stdout+p.stderr
- v=json.loads(direct('--json','status').stdout);assert v['version']=='0.2.2' and 'state_valid' in v
+ v=json.loads(direct('--json','status').stdout);assert v['version']==expected_version and 'state_valid' in v
  v=json.loads(direct('--json','schedule','list').stdout);assert len(v['anchors'])==4
 print(f'{checks} isolated bilingual menu/PTY sessions passed; JSON, EOF, SIGINT, NO_COLOR and terminal echo verified')
