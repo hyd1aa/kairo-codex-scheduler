@@ -1263,6 +1263,10 @@
     "en": "recovery clock or request pending",
     "zh": "本地历史时钟超前，禁止恢复"
   },
+  "recovery_clock_unavailable": {
+    "en": "recovery clock unavailable",
+    "zh": "无法验证本机单调时钟，恢复保持关闭"
+  },
   "recovery_evidence_changed": {
     "en": "recovery evidence changed",
     "zh": "原始记录发生变化，禁止覆盖恢复证据"

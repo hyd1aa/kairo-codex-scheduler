@@ -41,7 +41,7 @@ sudo kairo recover begin --acknowledge-unknown-history
 sudo kairo recover status
 ```
 
-This persists an unknown-history risk barrier. **It neither authorizes model requests nor treats old history as empty.** Wait at least **5 hours 6 minutes 30 seconds** (one full five-hour window + maximum300-second buffer +90-second execution timeout). Observed windows, previous guards and configured buffers may delay actual requests further. Restarts/repeated begin never shorten or restart a normal wait. If protection disappears during quarantine, explicitly beginning again restarts conservative waiting.
+This persists an unknown-history risk barrier. **It neither authorizes model requests nor treats old history as empty.** Wait at least **5 hours 6 minutes 30 seconds** (one full five-hour window + maximum300-second buffer +90-second execution timeout). Observed windows, previous guards and configured buffers may delay actual requests further. Service/process restarts and repeated begin never shorten or restart a normal wait. Monotonic timing prevents forward clock changes from skipping quarantine; a system reboot conservatively restarts timing at the next recheck. If protection disappears during quarantine, explicitly beginning again restarts conservative waiting.
 
 At the displayed deadline, recheck:
 
@@ -61,11 +61,11 @@ sudo kairo doctor
 
 Typing `ENABLE` in the wizard does the same. Automatic handoff supports only standard installer-managed root/systemd installations: validate unit/paths, stop the service, persist the recovery baseline/approval, remove only the unchanged installer observation override, reload/start, and verify a **fresh live status for the current PID**. Custom units/overrides are preserved and refused. Failure revokes approval and restores observation configuration; incomplete rollback is reported explicitly. Natural scheduling may issue real requests after enablement; rollback cannot undo a request already sent, and durable request guards are retained. The wizard never sends a forced model test.
 
-To confirm production, `kairo --json status` must show `scheduler_state_ready: true`, `recovery_status.production_authorized: true`, `service_mode.daemon_live_confirmed: true` and `automatic_warmup_enabled: true`, with `status_file.execution: live` and `status_file.daemon_pid` matching systemd's current PID. systemd active or verified OAuth alone is insufficient. Stale status, startup without confirmation or an effective `--observe` never reports confirmed production.
+To confirm production, `kairo --json status` must show `scheduler_state_ready: true`, `recovery_status.production_authorized: true`, `service_mode.daemon_live_confirmed: true` and `automatic_warmup_enabled: true`, with `status_file.execution: live` and `status_file.daemon_pid` matching systemd's current PID. systemd active or verified OAuth alone is insufficient. Stale status, startup without confirmation or an effective `--observe` never reports confirmed production. If authorization remains true but live status is unconfirmed, requests may still execute: this is not a safe pause; use `kairo pause` to revoke authorization.
 
 Valid requests/account anchors are retained. Original damaged local bytes are preserved in private `recovery-evidence-*` files before replacement. Corrupt global ledgers, account mismatches and unsafe file types/permissions require backup review, never automatic overwrite. Pre-baseline history remains marked unknown after recovery. Global cooldown fields hold risk/budget reservations, never invented successful/old requests. Account locks and deduplication cover **all data directories on the same host**. The quota API supplies neither a complete ledger nor proof that another machine has stopped; administrators must prevent competing schedulers.
 
-In doctor, `existing_records_valid` means existing configuration/records validate. `state_valid` and `scheduler_state_ready` require a complete binding/state/cursor/global guard, and still do not imply production approval or an actual live daemon. A zero doctor exit status means the report was generated, not every item is ready.
+In doctor, `existing_records_valid` means existing local configuration/records validate. `state_valid` and `scheduler_state_ready` require a complete binding/state/cursor/global guard, and still do not imply production approval or an actual live daemon. A zero doctor exit status means the report was generated, not every item is ready.
 
 ## The complete kairo command menu
 

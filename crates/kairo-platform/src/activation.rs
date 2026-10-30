@@ -227,7 +227,7 @@ pub fn enable(root: &Path, ack: bool) -> Result<Value> {
                 json!({"already_enabled":true,"production_authorized":true,"service_active":true,"daemon_live_confirmed":true,"automatic_warmup_enabled":true,"forced_model_requests":0}),
             );
         }
-        if let Some(deadline) = health["recovery"]["not_before"].as_i64() {
+        if let Some(deadline) = health["effective_not_before"].as_i64() {
             if chrono::Utc::now().timestamp() < deadline {
                 bail!(
                     "recovery_wait_required / 保守等待尚未结束；服务未修改，请运行 recover check"

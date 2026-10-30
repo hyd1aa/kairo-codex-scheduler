@@ -26,6 +26,9 @@ pub struct Recovery {
     pub weekly: Quota,
     pub history_before_start: String,
     pub approved: bool,
+    pub boot_id: String,
+    pub checked_uptime_ms: i64,
+    pub quiet_remaining_ms: i64,
 }
 impl Recovery {
     pub fn validate(&self, account: &str) -> Result<()> {
@@ -37,6 +40,11 @@ impl Recovery {
             || self.started_at < 0
             || self.checked_at < self.started_at
             || self.not_before < self.started_at.saturating_add(QUIET_SECONDS)
+            || self.boot_id.is_empty()
+            || self.boot_id.len() > 128
+            || self.checked_uptime_ms < 0
+            || !(0..=QUIET_SECONDS * 1000).contains(&self.quiet_remaining_ms)
+            || self.approved && self.quiet_remaining_ms != 0
             || self.history_before_start != "unknown"
             || !self.five.valid(self.checked_at, 18000)
             || !self.weekly.valid(self.checked_at, 604800)
@@ -45,6 +53,58 @@ impl Recovery {
         }
         Ok(())
     }
+}
+#[cfg(not(test))]
+fn clock_anchor(_now: i64) -> Result<(String, i64)> {
+    let boot = fs::read_to_string("/proc/sys/kernel/random/boot_id")?
+        .trim()
+        .to_string();
+    let mut time = std::mem::MaybeUninit::<libc::timespec>::uninit();
+    if unsafe { libc::clock_gettime(libc::CLOCK_BOOTTIME, time.as_mut_ptr()) } != 0 {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    let time = unsafe { time.assume_init() };
+    if boot.is_empty() || time.tv_sec < 0 {
+        bail!("recovery_clock_unavailable / 无法验证本机单调时钟，恢复保持关闭");
+    }
+    Ok((
+        boot,
+        time.tv_sec
+            .saturating_mul(1000)
+            .saturating_add(time.tv_nsec / 1_000_000),
+    ))
+}
+#[cfg(test)]
+fn clock_anchor(now: i64) -> Result<(String, i64)> {
+    Ok(("synthetic-boot".into(), now.saturating_mul(1000)))
+}
+fn quiet_remaining(r: &Recovery, boot: &str, uptime_ms: i64) -> i64 {
+    if r.approved {
+        return 0;
+    }
+    if r.boot_id != boot || uptime_ms < r.checked_uptime_ms {
+        QUIET_SECONDS * 1000
+    } else {
+        r.quiet_remaining_ms
+            .saturating_sub(uptime_ms - r.checked_uptime_ms)
+            .max(0)
+    }
+}
+fn advance_clock(r: &mut Recovery, now: i64, boot: String, uptime_ms: i64) {
+    r.quiet_remaining_ms = quiet_remaining(r, &boot, uptime_ms);
+    r.boot_id = boot;
+    r.checked_uptime_ms = uptime_ms;
+    r.not_before = r
+        .not_before
+        .max(now.saturating_add((r.quiet_remaining_ms + 999) / 1000));
+}
+pub fn effective_deadline(r: &Recovery, now: i64) -> Result<i64> {
+    if r.approved {
+        return Ok(r.not_before);
+    }
+    let (boot, up) = clock_anchor(now)?;
+    Ok(r.not_before
+        .max(now.saturating_add((quiet_remaining(r, &boot, up) + 999) / 1000)))
 }
 pub(crate) fn present(path: &Path) -> Result<bool> {
     match fs::symlink_metadata(path) {
@@ -231,8 +291,12 @@ pub fn inspect(store: &Store, guards: &Path) -> Result<Value> {
     } else {
         "authorized"
     };
+    let effective_not_before = record
+        .as_ref()
+        .map(|r| effective_deadline(r, chrono::Utc::now().timestamp()))
+        .transpose()?;
     Ok(
-        json!({"classification":class,"files":files,"oauth_discovered":id.is_some(),"history_proves_new_account":false,
+        json!({"classification":class,"effective_not_before":effective_not_before,"files":files,"oauth_discovered":id.is_some(),"history_proves_new_account":false,
         "account_origin":if fresh_declared {"administrator_declared_fresh"}else if record.is_some(){"existing_unknown_history_recovery"}else{"unknown"},"local_binding_valid":binding,"account_guard_valid":gate_valid,"scheduler_state_ready":ready,"production_authorized":authorized,
         "recovery":record,"recovery_record_invalid":recovery_error,
         "next_step":if class=="history_unknown" {"recover begin --acknowledge-unknown-history"} else if class=="recovery_waiting" {"recover check"} else if class=="not_authorized" || class=="fresh_bound_not_authorized" {"enable --approve-production-cutover"} else {"recover status"}}),
@@ -300,6 +364,10 @@ fn begin_verified(
                 .not_before
                 .max(now.saturating_add(QUIET_SECONDS))
                 .max(f.reset_at.saturating_add(300));
+            let (boot, up) = clock_anchor(now)?;
+            r.boot_id = boot;
+            r.checked_uptime_ms = up;
+            r.quiet_remaining_ms = QUIET_SECONDS * 1000;
             r.checked_at = now;
             r.five = f;
             r.weekly = w;
@@ -315,6 +383,7 @@ fn begin_verified(
         bail!("recovery_clock_or_request_pending / 存在未来请求保护或时钟回拨；等待并检查其他调度实例");
     }
     // Existing global anchors and timestamps remain intact; no synthetic request is inserted.
+    let (boot_id, checked_uptime_ms) = clock_anchor(now)?;
     let r = Recovery {
         schema: 1,
         account: account.into(),
@@ -330,6 +399,9 @@ fn begin_verified(
         weekly: w,
         history_before_start: "unknown".into(),
         approved: false,
+        boot_id,
+        checked_uptime_ms,
+        quiet_remaining_ms: QUIET_SECONDS * 1000,
     };
     r.validate(account)?;
     archive(&gate, "recovery.json", now)?;
@@ -346,9 +418,11 @@ fn view(r: &Recovery, now: i64) -> Value {
     if r.approved {
         return json!({"recovery":r,"recovery_approved":true,"history_before_start":"unknown","next_step":"status"});
     }
-    json!({"recovery":r,"remaining_seconds":r.not_before.saturating_sub(now).max(0),"history_before_start":"unknown",
-        "ready_for_explicit_approval":!r.approved && now>=r.not_before,"automatic_warmup_enabled":false,
-        "next_step":if now<r.not_before{"wait; then recover check"}else{"enable --approve-production-cutover"}})
+    let effective = effective_deadline(r, now)
+        .unwrap_or_else(|_| now.saturating_add(QUIET_SECONDS).max(r.not_before));
+    json!({"recovery":r,"effective_not_before":effective,"remaining_seconds":effective.saturating_sub(now).max(0),"history_before_start":"unknown",
+        "ready_for_explicit_approval":!r.approved && now>=effective,"automatic_warmup_enabled":false,
+        "next_step":if now<effective{"wait; then recover check"}else{"enable --approve-production-cutover"}})
 }
 pub fn check(store: &Store) -> Result<Value> {
     rt::ensure_legacy_inactive()?;
@@ -428,6 +502,8 @@ fn check_verified(
         return Ok(result);
     }
     let _authority = rt::authority_lease(&gate)?;
+    let (boot, up) = clock_anchor(now)?;
+    advance_clock(&mut r, now, boot, up);
     if journal.last_attempt > now && journal.last_attempt > r.not_before {
         bail!("recovery_clock_or_request_pending / 存在未来请求保护或时钟回拨");
     }
@@ -442,6 +518,7 @@ fn check_verified(
                 || (w.reset_at - r.weekly.reset_at).abs() > 5
                 || w.used > r.weekly.used + 0.0001));
     if activity {
+        r.quiet_remaining_ms = QUIET_SECONDS * 1000;
         r.not_before = r
             .not_before
             .max(now.saturating_add(QUIET_SECONDS))
@@ -458,7 +535,7 @@ fn check_verified(
     if !approve {
         return Ok(view(&r, now));
     }
-    if now < r.not_before {
+    if now < r.not_before || r.quiet_remaining_ms > 0 {
         bail!("recovery_wait_required / 保守等待尚未结束或检测到新活动；请运行 recover check 查看新的截止时间");
     }
     let mut state = match store.state() {
@@ -610,6 +687,14 @@ mod tests {
         assert_eq!(v["history_proves_new_account"], false);
         let v = f.begin(f.start).unwrap();
         assert_eq!(v["automatic_warmup_enabled"], false);
+        assert!(
+            inspect(&f.store, &f.guards).unwrap()["effective_not_before"]
+                .as_i64()
+                .is_some()
+        );
+        let doctor = crate::management::doctor(&f.store, false).unwrap();
+        assert_eq!(doctor["existing_records_valid"], true);
+        assert_eq!(doctor["state_valid"], false);
         assert!(!f.store.root.join("state.json").exists());
         assert_eq!(f.record().history_before_start, "unknown");
         assert!(!f.record().approved);
@@ -673,6 +758,30 @@ mod tests {
         assert!(f.record().not_before >= now + QUIET_SECONDS);
         assert!(f.check(now - 1, true).is_err());
         assert!(!f.record().approved);
+    }
+    #[test]
+    fn wall_clock_forward_jump_and_reboot_cannot_skip_actual_quiet_time() {
+        let f = Fixture::new();
+        f.begin(f.start).unwrap();
+        let mut r = f.record();
+        let original_up = r.checked_uptime_ms;
+        let boot = r.boot_id.clone();
+        advance_clock(
+            &mut r,
+            f.start + QUIET_SECONDS,
+            boot.clone(),
+            original_up + 1000,
+        );
+        assert!(r.not_before > f.start + QUIET_SECONDS);
+        assert!(r.quiet_remaining_ms > 0);
+        advance_clock(
+            &mut r,
+            f.start + QUIET_SECONDS + 10,
+            "another-synthetic-boot".into(),
+            1000,
+        );
+        assert_eq!(r.quiet_remaining_ms, QUIET_SECONDS * 1000);
+        assert!(r.not_before >= f.start + 2 * QUIET_SECONDS + 10);
     }
     #[test]
     fn denial_invalid_quota_and_identity_changes_never_create_authority() {

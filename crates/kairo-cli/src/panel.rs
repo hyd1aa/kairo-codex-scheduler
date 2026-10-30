@@ -262,6 +262,10 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
     let authorized = health["production_authorized"] == true;
     let service_mode = kairo_platform::activation::status(&store.root);
     let live = authorized && service_mode["daemon_live_confirmed"] == true;
+    let requested = store
+        .read::<rt::Deployment>("deployment.json")
+        .is_ok_and(|d| d.enabled);
+    let uncertain = requested && !live && service_mode["observation_override"] != true;
     println!(
         "{}: {}",
         t(en, "调度模式", "Scheduling"),
@@ -270,11 +274,15 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                 en,
                 if live {
                     "正式运行（仍受安全门禁约束）"
+                } else if uncertain {
+                    "已授权但运行未确认；可能执行请求"
                 } else {
                     "只读观察"
                 },
                 if live {
                     "Production (safety gates apply)"
+                } else if uncertain {
+                    "Authorized but unconfirmed; requests may execute"
                 } else {
                     "Read-only observation"
                 }
@@ -287,8 +295,20 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         t(en, "自动预热", "Automatic warmup"),
         t(
             en,
-            if live { "已启用" } else { "尚未启用" },
-            if live { "Enabled" } else { "Not enabled" }
+            if live {
+                "已启用"
+            } else if uncertain {
+                "未确认（不等于安全暂停）"
+            } else {
+                "尚未启用"
+            },
+            if live {
+                "Enabled"
+            } else if uncertain {
+                "Unconfirmed (not a safe pause)"
+            } else {
+                "Not enabled"
+            }
         )
     );
     if compact {
@@ -544,12 +564,31 @@ pub fn render(v: &Value, en: bool) {
             println!(
                 "{} {}",
                 color(if ok { "✓" } else { "✗" }, if ok { 32 } else { 31 }),
-                i18n::label(key, en)
+                if key == "state_valid" {
+                    t(
+                        en,
+                        "调度状态完整就绪（不代表生产授权）",
+                        "Complete scheduler readiness (not production approval)",
+                    )
+                    .into()
+                } else {
+                    i18n::label(key, en)
+                }
             );
             if !ok {
                 println!("  {}",t(en,"检查安装、认证路径和文件权限；保留历史后再修复","Check installation, auth paths and permissions; retain history before repair"));
             }
         }
+        println!(
+            "{}: {}",
+            t(
+                en,
+                "本地已有配置/记录可校验（缺失不算就绪）",
+                "Existing local records validate (absence is not readiness)"
+            ),
+            v["existing_records_valid"]
+        );
+        render_recovery(&v["recovery_status"], en);
         return;
     }
     if v.get("idle_window_prewarm").is_some() {
@@ -662,10 +701,14 @@ fn execute(cli: &Cli, cmd: Cmd, en: bool) -> Result<()> {
     let diagnostics = matches!(cmd, Cmd::Doctor { .. });
     run(cli, cmd)?;
     if diagnostics {
-        for name in ["deployment.json", "state.json", "cursor.json"] {
-            file_state(cli, name, en);
-        }
-        println!("{}",t(en,"缺失部署/历史时继续观察；先核查历史再决定绑定或迁移，不要自动 FRESH。","Missing deployment/history stays in observation; review history before binding or migration; never automatically FRESH-bind."));
+        println!(
+            "{}",
+            t(
+                en,
+                "doctor 报告不等于生产授权；首次启用与旧账号恢复请进入 06 → 09",
+                "A doctor report is not production approval; first use and recovery: 06 -> 09"
+            )
+        );
     }
     Ok(())
 }
@@ -1070,7 +1113,9 @@ pub fn render_recovery(v: &Value, en: bool) {
         println!("{}",color(t(en,"✓ 恢复基线已持久化；旧历史仍未知，实际授权和服务模式以 status 为准","✓ Recovery baseline persisted; old history remains unknown; use status to confirm approval and actual service mode"),32));
     } else if recovery.is_object() {
         let now = chrono::Utc::now().timestamp();
-        let at = recovery["not_before"].as_i64();
+        let at = v["effective_not_before"]
+            .as_i64()
+            .or_else(|| recovery["not_before"].as_i64());
         println!(
             "{}: {}",
             t(
@@ -1081,6 +1126,7 @@ pub fn render_recovery(v: &Value, en: bool) {
             at.and_then(|at| local_time(at, timezone().ok()?))
                 .unwrap_or_else(|| "?".into())
         );
+        println!("{}",t(en,"服务重启保留等待；系统重启会保守重新计时，以 recover check 为准","Service restarts preserve the wait; a system reboot conservatively restarts timing; run recover check"));
         println!(
             "{}: {}",
             t(

@@ -98,7 +98,13 @@ pub fn error(e: &anyhow::Error, en: bool) -> (String, String) {
 }
 pub fn label(k: &str, en: bool) -> String {
     if en {
-        return k.replace('_', " ");
+        return match k {
+            "state_valid" => "Complete scheduler readiness (not production approval)".into(),
+            "existing_records_valid" => {
+                "Existing local configuration/record integrity (absence is not readiness)".into()
+            }
+            _ => k.replace('_', " "),
+        };
     };
     match k {
         "version" => "版本",

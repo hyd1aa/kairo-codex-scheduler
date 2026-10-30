@@ -41,7 +41,7 @@ sudo kairo recover begin --acknowledge-unknown-history
 sudo kairo recover status
 ```
 
-此时只创建持久化的未知历史风险屏障，**不授权模型请求，不把旧历史当作空历史**。至少等待 **5 小时 6 分 30 秒**（完整五小时窗口 + 最大缓冲 300 秒 + 执行超时 90 秒）；已观察窗口、旧门禁和配置缓冲可能使实际请求更晚。正常重启或重复 begin 不缩短/重置等待；若等待期间保护文件丢失，显式重新 begin 会重新开始保守等待。
+此时只创建持久化的未知历史风险屏障，**不授权模型请求，不把旧历史当作空历史**。至少等待 **5 小时 6 分 30 秒**（完整五小时窗口 + 最大缓冲 300 秒 + 执行超时 90 秒）；已观察窗口、旧门禁和配置缓冲可能使实际请求更晚。服务/进程重启或重复 begin 不缩短/重置等待；单调时钟保证系统向前校时不能跳过等待，系统重启会在下次复查时保守重新计时；若等待期间保护文件丢失，显式重新 begin 会重新开始保守等待。
 
 到提示时间后复查：
 
@@ -61,11 +61,11 @@ sudo kairo doctor
 
 `enable` 同样可在向导中输入 `ENABLE` 完成。它只支持标准安装器管理的 root/systemd 安装：验证 unit/目录，停止服务后保存恢复基线和授权，只移除原样的安装器观察覆盖，重载并启动服务，确认**当前 PID 的新 `live` 状态**。自定义 unit/覆盖会保留并拒绝自动接管。失败时关闭授权并恢复观察配置；错误会说明回退是否完整。启用后自然计划可能发出真实请求；回退不能撤销已发生的请求，已有持久化请求保护始终保留。向导本身不发送模型测试请求。
 
-确认真正启用时，`kairo --json status` 应同时显示 `scheduler_state_ready: true`、`recovery_status.production_authorized: true`、`service_mode.daemon_live_confirmed: true`、`automatic_warmup_enabled: true`，并且 `status_file.execution` 为 `live`、`status_file.daemon_pid` 对应 systemd 当前 PID。只有 systemd active 或 OAuth 校验通过都不足以证明自动预热已启用。服务刚启动、状态过旧或仍有 `--observe` 时不会显示已确认正式运行。
+确认真正启用时，`kairo --json status` 应同时显示 `scheduler_state_ready: true`、`recovery_status.production_authorized: true`、`service_mode.daemon_live_confirmed: true`、`automatic_warmup_enabled: true`，并且 `status_file.execution` 为 `live`、`status_file.daemon_pid` 对应 systemd 当前 PID。只有 systemd active 或 OAuth 校验通过都不足以证明自动预热已启用。服务刚启动、状态过旧或仍有 `--observe` 时不会显示已确认正式运行。授权仍在但 live 未确认时，界面会明确提示可能执行请求；这不是安全暂停，需要撤权时运行 `kairo pause`。
 
 恢复保留有效请求和账号锚点；替换损坏的本地状态前，将原始字节保留为私有 `recovery-evidence-*` 文件。全局门禁损坏、账号不匹配、危险文件类型/权限不能自动覆盖，需要保留原件并核查备份。历史未知标记在恢复后仍保留；全局冷却字段保存的是风险/预算保留时间，不伪造成功请求或旧调用记录。防重和执行权锁在**同机所有数据目录**间按账号共享；额度接口既不提供完整请求账本，也不能证明其他机器已经停用，管理员必须保证不运行竞争调度器。
 
-`doctor` 的 `existing_records_valid` 仅表示已有配置/记录可校验；`state_valid` 和 `scheduler_state_ready` 表示完整绑定、状态、游标及全局门禁就绪，仍不等于生产授权或实际 `live`。doctor 退出成功表示报告已生成，不表示所有项目已就绪。
+`doctor` 的 `existing_records_valid` 仅表示本地已有配置/记录可校验；`state_valid` 和 `scheduler_state_ready` 表示完整绑定、状态、游标及全局门禁就绪，仍不等于生产授权或实际 `live`。doctor 退出成功表示报告已生成，不表示所有项目已就绪。
 
 ## 输入 kairo：完整命令菜单
 
