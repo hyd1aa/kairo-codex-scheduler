@@ -8,7 +8,10 @@ pub fn t<'a>(en: bool, zh: &'a str, english: &'a str) -> &'a str {
     }
 }
 pub fn color(s: &str, code: u8) -> String {
-    if io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none() {
+    if io::stdout().is_terminal()
+        && std::env::var_os("NO_COLOR").is_none()
+        && std::env::var("TERM").as_deref() != Ok("dumb")
+    {
         format!("\x1b[{code}m{s}\x1b[0m")
     } else {
         s.into()

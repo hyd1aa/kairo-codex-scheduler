@@ -111,10 +111,55 @@ const EN: &[&str] = &[
     "Help and project information",
     "Uninstall Kairo (preserve state)",
 ];
+fn local_bytes(cli: &Cli, name: &str) -> io::Result<Vec<u8>> {
+    use std::io::Read;
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(cli.data_dir.join(name))?;
+    if !file.metadata()?.is_file() {
+        return Err(io::Error::other("Expected a regular state file"));
+    }
+    let mut bytes = Vec::new();
+    file.take(8 * 1024 * 1024 + 1).read_to_end(&mut bytes)?;
+    if bytes.len() > 8 * 1024 * 1024 {
+        return Err(io::Error::other("State file too large"));
+    }
+    Ok(bytes)
+}
+fn redact(v: &mut Value) {
+    match v {
+        Value::Object(map) => {
+            for (key, value) in map {
+                let key = key.to_ascii_lowercase();
+                if key.contains("token")
+                    || key.contains("password")
+                    || key.contains("secret")
+                    || key.contains("api_key")
+                    || key == "authorization"
+                {
+                    *value = json!("[redacted]");
+                } else {
+                    redact(value);
+                }
+            }
+        }
+        Value::Array(array) => {
+            for v in array {
+                redact(v);
+            }
+        }
+        _ => {}
+    }
+}
 fn file_state(cli: &Cli, name: &str, en: bool) -> Option<Value> {
-    match fs::read(cli.data_dir.join(name)) {
+    match local_bytes(cli, name) {
         Ok(bytes) => match serde_json::from_slice(&bytes) {
-            Ok(v) => Some(v),
+            Ok(mut v) => {
+                redact(&mut v);
+                Some(v)
+            }
             Err(_) => {
                 println!(
                     "! {name}: {}",
@@ -323,6 +368,7 @@ fn summary(cli: &Cli, en: bool, detailed: bool) -> Result<()> {
         status
             .as_ref()
             .and_then(|v| v["next_check"].as_i64())
+            .filter(|at| *at > chrono::Utc::now().timestamp())
             .and_then(|at| local_time(at, timezone().ok()?))
             .unwrap_or_else(|| t(
                 en,
@@ -507,7 +553,19 @@ fn execute(cli: &Cli, cmd: Cmd, en: bool) -> Result<()> {
             bail!("service_not_stopped / 服务尚未完全停止，请查看日志");
         }
         println!(
-            "✓ {}: {}",
+            "{}",
+            color(
+                match action.as_str() {
+                    "start" => t(en, "✓ Kairo 服务启动成功", "✓ Kairo service started"),
+                    "stop" => t(en, "✓ Kairo 服务已停止", "✓ Kairo service stopped"),
+                    "restart" => t(en, "✓ Kairo 服务重启成功", "✓ Kairo service restarted"),
+                    _ => t(en, "✓ 服务状态已查询", "✓ Service state queried"),
+                },
+                32
+            )
+        );
+        println!(
+            "{}: {}",
             t(en, "当前服务状态", "Current service state"),
             i18n::value(state, en)
         );
@@ -524,7 +582,15 @@ fn execute(cli: &Cli, cmd: Cmd, en: bool) -> Result<()> {
         );
         return Ok(());
     }
-    run(cli, cmd)
+    let diagnostics = matches!(cmd, Cmd::Doctor { .. });
+    run(cli, cmd)?;
+    if diagnostics {
+        for name in ["deployment.json", "state.json", "cursor.json"] {
+            file_state(cli, name, en);
+        }
+        println!("{}",t(en,"缺失部署/历史时继续观察；先核查历史再决定绑定或迁移，不要自动 FRESH。","Missing deployment/history stays in observation; review history before binding or migration; never automatically FRESH-bind."));
+    }
+    Ok(())
 }
 pub fn latest() -> Result<Value> {
     if std::env::var_os("KAIRO_OFFLINE").is_some() {
@@ -636,7 +702,12 @@ fn logs(_cli: &Cli, en: bool) -> Result<()> {
                     priority
                 };
                 let text = if details {
-                    clean(msg)
+                    if let Some(mut v) = parsed.clone() {
+                        redact(&mut v);
+                        clean(&v.to_string())
+                    } else {
+                        clean(msg)
+                    }
                 } else {
                     clean(&i18n::value(short, en))
                 };
@@ -742,6 +813,9 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
                         // Read only local records; status CLI remains independently available.
                         let mut v = serde_json::Map::new();
                         for name in [
+                            "config.json",
+                            "runtime.json",
+                            "accounts.json",
                             "deployment.json",
                             "state.json",
                             "cursor.json",
@@ -877,5 +951,24 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
     match result {
         Err(e) if e.is::<EndOfInput>() => Ok(()),
         r => r,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn detail_redaction_covers_nested_credentials_without_hiding_scheduler_state() {
+        let mut value = json!({"event":"observation_only","nested":[{"refresh_token":"synthetic-sensitive-value","access_token":"synthetic-access"}],"Authorization":"synthetic-auth","account":"synthetic-account"});
+        redact(&mut value);
+        assert_eq!(value["event"], "observation_only");
+        assert_eq!(value["account"], "synthetic-account");
+        assert!(!value.to_string().contains("synthetic-sensitive-value"));
+        assert!(!value.to_string().contains("synthetic-access"));
+        assert!(!value.to_string().contains("synthetic-auth"));
+    }
+    #[test]
+    fn external_text_cannot_inject_terminal_controls() {
+        assert_eq!(clean("event\x1b[3J\r\n"), "event[3J");
     }
 }
