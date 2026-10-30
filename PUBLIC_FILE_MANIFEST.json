@@ -1260,7 +1260,7 @@
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "0958949dfa2d8c78cbc8075f07e7cf15feaf2ce99c519ed0f330830525f10d78"
+      "sha256": "e5d2bd8b698f3176f6f091b518b1fc0c8fe4c2cf496850adbf192fb5e0800b7a"
     },
     {
       "path": "tests/pipe_lifecycle.py",
