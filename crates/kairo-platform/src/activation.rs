@@ -232,6 +232,7 @@ fn enable_policy(root: &Path, ack: bool, automatic: bool) -> Result<Value> {
         let health = crate::recovery::inspect(&store, &rt::guard_root())?;
         if health["production_authorized"] == true && status(root)["daemon_live_confirmed"] == true
         {
+            crate::onboarding::cutover_succeeded(&store)?;
             return Ok(
                 json!({"already_enabled":true,"production_authorized":true,"service_active":true,"daemon_live_confirmed":true,"automatic_warmup_enabled":true,"forced_model_requests":0}),
             );
