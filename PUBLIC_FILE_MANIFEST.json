@@ -269,7 +269,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "77feafe3428ab7069494af59f5ca9f61680b95b195c511341ef10414a313a819",
+      "sha256": "2437071ce8a4d66eedeba5ec563138d0239aded42fa4f968b7efa1c6ca7e5ded",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "8529b88db4cb9cba91d6c1ebe1b2aa37e45848106d4c026e24d786bc83fea5bd"
+      "sha256": "6c13cac1389cba6b229ed3e02be2227c50edb231ce800d18a5dd4dcf9637f6da"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -1150,7 +1150,7 @@
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "76a73d2ec7539240c5b52f75333f74c28c1ca74d06e772467a5b3c642c4cb0e8"
+      "sha256": "f43966e4b6abda8e946a39f9c218b5c6d188ec0fb995173da5225baba409c6d1"
     },
     {
       "path": "tests/pipe_lifecycle.py",

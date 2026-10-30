@@ -6,7 +6,18 @@ static DETAILS: AtomicBool = AtomicBool::new(false);
 pub fn details() -> bool {
     DETAILS.load(Ordering::Relaxed)
 }
-pub fn detail_output(mut value: Value) -> Result<()> {
+pub fn detail_output(cli: &Cli, mut value: Value) -> Result<()> {
+    // Keep raw lifecycle/history accessible only in the explicitly requested detail page.
+    for (key, name) in [
+        ("saved_state", "state.json"),
+        ("saved_cursor", "cursor.json"),
+    ] {
+        if let Ok(bytes) = local_bytes(cli, name) {
+            if let Ok(record) = serde_json::from_slice::<Value>(&bytes) {
+                value[key] = record;
+            }
+        }
+    }
     redact(&mut value);
     println!("{}", serde_json::to_string_pretty(&value)?);
     Ok(())
