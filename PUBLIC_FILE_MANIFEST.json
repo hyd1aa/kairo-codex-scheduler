@@ -57,7 +57,7 @@
     },
     {
       "path": ".github/workflows/publish.yml",
-      "sha256": "6b9cfe573bb85bf1f84db9297ba2a55906a5291cff9b8c409d836ee60eb3081f",
+      "sha256": "b9a269ff57ed66aa9fe22e876b02389031729e85e28aaf625004a2589551264c",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -108,7 +108,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "2f2f6bca7a0d8d502a45190e05d9c2e1029ac0aac6f954e47f53e01b0d4cc426",
+      "sha256": "5e1b80720548e8c0bbd1c2914e7dd0c7c176caeee3a9a0fae1e7bc9a8d3278cb",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -634,6 +634,17 @@
       "sha256": "867d28b77c4d48888dee0be48e8c4f695b033d711caf312725075d98b3234beb"
     },
     {
+      "path": "docs/RELEASE_NOTES_0.2.4.md",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "docs/RELEASE_NOTES_0.2.4.md",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "bc99a0a9014614a9b816b97c21fd903bd16cbdaf6a51ab0950c5e780136310b9"
+    },
+    {
       "path": "docs/RELEASING.md",
       "sha256": "a09adf089d36d91c8fb54d025a8040c067bbf3ec8db9ef9a242089dc1601ca1f",
       "category": "first-party",
@@ -659,7 +670,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "4c3f685de24e1ed922b4af0294241b3a59764685739896a39dd0cc18c2105f9a",
+      "sha256": "2107db03b52e06e3ef650cf6ef3bf978c9732556b6aac1ad113d75e7d04deda1",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",

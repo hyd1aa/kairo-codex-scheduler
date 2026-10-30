@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4
+
+- Automatic safe onboarding and timed recovery continuation with durable pause/intent.
+- Six-entry bilingual menu and simple installation documentation.
+- Preserve existing upgrade policy and credited reboot waiting progress.
+
+
 ## 0.2.3
 
 - Add explicit unknown-history account recovery with verified read-only quota snapshots, persistent quarantine and activity-based extensions.
