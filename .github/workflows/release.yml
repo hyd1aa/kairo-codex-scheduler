@@ -56,6 +56,16 @@ jobs:
       - run: cargo fmt --check
       - run: cargo test --workspace --locked
       - run: cargo build --release --locked -p kairo-cli
+      - name: Verify actual v0.2.3 upgrade and rollback compatibility
+        run: |
+          mkdir previous
+          base=https://github.com/hyd1aa/kairo-codex-scheduler/releases/download/v0.2.3
+          for name in SHA256SUMS kairo-0.2.3-${{ matrix.target }}; do
+            curl -fLsS --proto '=https' --proto-redir '=https' --max-time 120 -o "previous/$name" "$base/$name"
+          done
+          (cd previous && grep '  kairo-0.2.3-${{ matrix.target }}$' SHA256SUMS | sha256sum -c -)
+          chmod 755 previous/kairo-0.2.3-${{ matrix.target }}
+          python3 tests/upgrade_compatibility.py previous/kairo-0.2.3-${{ matrix.target }} target/release/kairo
       - run: python3 tests/online_cli.py target/release/kairo
       - run: python3 tests/panel_navigation.py target/release/kairo
       - run: python3 tests/workflow_policy.py

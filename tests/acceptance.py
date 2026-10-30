@@ -216,6 +216,9 @@ exit 86''');crashsha=hashlib.sha256(crash.read_bytes()).hexdigest()
     assert json.loads((data/'state.json').read_text())['positive_until']==n
     shell('bootstrap.sh','example/kairo','0.2.1',checksum,prefix)
     stage=base/'system-stage';shell('system-install.sh',binary,checksum,'root',stage);assert (stage/'etc/systemd/system/kairo.service').exists()
+    # Re-provisioning an existing live unit must not reintroduce observation mode.
+    mode=stage/'etc/systemd/system/kairo.service.d/20-mode.conf';mode.unlink()
+    shell('system-install.sh',binary,checksum,'root',stage);assert not mode.exists()
     versioned=stage/'opt/kairo';vd=stage/'var/lib/kairo'
     old_target=os.readlink(versioned/'current');assert old_target.startswith('releases/'+raw(['--version']).stdout.strip().split()[-1]+'-')
     assert (versioned/'manager/kairo').exists()

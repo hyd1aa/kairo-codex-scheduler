@@ -43,7 +43,7 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "c52ac2eff269f24cbee8fe73ead52f226c562583b9373e9ec3295348e77efd5c",
+      "sha256": "ae42bd62b3f145508d06acefb9333ca027bcba8821da869e315bd88707c406a5",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -70,7 +70,7 @@
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "65863de9680cad8a4a02fd1ebd521094c81d88240d856fa647a23c9959600b2c",
+      "sha256": "69bdfaa380b91d8aa6b6edf29309caa482bdc0cbc3a8df8988cc94f54dba8a9d",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "6b4688989e359dfa43f0a11f5786ce5cbda9c2f412590f182cab4d732682afd9"
+      "sha256": "24cd1df945d4146a25ed4ea799dcdfc09c540a68dfa75d8e111d8d924fdb3b5e"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -1152,7 +1152,7 @@
     },
     {
       "path": "tests/acceptance.py",
-      "sha256": "a78b942d12a92142ff04441f1a946b27257a5137e722669281a66ddd230a5b2f",
+      "sha256": "a790a5e985bb6279c176c752d7116aea6cfd954bb70c6f0d003e333441077380",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1338,6 +1338,17 @@
       "source_path": "tests/update_integrity_files.py",
       "source_sha256": "5a65c6220faaab43e068a3710887907f526d87ffb2276dd535006cdd96b845c6",
       "transformation": "byte-identical"
+    },
+    {
+      "path": "tests/upgrade_compatibility.py",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "tests/upgrade_compatibility.py",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "610fd867047a9fe953c8c5d33840ed31de312a271acbcffbbfd1214ed99b0e97"
     },
     {
       "path": "tests/validate_sbom.py",

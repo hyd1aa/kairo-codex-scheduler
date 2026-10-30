@@ -314,6 +314,9 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
             t(en, "状态", "Status"),
             color(t(en, zh, english), code)
         );
+        if health["classification"] == "data_corrupt" && code != 31 {
+            println!("{}",color(t(en,"需要修复：状态数据损坏；请进入06高级设置检查，已保留暂停意愿。","Repair required: damaged state; check06 Advanced. Pause intent is preserved."),31));
+        }
         println!(
             "{}: {}",
             t(en, "账号", "Account"),
