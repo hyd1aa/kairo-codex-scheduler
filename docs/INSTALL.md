@@ -1,8 +1,8 @@
 # 安装与维护 / Installation and maintenance
 
-v0.2.1已公开：[Release](https://github.com/hyd1aa/kairo-codex-scheduler/releases/tag/v0.2.1)。使用[README中的固定命令](../README.md)自动选择最新稳定正式版，固定版本仍为高级选项。默认GitHub HTTPS＋SHA256完整性检查，不要求发行签名；同源SHA不提供独立发布者身份认证。必须信任仓库管理者及GitHub/TLS。高级签名路径保持独立且失败不降级。
+[最新稳定发行](https://github.com/hyd1aa/kairo-codex-scheduler/releases/latest)。使用[README中的固定命令](../README.md)自动选择最新稳定正式版，固定版本仍为高级选项。默认GitHub HTTPS＋SHA256完整性检查，不要求发行签名；同源SHA不提供独立发布者身份认证。必须信任仓库管理者及GitHub/TLS。高级签名路径保持独立且失败不降级。
 
-v0.2.1 is public. Use the fixed latest-stable command in the [README](../README.en.md); pinning a version remains an advanced option. Default trust is GitHub HTTPS/repository control with SHA256 integrity, not independent publisher authentication. Optional signatures are a separate, fail-closed path.
+Use the fixed latest-stable command in the [README](../README.en.md); pinning a version remains an advanced option. Default trust is GitHub HTTPS/repository control with SHA256 integrity, not independent publisher authentication. Optional signatures are a separate, fail-closed path.
 
 ## 首次安装 / First installation
 
@@ -17,25 +17,20 @@ If absent, the installer fetches official Codex0.164.0 from `openai/codex`, veri
 离线准备好发行目录时：
 
 ```sh
-sudo bash ./install.sh --version 0.2.1 --source-dir /path/to/release --skip-codex
+sudo bash ./install.sh --version 0.2.4 --source-dir /path/to/release --skip-codex
 ```
 
-`--skip-codex`只用于已有CLI或无网准备，不绕过Kairo校验。首次服务停用/观察，不自动OAuth或真实调度。
+`--skip-codex`只用于已有CLI或无网准备，不绕过Kairo校验。首次安装记录安全自动预热意愿；OAuth 未完成或安全条件未满足时禁止模型请求。交互安装从控制终端引导官方 OAuth；非交互安装不阻塞。
 
 ## OAuth与启用 / OAuth and activation
 
-```sh
-sudo -u kairo -H kairo auth login
-sudo -u kairo -H kairo auth verify
-sudo -u kairo -H kairo doctor
-sudo kairo
-```
+普通用户运行 `sudo kairo`，03 完成必要登录，04 启动或暂停。交互首装会引导缺失的官方设备 OAuth；已有服务账号登录直接复用，管理员自己的私有 Codex CLI 登录可在严格权限验证后安全导入。网页登录不能代替 VPS 上 Codex CLI OAuth，不复制其他机器的凭据或请求账本。
 
-本人完成官方浏览器/MFA。登录凭据由官方CLI在服务用户HOME中管理，不复制其他服务器的auth.json或账本。若现有CLI位于其他绝对路径，用 `sudo -u kairo -H kairo runtime --codex /absolute/path/to/codex` 设置；keyring-only等凭证存储是否兼容须实际验证，失败应停住，不转抄凭据。
+安装授权安全条件满足后自动预热。其他机器是否仍在调度无法验证时，必须对当前账号确认一次独占调度。之后由轻量 systemd timer 自动建立未知历史恢复、等待、只读复查和切换正式服务，无需 FRESH / RECOVER / ENABLE。系统重启保留已确认等待进度，无法验证的关机时间不计入。旧安装升级保留已有授权、暂停和恢复进度；没有自动意愿的旧观察安装在菜单04选择一次自动接续。
 
-菜单“OAuth与账号管理”完成状态核验和绑定；新账户确认只适用于确实没有近期请求的账户，迁移账户不得清空历史冒充新账户。诊断、额度和账户/近期请求门禁满足后，管理员才明确启用调度并启动服务。`kairo activate --help`列出原有显式启用参数；安装和登录本身不构成真实请求授权。开发验收只使用模拟账户，首次真实OAuth仍需本人操作，不发送模型测试请求。
+Use `sudo kairo`: 03 for necessary official login, 04 to start/pause. Interactive first installation guides official device OAuth, while noninteractive installation never waits for input. Existing private service OAuth or a securely validated local administrator Codex CLI login can be reused. Installation authorizes safe automatic warmup. A one-time account exclusivity confirmation remains necessary when other machines cannot be verified. The timer then handles unknown-history recovery, waiting, read-only checks and verified enablement. Upgrades never cancel a pause or infer new authorization. [State machine and restart details](AUTOMATIC_INITIALIZATION.md).
 
-Complete browser/MFA yourself. Credentials stay with the official CLI under the service user's HOME. Use the account menu to verify/bind and review quota/history checks before explicitly enabling live scheduling and starting the service. A successful login is not itself permission to send requests. Never erase request history to impersonate a fresh account. Real OAuth remains a separate human acceptance item.
+高级命令仍保留，见[人工维护说明](ADVANCED.md)。若官方 CLI 不在标准位置，可设置 `sudo kairo runtime --codex /absolute/path/to/codex`。keyring-only 等非文件 OAuth 需要管理员使用受支持的官方 CLI 登录方式，不绕过权限或手工转抄令牌。测试仅使用模拟账号，不发送真实模型请求。
 
 ## 更新与回滚 / Updates and rollback
 
@@ -50,6 +45,7 @@ sudo kairo update online
 The retained installer checks the latest stable GitHub release, package/binary hashes and version before stopping an active service. It reuses the existing durable Rust transaction and restores the previous service state. Errors attempt recovery; failed recovery stays an error and never starts a binary with the wrong expected hash. Online downgrades are refused. Same-byte reinstall is idempotent.
 
 ```sh
+sudo kairo pause
 sudo systemctl stop kairo.service
 sudo kairo update rollback --prefix /opt/kairo
 sudo kairo update recover --prefix /opt/kairo
@@ -78,12 +74,12 @@ Debian12 x86_64 public installation passed in a fresh QEMU TCG guest over real p
 首页安装和卸载命令固定且不带版本。保留高级固定版本：
 
 ```sh
-bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/install.sh | sudo bash -s -- --version 0.2.1'
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/install.sh | sudo bash -s -- --version 0.2.4'
 ```
 
-不使用 `sudo -S` 读取密码，以免与脚本源流混用。sudo正常从终端读取密码；安装器本身不从stdin询问账号或启用调度。网络/下载/校验失败返回非零，HUP/INT/TERM分别传播129/130/143并清理已建立的私有暂存目录；SIGKILL或断电不能执行shell清理钩子，重跑依靠已有持久化恢复，不宣称能截获SIGKILL。
+不使用 `sudo -S` 读取密码，以免与脚本源流混用。sudo正常从终端读取密码；安装器不从脚本 stdin 读取认证或确认，只在存在真实控制终端时使用独立终端描述符。网络/下载/校验失败返回非零，HUP/INT/TERM分别传播129/130/143并清理已建立的私有暂存目录；SIGKILL或断电不能执行shell清理钩子，重跑依靠已有持久化恢复，不宣称能截获SIGKILL。
 
-Use the homepage pipefail commands for reliable pipeline status. Plain `curl | bash` cannot detect a producer that fails before sending a script. No installer prompts consume the script stream. The complete function is parsed before any installation/removal action; child commands receive /dev/null. OAuth remains a later human operation. Existing v0.2.1 binaries/releases are immutable: rerunning the current online bootstrap also refreshes its managed maintenance helpers without replacing user data, even when the binary is already current.
+Use the homepage pipefail commands for reliable pipeline status. Plain `curl | bash` cannot detect a producer that fails before sending a script. No installer prompts consume the script stream. The complete function is parsed before any installation/removal action; child commands receive /dev/null. Official OAuth remains a human authentication operation, guided during interactive installation or through menu03 later. Existing v0.2.1 binaries/releases are immutable: rerunning the current online bootstrap also refreshes its managed maintenance helpers without replacing user data, even when the binary is already current.
 
 ## 高级卸载 / Advanced removal
 

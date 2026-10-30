@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "a5e1eb80eaa13684a33e5c87b2561dc5956c15e500cfab7e83f1113d7bcb9832"
+      "sha256": "6b4688989e359dfa43f0a11f5786ce5cbda9c2f412590f182cab4d732682afd9"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -561,14 +561,14 @@
     },
     {
       "path": "docs/INSTALL.md",
-      "sha256": "78d716ebb71c553719c5384c9880ab84ea90c9d02909de8b203d821e20b41535",
+      "sha256": "9812bb747b794e27bcfc9ea02c209c0d4b509556faa8194cb567747ffe686e4b",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "public-source/templates/docs/INSTALL.md",
       "source_sha256": "bf165d40a461ec70edce87dcfca568d6f30880c021c57b4360551eefcb7a6a0f",
-      "transformation": "New public-oriented document/tool; replaces private audit/prose dependencies",
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
       "previous_reviewed_sha256": "bf165d40a461ec70edce87dcfca568d6f30880c021c57b4360551eefcb7a6a0f",
       "post_export_change_basis": "Streaming maintenance/documentation update; runtime and immutable v0.2.1 assets unchanged",
       "previous_release_sha256": "044c6446fd9d46bdc5c90928ed92e2a743cbbe414d3d7fe64c2a0f6689d7dd9e",
@@ -670,7 +670,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "5e63d240201826bc8626f9e0d440280d4072dd4cb8f573afa43d6baa5d4dbbca",
+      "sha256": "9c18b4111717b55a56af06ce3925912e31c0b31542e9850ee338f0885b8778a5",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
@@ -1260,7 +1260,7 @@
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "5f034465842f8c00bf0d3a06bd0d2a1e484afaa65362083b4db3b6f0f901c048"
+      "sha256": "0958949dfa2d8c78cbc8075f07e7cf15feaf2ce99c519ed0f330830525f10d78"
     },
     {
       "path": "tests/pipe_lifecycle.py",

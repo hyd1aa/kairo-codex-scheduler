@@ -291,6 +291,13 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                 "One confirmation required (04 Start)",
                 33,
             )
+        } else if health["classification"] == "data_corrupt" || auto["status"] == "repair_required"
+        {
+            (
+                "需要修复（06 高级设置）",
+                "Repair required (06 Advanced)",
+                31,
+            )
         } else if health["classification"] == "recovery_waiting" {
             ("等待安全恢复", "Waiting for safe recovery", 33)
         } else if uncertain {
@@ -1037,7 +1044,7 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
         page(title, false);
         match n {
             1 => {
-                if let Err(e) = summary(cli, en, true, false) {
+                if let Err(e) = summary(cli, en, false, true) {
                     let (_, m) = i18n::error(&e, en);
                     println!("{}", color(&m, 31));
                 }
@@ -1177,7 +1184,7 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
             match n {
                 1 => section(cli, en, 1)?,
                 2 => section(cli, en, 3)?,
-                3 => section(cli, en, 6)?,
+                3 => account_menu(cli, en)?,
                 4 => warmup_menu(cli, en)?,
                 5 => section(cli, en, 9)?,
                 6 => advanced(cli, en)?,
@@ -1462,6 +1469,7 @@ fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
                 "中文 / English",
                 "帮助",
                 "卸载 Kairo",
+                "高级账号配置",
             ],
             &[
                 "Logs",
@@ -1472,6 +1480,7 @@ fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
                 "中文 / English",
                 "Help",
                 "Uninstall Kairo",
+                "Advanced account profiles",
             ],
         )?;
         match choice.trim_start_matches('0') {
@@ -1491,11 +1500,55 @@ fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
                 return Ok(());
             }
             "7" => section(cli, en, 11)?,
+            "9" => section(cli, en, 6)?,
             "8" => report(
                 choose(en, "12").and_then(|c| c.map_or(Ok(()), |c| execute(cli, c, en))),
                 en,
             )?,
             _ => {}
+        }
+    }
+}
+
+fn account_menu(cli: &Cli, en: bool) -> Result<()> {
+    loop {
+        let title = t(en, "Codex 账号管理", "Codex account");
+        TITLE.with(|t| *t.borrow_mut() = title.into());
+        page(title, false);
+        let choice = submenu(
+            en,
+            &[
+                "登录 Codex（官方 OAuth）",
+                "校验账号与查询额度",
+                "查看账号状态",
+            ],
+            &[
+                "Log in to Codex (official OAuth)",
+                "Verify account and quota",
+                "Account status",
+            ],
+        )?;
+        let action = match choice.trim_start_matches('0') {
+            "" => return Ok(()),
+            "1" => "login",
+            "2" => "verify",
+            "3" => "status",
+            _ => continue,
+        };
+        report(
+            run(
+                cli,
+                Cmd::Auth {
+                    action: action.into(),
+                    name: None,
+                    home: None,
+                    acknowledge_fresh: false,
+                },
+            ),
+            en,
+        )?;
+        if action == "login" {
+            println!("{}",t(en,"登录完成后后台继续检查；首次需在04确认一次账号独占调度。","Background checks continue after login; confirm exclusive scheduling once via04."));
         }
     }
 }

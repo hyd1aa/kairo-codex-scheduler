@@ -115,7 +115,9 @@ with tarfile.open(stage/asset) as archive:
    p.parent.mkdir(parents=True,exist_ok=True)
    with p.open('xb') as f:f.write(archive.extractfile(m).read())
    p.chmod(0o755 if m.mode & 0o111 else 0o644)
-for required in ['install.sh','packaging/system-first-install.sh','packaging/system-install.sh','packaging/install.sh','packaging/system-uninstall.sh','packaging/kairo.service']:
+required_files=['install.sh','packaging/system-first-install.sh','packaging/system-install.sh','packaging/install.sh','packaging/system-uninstall.sh','packaging/kairo.service']
+if tuple(map(int,version.split('.'))) >= (0,2,4):required_files+=['packaging/kairo-onboarding.service','packaging/kairo-onboarding.timer']
+for required in required_files:
  assert (stage/root/required).is_file(), 'Incomplete installation package: '+required
 binary=stage/root/'bin'/f'kairo-{target}'
 b=binary.read_bytes();assert b[:6]==b'\x7fELF\x02\x01' and struct.unpack('<H',b[18:20])[0]==(62 if target.startswith('x86_64') else 183), 'ELF architecture mismatch'
