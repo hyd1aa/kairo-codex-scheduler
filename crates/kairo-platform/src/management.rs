@@ -95,7 +95,7 @@ pub fn account_action(
         _ => bail!("auth_action_invalid / 账号操作无效"),
     }
 }
-fn account_command(store: &Store, binary: &Path) -> Result<Command> {
+pub(crate) fn account_command(store: &Store, binary: &Path) -> Result<Command> {
     use std::os::unix::fs::MetadataExt;
     let owner = fs::metadata(&store.root)?.uid();
     let command = if unsafe { libc::geteuid() } == 0 && owner != 0 {

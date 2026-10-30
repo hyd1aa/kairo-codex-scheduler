@@ -275,7 +275,7 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
             .unwrap_or_default();
         let (zh, english, code) = if live {
             ("自动预热运行中", "Automatic warmup running", 32)
-        } else if auth.is_none() {
+        } else if auth.is_none() || auto["status"] == "login_required" {
             (
                 "需要登录 Codex（03 账号管理）",
                 "Log in to Codex (03 Account)",
@@ -330,10 +330,13 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                 t(en, "预计复查", "Estimated recheck"),
                 local_time(deadline, timezone()?).unwrap_or_else(|| deadline.to_string())
             );
-            if intent
-                .as_ref()
-                .is_some_and(|i| i.requested && i.exclusive_account)
-            {
+            if intent.as_ref().is_some_and(|i| {
+                i.requested
+                    && i.exclusive_account
+                    && auth
+                        .as_ref()
+                        .is_some_and(|a| i.account.as_deref() == Some(a.fingerprint.as_str()))
+            }) {
                 println!(
                     "{}",
                     t(

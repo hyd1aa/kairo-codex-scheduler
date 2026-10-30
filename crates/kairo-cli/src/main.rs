@@ -910,7 +910,9 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                 kairo_platform::parse_usage(&v, now)?
             } else {
                 let id = kairo_platform::identity(&r.codex_home.join("auth.json"))?;
-                rt::verified_usage(&id, &kairo_platform::quota(&id)?, now)?
+                let usage = rt::verified_usage(&id, &kairo_platform::quota(&id)?, now)?;
+                store.write("quota-cache.json",&json!({"five_hour":usage.0,"weekly":usage.1,"server_denied":usage.2,"at":now,"account":id.fingerprint}))?;
+                usage
             };
             emit(cli, json!({"five_hour":f,"weekly":w,"server_denied":d}))
         }

@@ -1259,6 +1259,10 @@
     "en": "Quota limit flag missing",
     "zh": "缺少额度限制标志"
   },
+  "quota_refresh_failed": {
+    "en": "quota refresh failed",
+    "zh": "额度查询失败，将自动重试；预热仍受安全门禁约束"
+  },
   "quota_transport_failed": {
     "en": "quota transport failed",
     "zh": "网络失败"
@@ -1454,6 +1458,10 @@
   "service_not_stopped": {
     "en": "service not stopped",
     "zh": "服务或子进程尚未停止，未执行生产授权"
+  },
+  "service_oauth_unreadable": {
+    "en": "service oauth unreadable",
+    "zh": "服务账号无法读取此 OAuth，请在账号菜单登录"
   },
   "service_still_observing": {
     "en": "service still observing",

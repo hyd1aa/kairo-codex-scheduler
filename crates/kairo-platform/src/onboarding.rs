@@ -49,7 +49,7 @@ pub fn request(store: &Store, exclusive: bool) -> Result<Value> {
         }
     };
     let id = rt::runtime(store)
-        .and_then(|r| crate::identity(&r.codex_home.join("auth.json")))
+        .and_then(|r| service_identity(store, &r.codex_home.join("auth.json")))
         .ok();
     if exclusive && id.is_none() {
         bail!("oauth_unavailable / 请先完成服务账号的 Codex OAuth 登录，再确认独占调度");
@@ -158,6 +158,20 @@ pub fn tick(root: &Path) -> Result<Value> {
     }
     advance(root, &mut Real, chrono::Utc::now().timestamp())
 }
+fn service_identity(store: &Store, path: &Path) -> Result<crate::Identity> {
+    let owner = std::fs::metadata(&store.root)?.uid();
+    let meta = std::fs::symlink_metadata(path)?;
+    if meta.uid() != owner {
+        bail!("service_oauth_unreadable / 服务账号无法读取此 OAuth，请在账号菜单登录");
+    }
+    let mut command = crate::management::account_command(store, Path::new("/usr/bin/test"))?;
+    command.arg("-r").arg(path);
+    let output = crate::process::output(&mut command, 3, 4096)?;
+    if !output.status.success() {
+        bail!("service_oauth_unreadable / 服务账号无法读取此 OAuth，请在账号菜单登录");
+    }
+    crate::identity(path)
+}
 trait Actions {
     fn account(&mut self, store: &Store) -> Option<String>;
     fn inspect(&mut self, store: &Store) -> Result<Value>;
@@ -165,12 +179,15 @@ trait Actions {
     fn check(&mut self, store: &Store) -> Result<Value>;
     fn needs_cutover(&mut self, root: &Path) -> bool;
     fn enable(&mut self, root: &Path) -> Result<Value>;
+    fn refresh_quota(&mut self, _store: &Store, _now: i64) -> Result<()> {
+        Ok(())
+    }
 }
 struct Real;
 impl Actions for Real {
     fn account(&mut self, store: &Store) -> Option<String> {
-        rt::runtime(store)
-            .and_then(|r| crate::identity(&r.codex_home.join("auth.json")))
+        let r = rt::runtime(store).ok()?;
+        service_identity(store, &r.codex_home.join("auth.json"))
             .ok()
             .map(|id| id.fingerprint)
     }
@@ -182,6 +199,25 @@ impl Actions for Real {
     }
     fn check(&mut self, store: &Store) -> Result<Value> {
         recovery::check(store)
+    }
+    fn refresh_quota(&mut self, store: &Store, now: i64) -> Result<()> {
+        let account = self.account(store);
+        let fresh = store
+            .read::<Value>("quota-cache.json")
+            .ok()
+            .is_some_and(|v| {
+                v["account"].as_str() == account.as_deref()
+                    && v["at"]
+                        .as_i64()
+                        .is_some_and(|at| at <= now && now - at < 300)
+            });
+        if !fresh {
+            let mut q = rt::verify(store)?;
+            q["at"] = json!(now);
+            q["account"] = q["account_fingerprint"].clone();
+            store.write("quota-cache.json", &q)?;
+        }
+        Ok(())
     }
     fn needs_cutover(&mut self, root: &Path) -> bool {
         let v = crate::activation::status(root);
@@ -221,6 +257,14 @@ fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
         if step == Step::Running && actions.needs_cutover(root) {
             drop(store);
             return actions.enable(root);
+        }
+        if step == Step::Running && actions.refresh_quota(&store, now).is_err() {
+            return event(
+                &store,
+                status,
+                now + 60,
+                Some("quota_refresh_failed / 额度查询失败，将自动重试；预热仍受安全门禁约束"),
+            );
         }
         return event(&store, status, 0, None);
     }
@@ -446,6 +490,22 @@ mod tests {
                 enables: 0,
             },
         )
+    }
+    #[test]
+    fn service_credential_validation_rejects_symlinks_and_unprivate_files() {
+        let (root, _) = fixture();
+        let store = Store::open(&root).unwrap();
+        let path = root.join("auth-fixture.json");
+        store.write("auth-fixture.json",&json!({"tokens":{"account_id":"synthetic-readable-account","access_token":"synthetic-readable-placeholder"}})).unwrap();
+        assert!(service_identity(&store, &path).is_ok());
+        use std::os::unix::fs::{symlink, PermissionsExt};
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(service_identity(&store, &path).is_err());
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        symlink(&path, root.join("auth-link.json")).unwrap();
+        assert!(service_identity(&store, &root.join("auth-link.json")).is_err());
+        drop(store);
+        std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
     fn persisted_recovery_automatically_rechecks_and_enables_exactly_once() {
