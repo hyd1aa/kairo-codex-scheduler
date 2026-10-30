@@ -96,6 +96,9 @@ impl Record {
     }
 }
 pub fn load(store: &Store, expected: Option<&str>) -> View {
+    load_at(store, expected, chrono::Utc::now().timestamp())
+}
+fn load_at(store: &Store, expected: Option<&str>, now: i64) -> View {
     let state = store
         .state()
         .ok()
@@ -133,6 +136,10 @@ pub fn load(store: &Store, expected: Option<&str>) -> View {
                             _ => Kind::Pending,
                         };
                         r.reason = t.status.clone();
+                        if r.kind == Kind::Pending && now >= t.deadline {
+                            r.kind = Kind::Unconfirmed;
+                            r.reason = "confirmation_deadline_passed".into();
+                        }
                         if t.countdown_confirmed {
                             r.confirmed_at = t.samples.last().map(|s| s.checked_at);
                         }
@@ -143,6 +150,16 @@ pub fn load(store: &Store, expected: Option<&str>) -> View {
                     r.reason = "confirmation_unreadable".into();
                 }
             }
+        }
+        if r.kind == Kind::Pending && a.completed_at.is_none() {
+            r.kind = Kind::Unconfirmed;
+            r.reason = "legacy_confirmation_missing".into();
+        } else if r.kind == Kind::Pending
+            && a.completed_at
+                .is_some_and(|at| now >= at.saturating_add(kairo_core::WINDOW))
+        {
+            r.kind = Kind::Unconfirmed;
+            r.reason = "confirmation_deadline_passed".into();
         }
         records.push(r);
     }
@@ -351,13 +368,35 @@ mod tests {
                 .unwrap();
         }
         fn view(&self) -> View {
-            load(&Store::open(&self.root).unwrap(), Some(&self.state.account))
+            load_at(
+                &Store::open(&self.root).unwrap(),
+                Some(&self.state.account),
+                self.done + 152,
+            )
         }
     }
     impl Drop for Fixture {
         fn drop(&mut self) {
             std::fs::remove_dir_all(&self.root).unwrap();
         }
+    }
+    #[test]
+    fn expired_or_incomplete_legacy_success_is_not_permanently_pending() {
+        let mut f = Fixture::new();
+        assert_eq!(
+            load_at(
+                &Store::open(&f.root).unwrap(),
+                Some(&f.state.account),
+                f.done + 18001
+            )
+            .request
+            .unwrap()
+            .kind,
+            Kind::Unconfirmed
+        );
+        f.state.attempts[0].completed_at = None;
+        f.save();
+        assert_eq!(f.view().request.unwrap().kind, Kind::Unconfirmed);
     }
     #[test]
     fn timeout_and_unrelated_countdown_are_not_claimed_as_correlated_success() {
