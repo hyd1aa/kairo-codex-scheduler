@@ -55,6 +55,10 @@
     "en": "ChatGPT OAuth required",
     "zh": "需要 ChatGPT OAuth"
   },
+  "Check latest stable release without updating": {
+    "en": "Check latest stable release without updating",
+    "zh": "查询最新稳定版，不执行升级"
+  },
   "Check, install, recover or roll back updates": {
     "en": "Check, install, recover or roll back updates",
     "zh": "检查、安装、恢复或回滚更新"
@@ -523,6 +527,10 @@
     "en": "Acknowledge a fresh account with no recent requests",
     "zh": "确认首次绑定且没有近期调用"
   },
+  "activation_history_missing": {
+    "en": "activation history missing",
+    "zh": "部署授权或调度历史文件缺失；OAuth 校验成功不代表已绑定或已授权。请运行 status、doctor 并人工核对历史；不要自动 FRESH、伪造状态或删除保护记录"
+  },
   "add_hh:mm": {
     "en": "Add HH:MM",
     "zh": "新增 HH:MM 时间"
@@ -574,6 +582,10 @@
   "check,_install,_recover_or_roll_back_updates": {
     "en": "Check, install, recover or roll back updates",
     "zh": "检查、安装、恢复或回滚更新"
+  },
+  "check_latest_stable_release_without_updating": {
+    "en": "Check latest stable release without updating",
+    "zh": "查询最新稳定版，不执行升级"
   },
   "checksum_invalid": {
     "en": "checksum invalid",
@@ -897,7 +909,7 @@
   },
   "logs_failed": {
     "en": "logs failed",
-    "zh": "日志查询失败"
+    "zh": "无法读取日志；请检查日志权限"
   },
   "machine-readable_json_without_ansi": {
     "en": "Machine-readable JSON without ANSI",
@@ -1119,9 +1131,17 @@
     "en": "Recover an interrupted update transaction",
     "zh": "恢复中断的升级事务"
   },
+  "release_invalid": {
+    "en": "release invalid",
+    "zh": "发布信息无效"
+  },
   "release_path_invalid": {
     "en": "release path invalid",
     "zh": "版本目录无效"
+  },
+  "release_query_failed": {
+    "en": "release query failed",
+    "zh": "GitHub 最新版本查询失败，请检查网络"
   },
   "release_target_missing": {
     "en": "release target missing",
@@ -1215,6 +1235,14 @@
     "en": "service failed",
     "zh": "Kairo 服务操作失败；请检查权限与安装状态"
   },
+  "service_not_active": {
+    "en": "service not active",
+    "zh": "命令已返回，但服务尚未运行，请查看日志"
+  },
+  "service_not_stopped": {
+    "en": "service not stopped",
+    "zh": "服务尚未完全停止，请查看日志"
+  },
   "shadow_incomplete": {
     "en": "shadow incomplete",
     "zh": "只读观察状态初始化未完成"
@@ -1273,7 +1301,7 @@
   },
   "subcommand_required": {
     "en": "subcommand required",
-    "zh": "需要子命令"
+    "zh": "非交互终端请使用子命令"
   },
   "synthetic_fixture": {
     "en": "Synthetic fixture",

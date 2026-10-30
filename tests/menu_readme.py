@@ -8,6 +8,7 @@ with tempfile.TemporaryDirectory() as data:
  def menu(text):
   m,s=pty.openpty();p=subprocess.Popen([binary,'--data-dir',data],stdin=s,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env=env);os.close(s);os.write(m,text.encode());out,err=p.communicate(timeout=15);os.close(m);assert p.returncode==0,err;return strip(out)
  direct('init')
+ direct('runtime','--home',data,'--codex-home',data,'--codex','/nonexistent-kairo-mock')
  for language,file in [('zh-CN','README.md'),('en-US','README.en.md')]:
   direct('lang',language);readme=(repo/file).read_text()
   output=menu('00\n');actual=re.findall(r'^(\d{2})\. (.+)$',output,re.M)

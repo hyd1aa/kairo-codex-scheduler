@@ -1,4 +1,5 @@
 mod i18n;
+mod panel;
 use anyhow::{bail, Context, Result};
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use i18n::{color, t};
@@ -295,6 +296,8 @@ enum Schedule {
 }
 #[derive(Subcommand)]
 enum Update {
+    #[command(about = "Check latest stable release without updating / 查询最新稳定版，不执行升级")]
+    Latest,
     #[command(
         about = "Update from GitHub HTTPS with SHA256 verification / 从 GitHub HTTPS 校验 SHA256 并更新"
     )]
@@ -333,7 +336,9 @@ enum Update {
     },
 }
 fn emit(cli: &Cli, v: Value) -> Result<()> {
-    if cli.json {
+    if panel::active() {
+        panel::render(&v, cli.lang.as_deref() == Some("en-US"));
+    } else if cli.json {
         println!("{}", serde_json::to_string_pretty(&v)?)
     } else {
         i18n::render(&v, cli.lang.as_deref() == Some("en-US"), 0)
@@ -497,6 +502,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
         }
         Cmd::Update { action } => {
             match action {
+                Update::Latest => return emit(cli, panel::latest()?),
                 Update::Online => {
                     let status = std::process::Command::new("bash")
                         .args(["/opt/kairo/installer/install.sh", "--update"])
@@ -943,7 +949,18 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             account,
             approve_production_cutover,
         } => {
-            rt::activate(&store, &account, approve_production_cutover)?;
+            if let Err(e) = rt::activate(&store, &account, approve_production_cutover) {
+                if e.chain().any(|e| {
+                    e.downcast_ref::<io::Error>()
+                        .is_some_and(|e| e.kind() == io::ErrorKind::NotFound)
+                }) && ["deployment.json", "state.json", "cursor.json"]
+                    .iter()
+                    .any(|name| !store.root.join(name).exists())
+                {
+                    return Err(e.context("activation_history_missing / 部署授权或调度历史文件缺失；OAuth 校验成功不代表已绑定或已授权。请运行 status、doctor 并人工核对历史；不要自动 FRESH、伪造状态或删除保护记录"));
+                }
+                return Err(e);
+            }
             emit(cli, json!({"enabled":true}))
         }
         Cmd::Pause => {
@@ -957,19 +974,41 @@ fn input(prompt: &str) -> Result<String> {
     io::stdout().flush()?;
     let mut s = String::new();
     if io::stdin().read_line(&mut s)? == 0 {
-        return Ok("00".into());
+        bail!(panel::EndOfInput);
     }
     Ok(s.trim().into())
 }
 fn submenu(en: bool, zh: &[&str], english: &[&str]) -> Result<String> {
-    numbered(en, zh, english, t(en, "返回", "Back"))
+    loop {
+        let choice = numbered(en, zh, english, t(en, "返回", "Back"))?;
+        let normalized = choice.trim_start_matches('0');
+        if normalized.is_empty()
+            || normalized
+                .parse::<usize>()
+                .is_ok_and(|n| n > 0 && n <= zh.len())
+        {
+            panel::action_page(en);
+            return Ok(choice);
+        }
+        println!(
+            "{}",
+            color(
+                t(
+                    en,
+                    "菜单选项无效；请重新输入",
+                    "Invalid selection; try again"
+                ),
+                31
+            )
+        );
+    }
 }
 fn numbered(en: bool, zh: &[&str], english: &[&str], exit: &str) -> Result<String> {
     for (i, s) in (if en { english } else { zh }).iter().enumerate() {
         println!("{:02}. {}", i + 1, s)
     }
     println!("00. {exit}");
-    input("> ")
+    input(t(en, "请输入选项 > ", "Select > "))
 }
 fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
     Ok(Some(match choice {
@@ -1043,7 +1082,7 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
                 .into(),
             }
         }
-        "05" => Cmd::Logs { lines: 100 },
+        "05" => Cmd::Logs { lines: 20 },
         "06" => {
             let a = submenu(
                 en,
@@ -1184,6 +1223,7 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
                     "下载并自动升级",
                     "回滚程序（保留调用历史）",
                     "恢复中断的升级事务",
+                    "查询 GitHub 最新稳定版（不升级）",
                 ],
                 &[
                     "Check release manifest",
@@ -1191,6 +1231,7 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
                     "Download and automatically upgrade",
                     "Roll back binary (retain history)",
                     "Recover interrupted update",
+                    "Check GitHub latest stable (no upgrade)",
                 ],
             )?;
             let action = match a.trim_start_matches('0') {
@@ -1206,6 +1247,7 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
                 "4" => Update::Rollback {
                     prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
                 },
+                "6" => Update::Latest,
                 "5" => Update::Recover {
                     prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
                 },
@@ -1218,6 +1260,10 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
         },
         "11" => Cmd::HelpInfo,
         "12" => {
+            println!("{}", t(en, "将停止并禁用 kairo.service，删除安装器管理的 /opt/kairo 程序、unit 和全局 kairo 命令。保留 /var/lib/kairo、账号保护记录、/home/kairo/.codex、Codex CLI 及其他项目。", "Stops/disables kairo.service; removes installer-managed /opt/kairo programs, unit and global kairo command. Retains /var/lib/kairo, account guards, /home/kairo/.codex, Codex CLI and other projects."));
+            if input(t(en, "确认继续？输入 yes > ", "Continue? Type yes > "))? != "yes" {
+                return Ok(None);
+            }
             if input(t(
                 en,
                 "输入 uninstall 确认卸载（保留状态） > ",
@@ -1232,76 +1278,7 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
     }))
 }
 fn menu(cli: &mut Cli) -> Result<()> {
-    if !io::stdin().is_terminal() {
-        bail!("subcommand_required / 非交互终端请使用子命令")
-    };
-    loop {
-        let c = {
-            let s = configured(cli)?;
-            s.config()?
-        };
-        let en = c.language == "en-US";
-        cli.lang = Some(c.language);
-        println!(
-            "{}",
-            color(
-                &format!(
-                    "Kairo {} | {}",
-                    env!("CARGO_PKG_VERSION"),
-                    timezone()
-                        .map(|t| t.to_string())
-                        .unwrap_or_else(|_| i18n::value("timezone_unknown", en))
-                ),
-                34
-            )
-        );
-        let choice = numbered(
-            en,
-            &[
-                "查看运行状态",
-                "查询 Codex 额度",
-                "管理激活时间",
-                "启动 / 停止 / 重启服务",
-                "查看运行日志",
-                "OAuth 登录与账号管理",
-                "系统诊断与修复",
-                "预热参数设置",
-                "检查更新 / 升级程序",
-                "中文 / English 切换",
-                "帮助与项目说明",
-                "卸载 Kairo（保留状态）",
-            ],
-            &[
-                "Status",
-                "Codex quota",
-                "Activation schedule",
-                "Start / stop / restart service",
-                "Logs",
-                "OAuth login and accounts",
-                "Diagnostics and repair",
-                "Prewarm settings",
-                "Check updates / upgrade",
-                "中文 / English",
-                "Help and project information",
-                "Uninstall Kairo (preserve state)",
-            ],
-            t(en, "退出 Kairo", "Exit Kairo"),
-        )?;
-        if choice == "00" || choice == "0" {
-            return Ok(());
-        };
-        let result = choose(en, &format!("{:0>2}", choice)).and_then(|cmd| {
-            if let Some(cmd) = cmd {
-                run(cli, cmd)
-            } else {
-                Ok(())
-            }
-        });
-        if let Err(e) = result {
-            let (_, message) = i18n::error(&e, en);
-            println!("{}", color(&message, 31));
-        }
-    }
+    panel::menu(cli)
 }
 fn localize(mut command: clap::Command, en: bool, json: bool) -> clap::Command {
     command = command

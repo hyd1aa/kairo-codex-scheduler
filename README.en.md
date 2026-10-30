@@ -54,18 +54,48 @@ Run `kairo` as root, or `sudo kairo` as a non-root administrator. An interactive
 | 01 | Status | View timezone, identity, window, safety gates and next check | Data access |
 | 02 | Codex quota | Query five-hour/weekly usage after OAuth; unknown quota stays protected | Data access/OAuth |
 | 03 | Activation schedule | Open the time submenu below | Data access |
-| 04 | Start / stop / restart service | 01 status,02 start,03 stop,04 restart; starting is not authorization | root |
-| 05 | Logs | Show the latest100 kairo.service log lines | root/log access |
+| 04 | Service management | 01 status,02 start,03 stop,04 restart; starting is not authorization | root |
+| 05 | Logs | 20 readable records per page; refresh, page, filter warnings/errors and toggle details | root/log access |
 | 06 | OAuth login and accounts | 01 local status,02 server verification,03 human login,04 profiles,05 add,06 select,07 remove profile,08 fresh binding | Data access/human OAuth |
 | 07 | Diagnostics and repair | 01 diagnose;02 restore defaults while retaining request history | Data access |
 | 08 | Prewarm settings | 01 view,02 idle toggle,03 buffer seconds,04 weekly/denial guards,05 lifecycle,06 request-free preview,07 reset | Data access |
-| 09 | Check updates / upgrade | Usually03 automatic update;01/02 advanced local manifest/file operations,04 rollback,05 transaction recovery | root |
+| 09 | Check updates / upgrade | Usually03 automatic update;01/02 advanced local manifest/file operations,04 rollback,05 transaction recovery,06 check latest stable without upgrading | root |
 | 10 | 中文 / English | Switch and save menu language | Data access |
 | 11 | Help and project information | Show capabilities and safety notes | Data access |
-| 12 | Uninstall Kairo (preserve state) | Type `uninstall` to confirm; stop service/children and preserve data | root |
+| 12 | Uninstall Kairo (preserve state) | Confirm with `yes`, then `uninstall`; stop service and preserve data | root |
 | 00 | Exit Kairo | Leave the menu without stopping a running service | Data access |
 
-Example: enter `03`, then `02`, then `02:00` to add a time. Enter `00` in a submenu to return; `10` at the main menu switches language; `00` at the main menu exits. **12 exists in the actual shipping v0.2.1 binary; it is not a planned option.**
+Example: enter `03`, then `02`, then `02:00` to add a time. Enter `00` in a submenu to return; `10` at the main menu switches language; `00` at the main menu exits. 
+
+## v0.2.2 interactive panel
+
+Number + Enter opens a separate page. `00` returns one level; only the main menu exits. After an action, Enter returns to the same submenu. Invalid input stays local. The logo appears only on the main page. Interactive redraw clears the visible screen, retains scrollback and keeps normal terminal input/echo. Use subcommands without a TTY; `NO_COLOR` disables colors.
+
+```text
+[ K A I R O ]
+Codex Window Scheduler
+v0.2.2 | Asia/Shanghai
+Service: ● Running
+Scheduling: Read-only observation
+Automatic warmup: Not enabled
+
+04 → Enter
+Kairo / Service management
+01. Status
+02. Start service
+03. Stop service
+04. Restart service
+00. Back
+
+02 → Enter
+✓ Current service state: active
+Starting the service does not authorize automatic warmup
+Press Enter to return to this menu...
+```
+
+`01` shows a summary with detailed local JSON in a separate option. `02 → 01` queries quota without model requests. `05` shows20 records per page within the latest200 records; detail length is also bounded. `11` groups help by topic. `09 → 06` checks the latest stable GitHub release without upgrading; select `09 → 03` to upgrade explicitly.
+
+OAuth discovery, server verification, local binding and production approval are separate states. Missing, corrupt and unreadable deployment/history files receive explicit explanations. Start with OAuth verification and diagnostics above. Review account history before any fresh binding; never fabricate history or clear account guards. This panel does not implement a new historical-state recovery algorithm.
 
 ## Custom activation times (03)
 

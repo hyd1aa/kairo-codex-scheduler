@@ -12,10 +12,11 @@ with tempfile.TemporaryDirectory() as d:
    p=subprocess.CompletedProcess(process.args,process.returncode,stdout,stderr)
   assert p.returncode==0,(args,p.stderr);return p.stdout
  call('init')
+ call('runtime','--home',d,'--codex-home',d,'--codex','/nonexistent-kairo-synthetic')
  assert 'online' in call('--lang','en-US','update','--help')
  assert '--yes' in call('--lang','en-US','system-uninstall','--help')
  call('lang','en-US')
- en=call('--lang','en-US',input='12\nno\n00\n');assert 'Uninstall Kairo' in en and 'Type uninstall' in en
+ en=call('--lang','en-US',input='12\nyes\nno\n\n00\n');assert 'Uninstall Kairo' in en and 'Type uninstall' in en
  call('lang','zh-CN')
- zh=call('--lang','zh-CN',input='12\nno\n00\n');assert '卸载 Kairo' in zh and '输入 uninstall' in zh
+ zh=call('--lang','zh-CN',input='12\nyes\nno\n\n00\n');assert '卸载 Kairo' in zh and '输入 uninstall' in zh
 print('4 online-update/uninstall CLI/menu checks passed; no system helper execution')

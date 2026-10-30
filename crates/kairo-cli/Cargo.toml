@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 [dependencies]
+libc = "0.2"
 kairo-core = { path = "../kairo-core" }
 kairo-platform = { path = "../kairo-platform" }
 serde_json.workspace = true

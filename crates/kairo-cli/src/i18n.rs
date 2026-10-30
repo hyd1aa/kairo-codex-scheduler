@@ -8,7 +8,10 @@ pub fn t<'a>(en: bool, zh: &'a str, english: &'a str) -> &'a str {
     }
 }
 pub fn color(s: &str, code: u8) -> String {
-    if io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none() {
+    if io::stdout().is_terminal()
+        && std::env::var_os("NO_COLOR").is_none()
+        && std::env::var("TERM").as_deref() != Ok("dumb")
+    {
         format!("\x1b[{code}m{s}\x1b[0m")
     } else {
         s.into()
@@ -27,6 +30,11 @@ pub fn bilingual(s: &str, en: bool) -> String {
 }
 pub fn error(e: &anyhow::Error, en: bool) -> (String, String) {
     let s = e.to_string();
+    if s.starts_with("activation_history_missing / ") {
+        return ("io_error".into(), t(en,
+            "部署授权或调度历史文件缺失；OAuth 校验成功不代表已绑定或已授权。请运行 status、doctor 并人工核对历史；不要自动 FRESH、伪造状态或删除保护记录",
+            "Deployment approval or scheduler history files are missing. OAuth verification does not imply binding or production approval. Run status and doctor and review history; do not automatically FRESH-bind, fabricate state or delete guards").into());
+    }
     if s.contains(" / ") {
         let code = s
             .split(" / ")
