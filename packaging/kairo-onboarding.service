@@ -1,0 +1,12 @@
+[Unit]
+Description=Kairo automatic initialization and conservative recovery
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo onboard
+TimeoutStartSec=180
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only

@@ -23,6 +23,14 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  (root/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-panel','access_token':'synthetic-panel-placeholder'}}));(root/'auth.json').chmod(0o600)
  direct('init');expected_version=direct('--version').stdout.strip().split()[-1];direct('runtime','--home',temp,'--codex-home',temp,'--codex','/nonexistent-kairo-synthetic')
  def menu(text,extra=None,interrupt=False):
+  # Legacy feature-case paths mapped to the simplified shipping navigation.
+  first, sep, rest = text.partition('\n')
+  mapping={'01':'01','02':'01','03':'02','04':'06\n05','05':'06\n01','06':'03','07':'06\n02','08':'06\n04','09':'05','10':'06\n06','11':'06\n07','12':'06\n08'}
+  normalized=f'{int(first):02}' if first.isdigit() else first
+  if normalized in mapping:
+   text=mapping[normalized]+sep+rest
+   if normalized in ('04','05','07','08','11','12'):text+='00\n'
+
   global checks
   m,s=pty.openpty(); before=termios.tcgetattr(s)
   p=subprocess.Popen([binary,'--data-dir',str(data)],stdin=s,stdout=s,stderr=s,env={**env,**(extra or {})},start_new_session=True)

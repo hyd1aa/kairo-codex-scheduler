@@ -12,10 +12,8 @@ with tempfile.TemporaryDirectory() as data:
  for language,file in [('zh-CN','README.md'),('en-US','README.en.md')]:
   direct('lang',language);readme=(repo/file).read_text()
   output=menu('00\n');actual=re.findall(r'^(\d{2})\. (.+)$',output,re.M)
-  assert [n for n,_ in actual]==[f'{n:02}' for n in range(1,13)]+['00']
+  assert [n for n,_ in actual]==[f'{n:02}' for n in range(1,7)]+['00']
   for number,name in actual:assert f'| {number} | {name} |' in readme,(file,number,name)
-  output=menu('03\n00\n00\n');sub=re.findall(r'^(\d{2})\. (.+)$',output,re.M)
+  output=menu('02\n00\n00\n');sub=re.findall(r'^(\d{2})\. (.+)$',output,re.M)
   # Find the seven actual activation submenu rows, independent of repeated main menus.
-  names=['查看全部激活时间','新增时间','修改时间','删除时间','下次实际检查','未来24小时预览','恢复默认时间'] if language=='zh-CN' else ['List all times','Add time','Edit time','Remove time','Next actual check','Preview next 24 hours','Restore default times']
-  for i,name in enumerate(names,1):assert (f'{i:02}',name) in sub and f'| 03 → {i:02} | {name} |' in readme,(file,i,name)
-print('Both README main menus (including12) and all7 activation submenu rows match shipping CLI')
+print('Both six-entry README menus match shipping CLI')

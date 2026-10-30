@@ -623,6 +623,10 @@
     "en": "Authorize and verify managed production scheduling",
     "zh": "明确授权并验证 systemd 正式调度"
   },
+  "automatic_enable_cancelled": {
+    "en": "automatic enable cancelled",
+    "zh": "自动启用已暂停或账号确认不匹配"
+  },
   "candidate_invalid": {
     "en": "candidate invalid",
     "zh": "候选程序校验失败"
@@ -770,6 +774,10 @@
   "edit_an_existing_time": {
     "en": "Edit an existing time",
     "zh": "修改已有时间"
+  },
+  "enable_failed": {
+    "en": "enable failed",
+    "zh": "启用失败，保留安全保护并自动重试"
   },
   "enable_live_scheduling_after_separate_production_approval": {
     "en": "Enable live scheduling after separate production approval",
@@ -1013,7 +1021,7 @@
   },
   "managed_root_required": {
     "en": "managed root required",
-    "zh": "自动切换仅支持 root 和标准 /var/lib/kairo 安装；开发目录不会修改真实服务"
+    "zh": "后台初始化仅支持标准安装和 root"
   },
   "managed_service_changed": {
     "en": "managed service changed",
@@ -1106,6 +1114,10 @@
   "offline_tick_delay_in_milliseconds": {
     "en": "Offline tick delay in milliseconds",
     "zh": "离线测试每步间隔毫秒数"
+  },
+  "onboarding_intent_invalid": {
+    "en": "onboarding intent invalid",
+    "zh": "自动初始化授权记录无效"
   },
   "online_update_failed": {
     "en": "online update failed",

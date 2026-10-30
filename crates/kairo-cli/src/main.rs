@@ -193,6 +193,12 @@ enum Cmd {
     #[command(
         about = "Run the scheduler; observation until explicitly activated / 运行调度器，明确批准前仅观察"
     )]
+    Onboard {
+        #[arg(long)]
+        request: bool,
+        #[arg(long)]
+        confirm_exclusive_account: bool,
+    },
     Daemon {
         #[arg(
             long,
@@ -492,6 +498,18 @@ fn possible_prewarm(
 }
 fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     match cmd {
+        Cmd::Onboard {
+            request,
+            confirm_exclusive_account,
+        } => {
+            let v = if request {
+                let store = configured(cli)?;
+                kairo_platform::onboarding::request(&store, confirm_exclusive_account)?
+            } else {
+                kairo_platform::onboarding::tick(&cli.data_dir)?
+            };
+            return emit(cli, v);
+        }
         Cmd::Enable {
             approve_production_cutover,
         } => {
@@ -683,7 +701,8 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     }
     let mut c = store.config()?;
     match cmd {
-        Cmd::Recover { .. }
+        Cmd::Onboard { .. }
+        | Cmd::Recover { .. }
         | Cmd::Enable { .. }
         | Cmd::Init
         | Cmd::SystemUninstall { .. }
@@ -748,7 +767,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                 .and_then(|v| v["error"].as_str().or_else(|| v["event"].as_str()));
             emit(
                 cli,
-                json!({"version":env!("CARGO_PKG_VERSION"),"timezone":tz.to_string(),"config":c,"next_check":next,"next_possible_prewarm":next_possible,"prewarm_conditional":true,"state_valid":recovery["scheduler_state_ready"],"state_file_valid":state.is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"recovery_status":recovery,"service_mode":service_mode,"automatic_warmup_enabled":automatic_warmup_enabled,"status_file":status_file,"recent_reason":recent_reason,"deployment":deployment,"acceptance":acceptance,"current_quota":current_quota}),
+                json!({"version":env!("CARGO_PKG_VERSION"),"timezone":tz.to_string(),"config":c,"next_check":next,"next_possible_prewarm":next_possible,"prewarm_conditional":true,"state_valid":recovery["scheduler_state_ready"],"state_file_valid":state.is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"recovery_status":recovery,"onboarding":store.read::<Value>("onboarding-status.json").ok(),"service_mode":service_mode,"automatic_warmup_enabled":automatic_warmup_enabled,"status_file":status_file,"recent_reason":recent_reason,"deployment":deployment,"acceptance":acceptance,"current_quota":current_quota}),
             )
         }
         Cmd::Acceptance => {
@@ -1047,7 +1066,10 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             emit(cli, json!({"enabled":true}))
         }
         Cmd::Pause => {
-            rt::pause(&store)?;
+            kairo_platform::onboarding::pause(&store)?;
+            if kairo_platform::recovery::present(&store.root.join("deployment.json"))? {
+                rt::pause(&store)?;
+            }
             emit(cli, json!({"paused":true}))
         }
     }

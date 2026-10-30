@@ -83,7 +83,7 @@ fn quiet_remaining(r: &Recovery, boot: &str, uptime_ms: i64) -> i64 {
         return 0;
     }
     if r.boot_id != boot || uptime_ms < r.checked_uptime_ms {
-        QUIET_SECONDS * 1000
+        r.quiet_remaining_ms
     } else {
         r.quiet_remaining_ms
             .saturating_sub(uptime_ms - r.checked_uptime_ms)
@@ -802,8 +802,8 @@ mod tests {
             "another-synthetic-boot".into(),
             1000,
         );
-        assert_eq!(r.quiet_remaining_ms, QUIET_SECONDS * 1000);
-        assert!(r.not_before >= f.start + 2 * QUIET_SECONDS + 10);
+        assert_eq!(r.quiet_remaining_ms, (QUIET_SECONDS - 1) * 1000);
+        assert!(r.not_before >= f.start + 2 * QUIET_SECONDS + 9);
     }
     #[test]
     fn denial_invalid_quota_and_identity_changes_never_create_authority() {

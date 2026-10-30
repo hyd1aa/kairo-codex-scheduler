@@ -1,0 +1,181 @@
+# Kairo
+
+A lightweight Rust tool for Codex five-hour quota-window warmup. [中文](../README.md) · [Stable release](https://github.com/hyd1aa/kairo-codex-scheduler/releases/latest)
+
+## Core features
+
+- Daily activation times, system timezone, idle-window warmup and delayed read-only confirmation.
+- Five-hour/weekly quota and server-denial guards, global deduplication, persistence and restart recovery.
+- Colorful bilingual menus, systemd operation, online updates and data-preserving uninstall.
+
+Kairo **cannot reset, increase or bypass OpenAI limits**. Missing authorization, unknown quota or unmet safety gates prevent model requests.
+
+## One-command installation
+
+Copy this fixed command on a supported Linux VPS; it does not change when new versions ship:
+
+```sh
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/install.sh | sudo bash'
+```
+
+The installer selects the latest stable GitHub Release, excluding drafts/prereleases, detects OS and x86_64/ARM64, verifies HTTPS/SHA256/architecture/version, and prepares dependencies, a dedicated user and systemd. **No Rust/Cargo or hand-written unit is needed.** Existing installs are safely updated without replacing OAuth, configuration or request journals. Fresh installs stay stopped/observation-only.
+
+The initial download requires curl, trusted CA certificates, bash and root/sudo access. `pipefail` is essential: bare `curl … | sudo bash` can return success from an empty bash when curl fails before sending any bytes. The wrapper propagates that failure. The complete script is parsed before execution; child processes cannot consume shell source as interactive input. Pinned-version options remain in the [installation guide](INSTALL.md).
+
+## First use and reinstall recovery
+
+After installation/upgrade, run the administrator wizard:
+
+```sh
+sudo kairo recover wizard
+```
+
+Alternatively open `sudo kairo` and select **06 → 09**. The wizard covers human OAuth login, official read-only identity/quota verification, fresh binding, existing-account recovery, rechecks and explicit production enablement. No hand-written JSON or manual systemd-file removal is required.
+
+**A genuinely new account:** log in and verify the server identity, then select fresh binding and type `FRESH` only if this account has never run Kairo and has no previous scheduler/recent requests. This is an administrator declaration: the quota API cannot prove complete history. Existing records/guards are never overwritten by FRESH. Finally type `ENABLE` in the wizard. Existing fresh-binding cooldown, deduplication, weekly limits and denial guards remain in force.
+
+**An existing account reinstalled without recoverable local history:** never use FRESH. Stop schedulers on other machines/data directories and stop other automatic/manual model requests during recovery. Select existing-account recovery and type `RECOVER`, or run:
+
+```sh
+sudo kairo recover begin --acknowledge-unknown-history
+sudo kairo recover status
+```
+
+This persists an unknown-history risk barrier. **It neither authorizes model requests nor treats old history as empty.** Wait at least **5 hours 6 minutes 30 seconds** (one full five-hour window + maximum300-second buffer +90-second execution timeout). Observed windows, previous guards and configured buffers may delay actual requests further. Service/process restarts and repeated begin never shorten or restart a normal wait. Monotonic timing prevents forward clock changes from skipping quarantine; a system reboot conservatively restarts timing at the next recheck. If protection disappears during quarantine, explicitly beginning again restarts conservative waiting.
+
+At the displayed deadline, recheck:
+
+```sh
+sudo kairo recover check
+```
+
+The official read-only quota endpoint revalidates the current identity, five-hour and weekly windows. Mismatched identity, unknown quota, denial, weekly exhaustion and backward clocks block approval. New usage or active-window changes extend quarantine; normally moving zero-usage idle resets do not extend it forever. Time passing never grants approval automatically.
+
+Then explicitly authorize production:
+
+```sh
+sudo kairo enable --approve-production-cutover
+sudo kairo status
+sudo kairo doctor
+```
+
+Typing `ENABLE` in the wizard does the same. Automatic handoff supports only standard installer-managed root/systemd installations: validate unit/paths, stop the service, persist the recovery baseline/approval, remove only the unchanged installer observation override, reload/start, and verify a **fresh live status for the current PID**. Custom units/overrides are preserved and refused. Failure revokes approval and restores observation configuration; incomplete rollback is reported explicitly. Natural scheduling may issue real requests after enablement; rollback cannot undo a request already sent, and durable request guards are retained. The wizard never sends a forced model test.
+
+To confirm production, `kairo --json status` must show `scheduler_state_ready: true`, `recovery_status.production_authorized: true`, `service_mode.daemon_live_confirmed: true` and `automatic_warmup_enabled: true`, with `status_file.execution: live` and `status_file.daemon_pid` matching systemd's current PID. systemd active or verified OAuth alone is insufficient. Stale status, startup without confirmation or an effective `--observe` never reports confirmed production. If authorization remains true but live status is unconfirmed, requests may still execute: this is not a safe pause; use `kairo pause` to revoke authorization.
+
+Valid requests/account anchors are retained. Original damaged local bytes are preserved in private `recovery-evidence-*` files before replacement. Corrupt global ledgers, account mismatches and unsafe file types/permissions require backup review, never automatic overwrite. Pre-baseline history remains marked unknown after recovery. Global cooldown fields hold risk/budget reservations, never invented successful/old requests. Account locks and deduplication cover **all data directories on the same host**. The quota API supplies neither a complete ledger nor proof that another machine has stopped; administrators must prevent competing schedulers.
+
+In doctor, `existing_records_valid` means existing local configuration/records validate. `state_valid` and `scheduler_state_ready` require a complete binding/state/cursor/global guard, and still do not imply production approval or an actual live daemon. A zero doctor exit status means the report was generated, not every item is ready.
+
+## The complete kairo command menu
+
+Run `kairo` as root, or `sudo kairo` as a non-root administrator. An interactive SSH terminal shows the colorful menu. Read/configuration actions also work for the service user with access to its private data; operations marked root require administration rights.
+
+| Number | Actual menu name | Operation | Permission |
+| --- | --- | --- | --- |
+| 01 | Status | View timezone, identity, window, safety gates and next check | Data access |
+| 02 | Codex quota | Query five-hour/weekly usage after OAuth; unknown quota stays protected | Data access/OAuth |
+| 03 | Activation schedule | Open the time submenu below | Data access |
+| 04 | Service management | 01 status,02 start,03 stop,04 restart; starting is not authorization | root |
+| 05 | Logs | 20 readable records per page; refresh, page, filter warnings/errors and toggle details | root/log access |
+| 06 | OAuth login and accounts | 01 local status,02 server verification,03 human login,04 profiles,05 add,06 select,07 remove profile,08 fresh binding,09 first-use/recovery wizard | Data access/human OAuth |
+| 07 | Diagnostics and repair | 01 diagnose;02 restore defaults while retaining request history | Data access |
+| 08 | Prewarm settings | 01 view,02 idle toggle,03 buffer seconds,04 weekly/denial guards,05 lifecycle,06 request-free preview,07 reset | Data access |
+| 09 | Check updates / upgrade | Usually03 automatic update;01/02 advanced local manifest/file operations,04 rollback,05 transaction recovery,06 check latest stable without upgrading | root |
+| 10 | 中文 / English | Switch and save menu language | Data access |
+| 11 | Help and project information | Show capabilities and safety notes | Data access |
+| 12 | Uninstall Kairo (preserve state) | Confirm with `yes`, then `uninstall`; stop service and preserve data | root |
+| 00 | Exit Kairo | Leave the menu without stopping a running service | Data access |
+
+Example: enter `03`, then `02`, then `02:00` to add a time. Enter `00` in a submenu to return; `10` at the main menu switches language; `00` at the main menu exits. 
+
+## Interactive panel
+
+Number + Enter opens a separate page. `00` returns one level; only the main menu exits. After an action, Enter returns to the same submenu. Invalid input stays local. The logo appears only on the main page. Interactive redraw clears the visible screen, retains scrollback and keeps normal terminal input/echo. Use subcommands without a TTY; `NO_COLOR` disables colors.
+
+```text
+[ K A I R O ]
+Codex Window Scheduler
+v0.2.3 | Asia/Shanghai
+Service: ● Running
+Scheduling: Read-only observation
+Automatic warmup: Not enabled
+
+04 → Enter
+Kairo / Service management
+01. Status
+02. Start service
+03. Stop service
+04. Restart service
+00. Back
+
+02 → Enter
+✓ Current service state: active
+Starting the service does not authorize automatic warmup
+Press Enter to return to this menu...
+```
+
+`01` shows a summary with detailed local JSON in a separate option. `02 → 01` queries quota without model requests. `05` shows20 records per page within the latest200 records; detail length is also bounded. `11` groups help by topic. `09 → 06` checks the latest stable GitHub release without upgrading; select `09 → 03` to upgrade explicitly.
+
+OAuth discovery, server verification, local binding and production approval are separate states. Missing, corrupt and unreadable deployment/history files receive explicit explanations. Start with OAuth verification and diagnostics above. Review account history before any fresh binding; never fabricate history or clear account guards. The recovery wizard keeps pre-baseline history unknown and establishes a conservative guarded baseline; it never reconstructs old requests.
+
+## Custom activation times (03)
+
+Defaults are `06:00,11:00,16:00,21:00` in the **system timezone**, not a fixed timezone. You are not restricted to four activations: up to48 entries are supported with at least10 minutes between adjacent entries, including across midnight.
+
+| Number | Actual submenu name | Operation |
+| --- | --- | --- |
+| 03 → 01 | List all times | Show configured times |
+| 03 → 02 | Add time | Enter `HH:MM` |
+| 03 → 03 | Edit time | Enter old time, then new time |
+| 03 → 04 | Remove time | Enter the time to remove |
+| 03 → 05 | Next actual check | Show the next planned check |
+| 03 → 06 | Preview next 24 hours | Read-only preview; no model request |
+| 03 → 07 | Restore default times | Restore the four defaults |
+
+Direct equivalents:
+
+```sh
+sudo kairo schedule list
+sudo kairo schedule add 02:00
+sudo kairo schedule edit 02:00 03:30
+sudo kairo schedule remove 03:30
+sudo kairo schedule next
+sudo kairo schedule preview
+```
+
+## Quota and running status
+
+Use menu `01/02/05`, or:
+
+```sh
+sudo kairo status
+sudo kairo quota
+sudo kairo logs
+```
+
+Server denial, exhausted/unknown quotas, recent requests and uncertain outcomes prevent blind retries. Changing times or reinstalling must not bypass these guards.
+
+## Updates
+
+Open `kairo` (with sudo when needed), select `09 → 03`, or run:
+
+```sh
+sudo kairo update online
+```
+
+The latest stable release is selected automatically. Failed downloads/checksums never activate a new version. Existing durable Rust transactions preserve OAuth/configuration/journals and support recovery. See [maintenance](INSTALL.md) for rollback and interrupted updates.
+
+## One-command uninstall
+
+```sh
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/uninstall.sh | sudo bash'
+```
+
+Stops/disables the service, verifies the daemon/service children have stopped, and removes installer-managed units, binaries and the global command. Repeated removal is safe. By default it retains `/var/lib/kairo`, `/var/lib/kairo-account-guards`, `/home/kairo/.codex`, the dedicated user and ownership marker. Existing Codex CLI/shared dependencies remain untouched; reinstall preserves state. Unknown files are retained and failures/residuals are explicitly reported. Data purge is a [separately confirmed advanced option](INSTALL.md#高级卸载--advanced-removal).
+
+## Verified Linux systems and notes
+
+Real systemd lifecycle acceptance uses an isolated **Debian12 x86_64 QEMU TCG** guest, not physical-hardware certification. x86_64/aarch64 binaries passed native builds. The installer also recognizes Debian13, Ubuntu22.04/24.04, Alma9 and Rocky9 with historical compatibility evidence, not a claim all passed this online lifecycle. ARM64 public first installation remains untested; Alma/Rocky10 automatic installation is unsupported.
+
+Default trust relies on GitHub HTTPS/repository administration; SHA256 checks integrity. Actual OAuth/account behavior remains installer-controlled. Project code is [MIT](LICENSE); dependencies retain their terms: [notices](THIRD_PARTY_NOTICES.md), [provenance](PROVENANCE.md), [security reporting](SECURITY.md). Only source developers need Rust/Cargo; this change does not alter the validated Rust scheduler core.

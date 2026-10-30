@@ -537,3 +537,5 @@ mod administration_tests {
         fs::remove_dir_all(root).unwrap();
     }
 }
+
+pub mod onboarding;
