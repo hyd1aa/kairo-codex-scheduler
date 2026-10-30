@@ -79,6 +79,10 @@
     "en": "Configure idle prewarm and safety buffer",
     "zh": "设置空闲预热及安全缓冲"
   },
+  "Continue automatic safe initialization": {
+    "en": "Continue automatic safe initialization",
+    "zh": "自动接续安全初始化"
+  },
   "Control only kairo.service": {
     "en": "Control only kairo.service",
     "zh": "仅控制 kairo.service"
@@ -699,6 +703,10 @@
     "en": "confirmation task invalid",
     "zh": "确认任务记录无效"
   },
+  "continue_automatic_safe_initialization": {
+    "en": "Continue automatic safe initialization",
+    "zh": "自动接续安全初始化"
+  },
   "control_only_kairo.service": {
     "en": "Control only kairo.service",
     "zh": "仅控制 kairo.service"
@@ -1063,6 +1071,10 @@
     "en": "Minimum spacing 10 minutes",
     "zh": "最小间隔十分钟"
   },
+  "mock_cutover_failed": {
+    "en": "mock cutover failed",
+    "zh": "模拟切换失败"
+  },
   "no_newer_release": {
     "en": "no newer release",
     "zh": "没有较新的可用版本"
@@ -1118,6 +1130,10 @@
   "onboarding_intent_invalid": {
     "en": "onboarding intent invalid",
     "zh": "自动初始化授权记录无效"
+  },
+  "onboarding_lock_unsafe": {
+    "en": "onboarding lock unsafe",
+    "zh": "初始化锁不安全"
   },
   "online_update_failed": {
     "en": "online update failed",
@@ -1236,8 +1252,8 @@
     "zh": "缺少额度限制标志"
   },
   "quota_transport_failed": {
-    "en": "Quota transport failed",
-    "zh": "额度网络请求失败"
+    "en": "quota transport failed",
+    "zh": "网络失败"
   },
   "quota_usage_missing": {
     "en": "Quota usage missing",

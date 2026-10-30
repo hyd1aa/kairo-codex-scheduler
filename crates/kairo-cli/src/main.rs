@@ -193,6 +193,7 @@ enum Cmd {
     #[command(
         about = "Run the scheduler; observation until explicitly activated / 运行调度器，明确批准前仅观察"
     )]
+    #[command(about = "Continue automatic safe initialization / 自动接续安全初始化")]
     Onboard {
         #[arg(long)]
         request: bool,
@@ -1067,7 +1068,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
         }
         Cmd::Pause => {
             kairo_platform::onboarding::pause(&store)?;
-            if kairo_platform::recovery::present(&store.root.join("deployment.json"))? {
+            if store.root.join("deployment.json").try_exists()? {
                 rt::pause(&store)?;
             }
             emit(cli, json!({"paused":true}))

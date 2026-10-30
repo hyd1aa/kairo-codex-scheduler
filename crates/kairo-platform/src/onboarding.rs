@@ -4,7 +4,10 @@ use crate::{recovery, runtime as rt, Store};
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::path::Path;
+use std::{
+    os::unix::fs::{MetadataExt, OpenOptionsExt},
+    path::Path,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -128,22 +131,76 @@ pub fn tick(root: &Path) -> Result<Value> {
         bail!("managed_root_required / 后台初始化仅支持标准安装和 root");
     }
     // Serialize timer/manual invocations, including while Store is released for cutover.
-    let _lease = crate::runtime::daemon_lease(&root.join("onboarding-lock"))?;
+    let lease = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open("/run/kairo-onboarding.lock")?;
+    let meta = lease.metadata()?;
+    if !meta.is_file() || meta.uid() != 0 || meta.nlink() != 1 || meta.mode() & 0o077 != 0 {
+        bail!("onboarding_lock_unsafe / 初始化锁不安全");
+    }
+    fs2::FileExt::try_lock_exclusive(&lease)?;
+    // Do not race an online installer, even between its daemon stop and update apply.
+    let installer = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open("/var/lib/kairo-installer/online.lock")?;
+    fs2::FileExt::try_lock_shared(&installer)?;
+    if root.join(".upgrade-lock").try_exists()? {
+        return Ok(json!({"status":"upgrade_in_progress"}));
+    }
+    advance(root, &mut Real, chrono::Utc::now().timestamp())
+}
+trait Actions {
+    fn account(&mut self, store: &Store) -> Option<String>;
+    fn inspect(&mut self, store: &Store) -> Result<Value>;
+    fn begin(&mut self, store: &Store) -> Result<Value>;
+    fn check(&mut self, store: &Store) -> Result<Value>;
+    fn needs_cutover(&mut self, root: &Path) -> bool;
+    fn enable(&mut self, root: &Path) -> Result<Value>;
+}
+struct Real;
+impl Actions for Real {
+    fn account(&mut self, store: &Store) -> Option<String> {
+        rt::runtime(store)
+            .and_then(|r| crate::identity(&r.codex_home.join("auth.json")))
+            .ok()
+            .map(|id| id.fingerprint)
+    }
+    fn inspect(&mut self, store: &Store) -> Result<Value> {
+        recovery::inspect(store, &rt::guard_root())
+    }
+    fn begin(&mut self, store: &Store) -> Result<Value> {
+        recovery::begin(store, true)
+    }
+    fn check(&mut self, store: &Store) -> Result<Value> {
+        recovery::check(store)
+    }
+    fn needs_cutover(&mut self, root: &Path) -> bool {
+        let v = crate::activation::status(root);
+        v["observation_override"] == true || v["service_active"] != true
+    }
+    fn enable(&mut self, root: &Path) -> Result<Value> {
+        crate::activation::enable_automatic(root)
+    }
+}
+fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
     let store = Store::open(root)?;
     if !recovery::present(&store.root.join("onboarding.json"))? {
         return Ok(json!({"status":"manual_policy_preserved"}));
     }
     let mut i: Intent = store.read("onboarding.json")?;
     i.validate()?;
-    let now = chrono::Utc::now().timestamp();
     if i.next_attempt > now && i.requested {
         return Ok(json!({"status":"backoff","next_attempt":i.next_attempt}));
     }
-    let id = rt::runtime(&store)
-        .and_then(|r| crate::identity(&r.codex_home.join("auth.json")))
-        .ok();
-    let health = recovery::inspect(&store, &rt::guard_root())?;
-    let step = plan(&i, &health, id.as_ref().map(|id| id.fingerprint.as_str()));
+    let account = actions.account(&store);
+    let health = actions.inspect(&store)?;
+    let step = plan(&i, &health, account.as_deref());
     let status = match step {
         Step::Paused => Some("paused"),
         Step::Login => Some("login_required"),
@@ -154,27 +211,26 @@ pub fn tick(root: &Path) -> Result<Value> {
         _ => None,
     };
     if let Some(status) = status {
-        if step == Step::Running && crate::activation::status(root)["observation_override"] == true
-        {
+        if step == Step::Running && actions.needs_cutover(root) {
             drop(store);
-            return crate::activation::enable_automatic(root);
+            return actions.enable(root);
         }
         return event(&store, status, 0, None);
     }
     if i.account.is_none() {
-        i.account = id.map(|id| id.fingerprint);
+        i.account = account;
         store.write("onboarding.json", &i)?;
     }
     let result = match step {
-        Step::Recover => recovery::begin(&store, true),
-        Step::Check => recovery::check(&store),
+        Step::Recover => actions.begin(&store),
+        Step::Check => actions.check(&store),
         Step::Enable => Ok(json!({"ready_for_explicit_approval":true})),
         _ => unreachable!(),
     };
     let ready = match result {
         Ok(v) => {
-            if let Ok(q) = rt::verify(&store) {
-                store.write("quota-cache.json", &q)?;
+            if v["recovery"]["five"].is_object() {
+                store.write("quota-cache.json", &json!({"five_hour":v["recovery"]["five"],"weekly":v["recovery"]["weekly"],"at":now,"account":i.account}))?;
             }
             i.failures = 0;
             // Recheck at least once a minute: activity can invalidate an old deadline.
@@ -202,7 +258,7 @@ pub fn tick(root: &Path) -> Result<Value> {
     drop(store);
     if ready {
         // enable rechecks official quota and all guards after stopping daemon.
-        match crate::activation::enable_automatic(root) {
+        match actions.enable(root) {
             Ok(_) => event(&Store::open(root)?, "enabled", 0, None),
             Err(_) => event(
                 &Store::open(root)?,
@@ -219,6 +275,195 @@ pub fn tick(root: &Path) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    struct Mock {
+        account: Option<String>,
+        class: &'static str,
+        ready: bool,
+        offline: bool,
+        observing: bool,
+        fail_enable: bool,
+        begins: u32,
+        checks: u32,
+        enables: u32,
+    }
+    impl Actions for Mock {
+        fn account(&mut self, _: &Store) -> Option<String> {
+            self.account.clone()
+        }
+        fn inspect(&mut self, _: &Store) -> Result<Value> {
+            Ok(
+                json!({"classification":self.class,"production_authorized":self.class=="authorized"}),
+            )
+        }
+        fn begin(&mut self, _: &Store) -> Result<Value> {
+            self.begins += 1;
+            self.class = "recovery_waiting";
+            Ok(json!({"ready_for_explicit_approval":false}))
+        }
+        fn check(&mut self, _: &Store) -> Result<Value> {
+            self.checks += 1;
+            if self.offline {
+                bail!("quota_transport_failed / 网络失败");
+            }
+            Ok(json!({"ready_for_explicit_approval":self.ready}))
+        }
+        fn needs_cutover(&mut self, _: &Path) -> bool {
+            self.observing
+        }
+        fn enable(&mut self, root: &Path) -> Result<Value> {
+            let s = Store::open(root)?;
+            require_intent(&s, self.account.as_deref().unwrap())?;
+            if self.fail_enable {
+                bail!("mock_cutover_failed / 模拟切换失败");
+            }
+            self.enables += 1;
+            self.class = "authorized";
+            self.observing = false;
+            Ok(json!({"enabled":true}))
+        }
+    }
+    fn fixture() -> (std::path::PathBuf, Mock) {
+        static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let p = std::env::temp_dir().join(format!(
+            "kairo-onboard-{}-{}",
+            std::process::id(),
+            N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        let s = Store::open(&p).unwrap();
+        s.write(
+            "onboarding.json",
+            &Intent {
+                schema: 1,
+                requested: true,
+                exclusive_account: true,
+                account: None,
+                next_attempt: 0,
+                failures: 0,
+            },
+        )
+        .unwrap();
+        (
+            p,
+            Mock {
+                account: Some("a".repeat(64)),
+                class: "history_unknown",
+                ready: false,
+                offline: false,
+                observing: true,
+                fail_enable: false,
+                begins: 0,
+                checks: 0,
+                enables: 0,
+            },
+        )
+    }
+    #[test]
+    fn persisted_recovery_automatically_rechecks_and_enables_exactly_once() {
+        let (p, mut m) = fixture();
+        advance(&p, &mut m, 100).unwrap();
+        assert_eq!(m.begins, 1);
+        assert_eq!(m.enables, 0);
+        advance(&p, &mut m, 120).unwrap();
+        assert_eq!(m.checks, 0); // restart retains backoff
+        advance(&p, &mut m, 160).unwrap();
+        assert_eq!(m.checks, 1);
+        assert_eq!(m.enables, 0);
+        m.ready = true;
+        advance(&p, &mut m, 220).unwrap();
+        assert_eq!(m.enables, 1);
+        advance(&p, &mut m, 280).unwrap();
+        advance(&p, &mut m, 340).unwrap();
+        assert_eq!(m.enables, 1);
+        assert_eq!(m.begins, 1);
+        std::fs::remove_dir_all(p).unwrap();
+    }
+    #[test]
+    fn login_after_install_and_unconfirmed_external_risk_never_enable() {
+        let (p, mut m) = fixture();
+        m.account = None;
+        assert_eq!(
+            advance(&p, &mut m, 100).unwrap()["status"],
+            "login_required"
+        );
+        {
+            let s = Store::open(&p).unwrap();
+            let mut i: Intent = s.read("onboarding.json").unwrap();
+            i.exclusive_account = false;
+            s.write("onboarding.json", &i).unwrap();
+        }
+        m.account = Some("a".repeat(64));
+        assert_eq!(
+            advance(&p, &mut m, 160).unwrap()["status"],
+            "exclusive_account_confirmation_required"
+        );
+        assert_eq!(m.begins + m.checks + m.enables, 0);
+        std::fs::remove_dir_all(p).unwrap();
+    }
+    #[test]
+    fn activity_network_account_change_corruption_and_pause_fail_closed() {
+        let (p, mut m) = fixture();
+        advance(&p, &mut m, 100).unwrap();
+        m.offline = true;
+        assert_eq!(advance(&p, &mut m, 160).unwrap()["status"], "retry_wait");
+        let s = Store::open(&p).unwrap();
+        let i: Intent = s.read("onboarding.json").unwrap();
+        assert_eq!(i.failures, 1);
+        drop(s);
+        m.offline = false;
+        advance(&p, &mut m, 220).unwrap();
+        assert_eq!(m.enables, 0); // new activity keeps ready false
+        m.account = Some("b".repeat(64));
+        assert_eq!(
+            advance(&p, &mut m, 280).unwrap()["status"],
+            "account_changed_confirmation_required"
+        );
+        m.account = Some("a".repeat(64));
+        m.class = "data_corrupt";
+        assert_eq!(
+            advance(&p, &mut m, 340).unwrap()["status"],
+            "repair_required"
+        );
+        {
+            let s = Store::open(&p).unwrap();
+            pause(&s).unwrap();
+        }
+        m.ready = true;
+        m.class = "recovery_waiting";
+        assert_eq!(advance(&p, &mut m, 400).unwrap()["status"], "paused");
+        assert_eq!(m.enables, 0);
+        std::fs::remove_dir_all(p).unwrap();
+    }
+    #[test]
+    fn upgrade_without_opt_in_preserves_all_existing_policies() {
+        let (p, mut m) = fixture();
+        std::fs::remove_file(p.join("onboarding.json")).unwrap();
+        for class in ["authorized", "not_authorized", "recovery_waiting"] {
+            m.class = class;
+            assert_eq!(
+                advance(&p, &mut m, 100).unwrap()["status"],
+                "manual_policy_preserved"
+            );
+        }
+        assert_eq!(m.begins + m.checks + m.enables, 0);
+        std::fs::remove_dir_all(p).unwrap();
+    }
+    #[test]
+    fn repeated_opt_in_preserves_bound_account_and_pause_cancels_cutover() {
+        let (p, mut m) = fixture();
+        advance(&p, &mut m, 100).unwrap();
+        {
+            let s = Store::open(&p).unwrap();
+            request(&s, false).unwrap();
+            request(&s, false).unwrap();
+            pause(&s).unwrap();
+            assert!(require_intent(&s, &"a".repeat(64)).is_err());
+        }
+        m.ready = true;
+        advance(&p, &mut m, 200).unwrap();
+        assert_eq!(m.begins, 1);
+        assert_eq!(m.enables, 0);
+        std::fs::remove_dir_all(p).unwrap();
+    }
     #[test]
     fn lifecycle_never_infers_fresh_or_overrides_pause_or_account_change() {
         let a = "a".repeat(64);
