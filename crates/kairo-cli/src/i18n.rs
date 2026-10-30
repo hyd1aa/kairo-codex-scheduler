@@ -42,7 +42,33 @@ pub fn error(e: &anyhow::Error, en: bool) -> (String, String) {
             .unwrap_or("operation_failed")
             .to_lowercase()
             .replace([' ', '/'], "_");
-        return (code, bilingual(&s, en));
+        let english=match code.as_str() {
+            "account_recovery_required"=>Some("Binding or scheduler history is missing. Existing accounts: run recover begin --acknowledge-unknown-history or use wizard 06 -> 09. Do not declare FRESH."),
+            "unknown_history_ack_required"=>Some("Acknowledge unknown history only after stopping other schedulers and manual requests; use the existing-account recovery wizard."),
+            "recovery_wait_required"=>Some("The conservative wait has not ended or new activity extended it. Run recover check for the updated deadline; no production approval was granted."),
+            "recovery_quota_blocked"=>Some("Quota is invalid, weekly allowance exhausted or the server denied access. Keep observation mode and recheck identity/quota; recovery is not authorized."),
+            "account_guard_corrupt"=>Some("The global account ledger is corrupt. Preserve it and review backups; automatic overwrite is forbidden."),
+            "recovery_guard_missing"=>Some("The account guard disappeared during quarantine. Run recover begin again to restart conservative waiting; do not approve directly."),
+            "recovery_owner_or_clock"=>Some("Recovery belongs to another data directory or the clock moved backward; approval is blocked."),
+            "recovery_owner_mismatch"=>Some("Global recovery approval and local history/directory do not match. Run recover check; model execution is blocked."),
+            "recovery_approval_required"=>Some("Unknown-history recovery is not approved. Complete the wait, recheck and explicitly enable scheduling."),
+            "managed_root_required"=>Some("Automatic service cutover requires root and the standard /var/lib/kairo installation. Development directories never modify the real service."),
+            "live_status_unconfirmed"=>Some("The daemon did not confirm a fresh live status. Authorization was rolled back; inspect logs before retrying enable."),
+            "cutover_rollback_incomplete"=>Some("Service cutover failed and rollback is incomplete. Inspect kairo.service and deployment approval; do not keep retrying automatically."),
+            "systemd_cutover_failed"=>Some("The systemd handoff failed. Production approval is being rolled back; inspect service logs."),
+            "managed_service_changed"=>Some("The unit differs from the managed installer template. Custom service files are preserved; review the handoff manually."),
+            "custom_service_override"=>Some("Custom or runtime systemd overrides exist. They will not be deleted; review them manually."),
+            "pause_before_recovery"=>Some("The account differs or production is already approved. Pause scheduling and inspect the records before recovery."),
+            _=>None,
+        };
+        let message = if en {
+            english
+                .map(str::to_string)
+                .unwrap_or_else(|| bilingual(&s, true))
+        } else {
+            bilingual(&s, false)
+        };
+        return (code, message);
     }
     let code = if e.chain().any(|x| x.is::<std::io::Error>()) {
         "io_error"
@@ -72,7 +98,13 @@ pub fn error(e: &anyhow::Error, en: bool) -> (String, String) {
 }
 pub fn label(k: &str, en: bool) -> String {
     if en {
-        return k.replace('_', " ");
+        return match k {
+            "state_valid" => "Complete scheduler readiness (not production approval)".into(),
+            "existing_records_valid" => {
+                "Existing local configuration/record integrity (absence is not readiness)".into()
+            }
+            _ => k.replace('_', " "),
+        };
     };
     match k {
         "version" => "版本",
@@ -80,7 +112,33 @@ pub fn label(k: &str, en: bool) -> String {
         "config" => "配置",
         "next_check" => "下次实际检查",
         "execution" => "执行模式",
-        "state_valid" => "状态有效",
+        "account_origin" => "账号来源声明",
+        "files" => "调度文件",
+        "oauth_discovered" => "已发现 OAuth（非服务端验证）",
+        "local_binding_valid" => "本地绑定有效",
+        "account_guard_valid" => "全局账号保护有效",
+        "history_proves_new_account" => "存在可证明新账号的完整历史",
+        "recovery" => "未知历史恢复记录",
+        "recovery_record_invalid" => "恢复记录无效",
+        "next_step" => "下一步",
+        "history_before_start" => "基线之前的请求历史",
+        "not_before" => "最早恢复时间",
+        "owner" => "恢复所属目录",
+        "started_at" => "恢复开始时间",
+        "approved" => "恢复已批准",
+        "observation_override" => "systemd 强制观察模式",
+        "managed_service" => "标准安装器服务",
+        "service_active" => "服务正在运行",
+        "state_valid" => "调度状态完整就绪（不代表生产授权）",
+        "existing_records_valid" => "已有配置/文件完整性（缺失不算就绪）",
+        "scheduler_state_ready" => "调度状态完整就绪",
+        "production_authorized" => "生产授权",
+        "automatic_warmup_enabled" => "自动预热已启用",
+        "recovery_status" => "恢复诊断",
+        "classification" => "账号与记录分类",
+        "state_file_valid" => "本地状态文件格式有效",
+        "service_mode" => "实际服务模式",
+        "daemon_live_confirmed" => "已确认正式守护进程",
         "language" => "语言",
         "anchors" => "激活时间",
         "max_anchors" => "时间数量上限",
@@ -224,6 +282,53 @@ pub fn value(s: &str, en: bool) -> String {
     }
 
     let (zh, english) = match s {
+        "fresh_bound_not_authorized" => (
+            "新账号声明已绑定；尚未生产授权",
+            "Fresh declaration bound; not production-approved",
+        ),
+        "recovery_owned_elsewhere" => (
+            "恢复属于其他数据目录",
+            "Recovery owned by another data directory",
+        ),
+        "administrator_declared_fresh" => (
+            "管理员声明首次新账号（非 API 历史证明）",
+            "Administrator declared fresh (not API history proof)",
+        ),
+        "existing_unknown_history_recovery" => (
+            "已有账号未知历史恢复",
+            "Existing-account unknown-history recovery",
+        ),
+        "oauth_missing" => (
+            "未发现有效 OAuth；先登录与校验",
+            "OAuth missing; log in and verify",
+        ),
+        "data_corrupt" => (
+            "数据损坏或无法读取；保留证据并恢复",
+            "Data corrupt/unreadable; preserve evidence and recover",
+        ),
+        "history_unknown" => (
+            "调度历史未知；新旧账号必须明确选择",
+            "Scheduler history unknown; explicitly choose first use or recovery",
+        ),
+        "recovery_waiting" => (
+            "已有账号恢复等待中；尚未授权",
+            "Existing-account recovery waiting; not approved",
+        ),
+        "not_authorized" => (
+            "状态完整但尚未生产授权",
+            "Records ready; production not authorized",
+        ),
+        "authorized" => (
+            "生产授权已取得；仍需验证实际服务模式",
+            "Production approved; verify effective service mode",
+        ),
+        "unknown" => (
+            "未知（未还原为无请求历史）",
+            "Unknown (not reconstructed as empty history)",
+        ),
+        "missing" => ("文件缺失", "Missing file"),
+        "valid" => ("有效", "Valid"),
+        "invalid_or_unreadable" => ("无效或读取失败", "Invalid or unreadable"),
         "processed_without_request" => (
             "原锚点已处理，无请求记录",
             "Legacy anchor processed without a request record",

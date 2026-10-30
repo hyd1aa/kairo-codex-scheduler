@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.3
+
+- Add explicit unknown-history account recovery with verified read-only quota snapshots, persistent quarantine and activity-based extensions.
+- Preserve valid histories/global anchors, archive damaged local evidence and fail closed on corrupt global guards.
+- Bind recovery approval to the account/data directory; retain account execution locks and durable deduplication.
+- Add first-use/reinstall wizard and managed systemd production handoff with rollback and current-PID live verification.
+- Separate installation integrity, scheduler readiness, production approval and actual running mode in doctor/status.
+- Recovery itself never issues model requests; tests use synthetic accounts, clocks and services.
+
 ## 0.2.2
 
 - Persistent bilingual management pages with safe visible-screen redraw, breadcrumbs, concise status and quota, bounded journal pagination and topic help.

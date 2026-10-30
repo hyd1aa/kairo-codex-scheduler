@@ -326,8 +326,9 @@ pub fn doctor(store: &Store, repair: bool) -> Result<Value> {
             })
             .unwrap_or_default()
     };
+    let recovery = crate::recovery::inspect(store, &runtime::guard_root())?;
     Ok(
-        json!({"distribution":read("ID"),"distribution_version":read("VERSION_ID"),"arch":std::env::consts::ARCH,"systemd":Path::new("/run/systemd/system").exists(),"timezone":crate::timezone().map(|t|t.to_string()).unwrap_or_else(|_|"timezone_unknown".into()),"codex_safety_flags":codex,"oauth_present":crate::identity(&r.codex_home.join("auth.json")).is_ok(),"state_valid":validate(store).is_ok(),"repair_applied":repair}),
+        json!({"distribution":read("ID"),"distribution_version":read("VERSION_ID"),"arch":std::env::consts::ARCH,"systemd":Path::new("/run/systemd/system").exists(),"timezone":crate::timezone().map(|t|t.to_string()).unwrap_or_else(|_|"timezone_unknown".into()),"codex_safety_flags":codex,"oauth_present":crate::identity(&r.codex_home.join("auth.json")).is_ok(),"state_valid":recovery["scheduler_state_ready"],"existing_records_valid":validate(store).is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"production_authorized":recovery["production_authorized"],"recovery_status":recovery,"repair_applied":repair}),
     )
 }
 
