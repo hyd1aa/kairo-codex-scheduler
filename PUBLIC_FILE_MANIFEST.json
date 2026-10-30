@@ -70,7 +70,7 @@
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "7cecceeb5339a9452158e10c3b57b018e699397013e7971fee0f77e88dbae67a",
+      "sha256": "e1ac982dc572a7fe9ad3b91952dbc24bf4ba601ac5a6ff2d61f04751e414e8dd",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
