@@ -511,8 +511,82 @@ mod tests {
 pub(crate) fn require_intent(store: &Store, account: &str) -> Result<()> {
     let i: Intent = store.read("onboarding.json")?;
     i.validate()?;
+    if store.root.join(".upgrade-lock").try_exists()? {
+        bail!("upgrade_in_progress / 升级进行中，推迟自动启用");
+    }
     if !i.requested || !i.exclusive_account || i.account.as_deref() != Some(account) {
         bail!("automatic_enable_cancelled / 自动启用已暂停或账号确认不匹配");
+    }
+    Ok(())
+}
+
+/// Also provisions the timer when opting in after an upgrade from an older installer.
+pub fn prepare(root: &Path) -> Result<()> {
+    if std::fs::canonicalize(root)?.as_path() != Path::new("/var/lib/kairo") {
+        return Ok(());
+    }
+    if unsafe { libc::geteuid() } != 0 {
+        bail!("root_required / 请使用 sudo kairo 启动自动预热");
+    }
+    if std::env::var_os("KAIRO_OFFLINE").as_deref() == Some(std::ffi::OsStr::new("1")) {
+        bail!("offline_mode / 离线模式禁止修改真实服务");
+    }
+    let units = Path::new("/etc/systemd/system");
+    let meta = std::fs::symlink_metadata(units)?;
+    if !meta.is_dir()
+        || meta.file_type().is_symlink()
+        || meta.uid() != 0
+        || meta.mode() & 0o022 != 0
+    {
+        bail!("managed_service_unsafe / 服务目录不安全");
+    }
+    for (name, body) in [
+        (
+            "kairo-onboarding.service",
+            include_str!("../../../packaging/kairo-onboarding.service"),
+        ),
+        (
+            "kairo-onboarding.timer",
+            include_str!("../../../packaging/kairo-onboarding.timer"),
+        ),
+    ] {
+        let path = units.join(name);
+        if recovery::present(&path)? {
+            let m = std::fs::symlink_metadata(&path)?;
+            if !m.is_file()
+                || m.file_type().is_symlink()
+                || m.uid() != 0
+                || m.nlink() != 1
+                || m.mode() & 0o022 != 0
+                || std::fs::read_to_string(&path)? != body
+            {
+                bail!("custom_initialization_unit / 初始化任务已被修改，保留原件，请人工检查");
+            }
+        } else {
+            use std::io::Write;
+            let mut f = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o644)
+                .custom_flags(libc::O_NOFOLLOW)
+                .open(&path)?;
+            f.write_all(body.as_bytes())?;
+            f.sync_all()?;
+            std::fs::File::open(units)?.sync_all()?;
+        }
+    }
+    for args in [
+        &["daemon-reload"][..],
+        &["enable", "--now", "kairo-onboarding.timer"][..],
+    ] {
+        let output = crate::process::output(
+            std::process::Command::new("/usr/bin/systemctl").args(args),
+            30,
+            65536,
+        )?;
+        if !output.status.success() {
+            bail!("initialization_timer_failed / 自动初始化定时任务未启动，请检查 systemd");
+        }
     }
     Ok(())
 }

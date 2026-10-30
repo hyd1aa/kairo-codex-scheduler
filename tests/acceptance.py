@@ -70,7 +70,7 @@ exit 99''')
     # Actual numbered menu, submenu, persistent language toggle and EOF handling.
     master,slave=pty.openpty();menuenv=dict(env);menuenv.pop('NO_COLOR',None)
     p=subprocess.Popen([binary,'--data-dir',str(root)],stdin=slave,stdout=slave,stderr=slave,env=menuenv);os.close(slave)
-    os.write(master,b'03\n1\n\n00\n10\n01\n00\n00\n');out=b'';deadline=time.monotonic()+15
+    os.write(master,b'02\n1\n\n00\n06\n06\n01\n00\n00\n');out=b'';deadline=time.monotonic()+15
     while time.monotonic()<deadline:
         if select.select([master],[],[],.1)[0]:
             try:out+=os.read(master,65536)

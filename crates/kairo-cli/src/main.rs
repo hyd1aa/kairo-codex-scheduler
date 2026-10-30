@@ -504,6 +504,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             confirm_exclusive_account,
         } => {
             let v = if request {
+                kairo_platform::onboarding::prepare(&cli.data_dir)?;
                 let store = configured(cli)?;
                 kairo_platform::onboarding::request(&store, confirm_exclusive_account)?
             } else {

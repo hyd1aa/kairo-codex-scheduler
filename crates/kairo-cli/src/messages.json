@@ -727,6 +727,10 @@
     "en": "cursor invalid",
     "zh": "调度游标无效"
   },
+  "custom_initialization_unit": {
+    "en": "custom initialization unit",
+    "zh": "初始化任务已被修改，保留原件，请人工检查"
+  },
   "custom_service_override": {
     "en": "custom service override",
     "zh": "存在自定义或运行时覆盖，禁止自动接管"
@@ -858,6 +862,10 @@
   "independently_trusted_sha256": {
     "en": "Independently trusted SHA256",
     "zh": "独立可信的 SHA256 校验值"
+  },
+  "initialization_timer_failed": {
+    "en": "initialization timer failed",
+    "zh": "自动初始化定时任务未启动，请检查 systemd"
   },
   "initialize_configuration_without_starting_services": {
     "en": "Initialize configuration without starting services",
@@ -1037,7 +1045,7 @@
   },
   "managed_service_unsafe": {
     "en": "managed service unsafe",
-    "zh": "服务覆盖目录不安全"
+    "zh": "服务目录不安全"
   },
   "managed_unit_mismatch": {
     "en": "managed unit mismatch",
@@ -1403,6 +1411,10 @@
     "en": "rollback missing",
     "zh": "没有可回滚版本"
   },
+  "root_required": {
+    "en": "root required",
+    "zh": "请使用 sudo kairo 启动自动预热"
+  },
   "run_the_scheduler;_observation_until_explicitly_activated": {
     "en": "Run the scheduler; observation until explicitly activated",
     "zh": "运行调度器，明确批准前仅观察"
@@ -1582,6 +1594,10 @@
   "update_in_progress": {
     "en": "update in progress",
     "zh": "程序升级中，请稍后重试或运行 update recover"
+  },
+  "upgrade_in_progress": {
+    "en": "upgrade in progress",
+    "zh": "升级进行中，推迟自动启用"
   },
   "validate_state_without_requests": {
     "en": "Validate state without requests",
