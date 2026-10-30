@@ -81,6 +81,7 @@ pub fn credentials_changed(store: &Store) -> Result<()> {
         i.next_attempt = 0;
         i.failures = 0;
         store.write("onboarding.json", &i)?;
+        event(store, "credentials_updated", 0, None)?;
     }
     Ok(())
 }
@@ -546,6 +547,10 @@ mod tests {
         assert!(!after.requested);
         assert_eq!(after.next_attempt, 0);
         assert_eq!(after.failures, 0);
+        assert_eq!(
+            s.read::<Value>("onboarding-status.json").unwrap()["status"],
+            "credentials_updated"
+        );
         assert_eq!(std::fs::read(root.join("recovery.json")).unwrap(), before);
         drop(s);
         std::fs::remove_dir_all(root).unwrap();

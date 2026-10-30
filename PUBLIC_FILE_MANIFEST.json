@@ -447,7 +447,7 @@
       "source_path": "crates/kairo-platform/src/onboarding.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "d275500923d1c5ea02f3185e7428d0db68f3cbd6e359ce7b24b05584885f21bd"
+      "sha256": "7c6ed143b06749590fb053ae8638bd38df2325785cf8860bbac47f5537fb0842"
     },
     {
       "path": "crates/kairo-platform/src/process.rs",
