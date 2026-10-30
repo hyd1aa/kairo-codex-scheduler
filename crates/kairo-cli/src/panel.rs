@@ -1391,25 +1391,6 @@ fn titled(en: bool) -> String {
     .into()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn detail_redaction_covers_nested_credentials_without_hiding_scheduler_state() {
-        let mut value = json!({"event":"observation_only","nested":[{"refresh_token":"synthetic-sensitive-value","access_token":"synthetic-access"}],"Authorization":"synthetic-auth","account":"synthetic-account"});
-        redact(&mut value);
-        assert_eq!(value["event"], "observation_only");
-        assert_eq!(value["account"], "synthetic-account");
-        assert!(!value.to_string().contains("synthetic-sensitive-value"));
-        assert!(!value.to_string().contains("synthetic-access"));
-        assert!(!value.to_string().contains("synthetic-auth"));
-    }
-    #[test]
-    fn external_text_cannot_inject_terminal_controls() {
-        assert_eq!(clean("event\x1b[3J\r\n"), "event[3J");
-    }
-}
-
 fn warmup_menu(cli: &Cli, en: bool) -> Result<()> {
     loop {
         TITLE.with(|t| *t.borrow_mut() = t_string(en, "启动 / 暂停预热", "Start / pause warmup"));
@@ -1518,5 +1499,24 @@ fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
             )?,
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn detail_redaction_covers_nested_credentials_without_hiding_scheduler_state() {
+        let mut value = json!({"event":"observation_only","nested":[{"refresh_token":"synthetic-sensitive-value","access_token":"synthetic-access"}],"Authorization":"synthetic-auth","account":"synthetic-account"});
+        redact(&mut value);
+        assert_eq!(value["event"], "observation_only");
+        assert_eq!(value["account"], "synthetic-account");
+        assert!(!value.to_string().contains("synthetic-sensitive-value"));
+        assert!(!value.to_string().contains("synthetic-access"));
+        assert!(!value.to_string().contains("synthetic-auth"));
+    }
+    #[test]
+    fn external_text_cannot_inject_terminal_controls() {
+        assert_eq!(clean("event\x1b[3J\r\n"), "event[3J");
     }
 }
