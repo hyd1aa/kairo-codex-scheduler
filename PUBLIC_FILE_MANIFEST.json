@@ -264,8 +264,8 @@
       "source_commit": null,
       "source_path": "crates/kairo-cli/src/history.rs",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "254e41d299a788aaf47ce7f04a7f06487bb18a0627d9e3faece74f669b6d99ce"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "08b99053cc935191ded9e296b659045ae020ca844fe07a464d91d3983e5912a9"
     },
     {
       "path": "crates/kairo-cli/src/i18n.rs",
@@ -313,7 +313,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "44ef4ddfe2ef65f3b6620d6fa568d45fdd5c0fd6ea6fa51e2530877c69ff23cf"
+      "sha256": "ad65c2b551cc6ee194446e68cab12b9fde6a50b8822c801b38e98b0d2c480c96"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",

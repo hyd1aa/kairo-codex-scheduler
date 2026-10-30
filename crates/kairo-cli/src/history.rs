@@ -360,6 +360,53 @@ mod tests {
         }
     }
     #[test]
+    fn timeout_and_unrelated_countdown_are_not_claimed_as_correlated_success() {
+        let f = Fixture::new();
+        f.confirmed();
+        {
+            let store = Store::open(&f.root).unwrap();
+            let mut l: Ledger = store.read("confirmations.json").unwrap();
+            let t = &mut l.tasks[0];
+            t.status = "attribution_uncertain".into();
+            t.time_correlated = false;
+            for sample in &mut t.samples {
+                sample.reset_at -= 600;
+                sample.remaining -= 600;
+            }
+            store.write("confirmations.json", &l).unwrap();
+        }
+        assert_eq!(f.view().request.unwrap().kind, Kind::Uncertain);
+        {
+            let store = Store::open(&f.root).unwrap();
+            let mut l: Ledger = store.read("confirmations.json").unwrap();
+            let t = &mut l.tasks[0];
+            t.status = "timeout".into();
+            t.countdown_confirmed = false;
+            t.time_correlated = false;
+            t.samples.clear();
+            store.write("confirmations.json", &l).unwrap();
+        }
+        assert_eq!(f.view().request.unwrap().kind, Kind::Unconfirmed);
+    }
+    #[test]
+    fn unknown_attempt_and_missing_pre_recovery_history_stay_unproven() {
+        let mut f = Fixture::new();
+        f.state.attempts[0].outcome = "attempt_persisted_unknown".into();
+        f.state.attempts[0].completed_at = None;
+        f.save();
+        assert_eq!(f.view().request.unwrap().kind, Kind::Unknown);
+        f.state.attempts.clear();
+        f.save();
+        Store::open(&f.root)
+            .unwrap()
+            .write(
+                "recovery.json",
+                &serde_json::json!({"history_before_start":"unknown"}),
+            )
+            .unwrap();
+        assert_eq!(f.view().latest.kind, Kind::Unavailable);
+    }
+    #[test]
     fn confirmed_evidence_survives_reopen_and_keeps_attribution_caveat() {
         let f = Fixture::new();
         f.confirmed();

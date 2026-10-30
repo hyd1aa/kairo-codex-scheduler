@@ -1798,6 +1798,18 @@ fn account_menu(cli: &Cli, en: bool) -> Result<()> {
 mod tests {
     use super::*;
     #[test]
+    fn completed_recovery_never_shows_its_old_recheck_deadline() {
+        assert!(!recovery_waiting(
+            &json!({"classification":"authorized","effective_not_before":1,"recovery":{"approved":true}})
+        ));
+        assert!(!recovery_waiting(
+            &json!({"classification":"recovery_waiting","effective_not_before":1,"recovery":{"approved":true}})
+        ));
+        assert!(recovery_waiting(
+            &json!({"classification":"recovery_waiting","effective_not_before":9999,"recovery":{"approved":false}})
+        ));
+    }
+    #[test]
     fn detail_redaction_covers_nested_credentials_without_hiding_scheduler_state() {
         let mut value = json!({"event":"observation_only","nested":[{"refresh_token":"synthetic-sensitive-value","access_token":"synthetic-access"}],"Authorization":"synthetic-auth","account":"synthetic-account"});
         redact(&mut value);
