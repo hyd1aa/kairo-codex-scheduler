@@ -2,6 +2,15 @@
 use super::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 static ACTIVE: AtomicBool = AtomicBool::new(false);
+static DETAILS: AtomicBool = AtomicBool::new(false);
+pub fn details() -> bool {
+    DETAILS.load(Ordering::Relaxed)
+}
+pub fn detail_output(mut value: Value) -> Result<()> {
+    redact(&mut value);
+    println!("{}", serde_json::to_string_pretty(&value)?);
+    Ok(())
+}
 #[derive(Debug)]
 pub struct EndOfInput;
 impl std::fmt::Display for EndOfInput {
@@ -551,11 +560,42 @@ pub fn render(v: &Value, en: bool) {
         return;
     }
     if v.get("idle_window_prewarm").is_some() {
-        let mut v = v.clone();
-        if let Some(o) = v.as_object_mut() {
+        let mut settings = v.clone();
+        if let Some(o) = settings.as_object_mut() {
             o.remove("state");
         }
-        i18n::render(&v, en, 0);
+        i18n::render(&settings, en, 0);
+        if v["state"].is_object() {
+            let state = &v["state"];
+            println!(
+                "{}",
+                color(
+                    t(
+                        en,
+                        "窗口生命周期（最近保存状态）",
+                        "Window lifecycle (last saved state)"
+                    ),
+                    34
+                )
+            );
+            let at = |key: &str| {
+                state[key]
+                    .as_i64()
+                    .filter(|at| *at > 0)
+                    .and_then(|at| local_time(at, timezone().ok()?))
+            };
+            i18n::render(
+                &json!({"positive_until":at("positive_until"),"pending":at("pending"),"server_denied":state["server_denied"],"recent_reason":state["attempts"].as_array().and_then(|a|a.last()).map(|a|a["outcome"].clone())}),
+                en,
+                0,
+            );
+            quota(
+                &json!({"weekly":state["weekly"],"five_hour":state["observations"].as_array().and_then(|a|a.last()).map(|o|o["quota"].clone())}),
+                en,
+            );
+        } else {
+            println!("{}",color(t(en,"! 调度历史缺失、无效或无法读取；请在 01 查看原因，保留保护记录","! Scheduler history is missing, invalid or unreadable; inspect 01 and retain guards"),33));
+        }
         return;
     }
     i18n::render(v, en, 0);
@@ -833,23 +873,10 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
                     "" => return Ok(()),
                     "1" => continue,
                     "2" => {
-                        // Read only local records; status CLI remains independently available.
-                        let mut v = serde_json::Map::new();
-                        for name in [
-                            "config.json",
-                            "runtime.json",
-                            "accounts.json",
-                            "deployment.json",
-                            "state.json",
-                            "cursor.json",
-                            "status.json",
-                        ] {
-                            if let Some(data) = file_state(cli, name, en) {
-                                v.insert(name.into(), data);
-                            }
-                        }
-                        println!("{}", serde_json::to_string_pretty(&v)?);
-                        pause(en)?;
+                        DETAILS.store(true, Ordering::Relaxed);
+                        let result = run(cli, Cmd::Status);
+                        DETAILS.store(false, Ordering::Relaxed);
+                        report(result, en)?;
                     }
                     _ => unreachable!(),
                 }

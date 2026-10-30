@@ -63,6 +63,10 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  (root/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-panel','access_token':'synthetic-panel-placeholder'}}))
  (root/'auth.json').chmod(0o600)
  out=menu('01\n00\n00\n');assert 'OAuth' in out and 'state.json' in out
+ # A saved lifecycle remains visible under 08, while 01 details uses full status JSON.
+ (data/'state.json').write_text(json.dumps({'schema':1,'account':'synthetic-panel','last_clock':0,'attempts':[],'positive_until':1793300000,'pending':None,'observations':[],'weekly':None,'server_denied':False,'legacy_attempts':[]}))
+ out=menu('08\n05\n\n00\n00\n');assert 'Window lifecycle' in out or '窗口生命周期' in out
+ out=menu('01\n02\n\n00\n00\n');assert '"prewarm_conditional": true' in out and '"version": "0.2.2"' in out
  (data/'state.json').write_text('{invalid')
  out=menu('01\n00\n00\n');assert 'Invalid' in out or '无效' in out
  (data/'state.json').unlink()

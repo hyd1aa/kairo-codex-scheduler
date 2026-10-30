@@ -336,7 +336,9 @@ enum Update {
     },
 }
 fn emit(cli: &Cli, v: Value) -> Result<()> {
-    if panel::active() {
+    if panel::details() {
+        return panel::detail_output(v);
+    } else if panel::active() {
         panel::render(&v, cli.lang.as_deref() == Some("en-US"));
     } else if cli.json {
         println!("{}", serde_json::to_string_pretty(&v)?)
