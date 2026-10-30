@@ -427,7 +427,7 @@ try:
   source_home=directory(user.pw_dir,user.pw_uid)
   source=os.open('.codex',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=source_home)
   sm=os.fstat(source)
-  if sm.st_uid!=user.pw_uid or sm.st_mode & 0o077:raise ValueError('source must be private')
+  if sm.st_uid!=user.pw_uid or sm.st_mode & 0o022:raise ValueError('source must be private')
   f=os.open('auth.json',os.O_RDONLY|os.O_NOFOLLOW,dir_fd=source)
   m=os.fstat(f)
   if not stat.S_ISREG(m.st_mode) or m.st_uid!=user.pw_uid or m.st_nlink!=1 or m.st_mode & 0o077:raise ValueError('unsafe source')
@@ -458,7 +458,7 @@ PYOAUTH
   fi
   msg '其他机器使用同账号无法自动检测。已停止其他调度器，且恢复等待期间不手动请求？[yes/N]' 'Other machines cannot be checked. Other schedulers stopped, and no manual requests during recovery? [yes/N]'
   answer=; read -r answer </dev/tty || :
-  if [[ $answer == yes ]]; then /opt/kairo/current/bin/kairo onboard --request --confirm-exclusive-account; fi
+  if [[ $answer == yes ]]; then /opt/kairo/current/bin/kairo onboard --request --confirm-exclusive-account || msg '请先完成登录，再在菜单04确认。' 'Complete login, then confirm once in menu04.'; fi
  fi
  systemctl start --no-block kairo-onboarding.service
 fi

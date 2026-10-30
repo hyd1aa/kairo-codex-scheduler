@@ -1108,8 +1108,8 @@
     "zh": "OAuth 令牌缺失"
   },
   "oauth_unavailable": {
-    "en": "OAuth unavailable",
-    "zh": "OAuth 未授权"
+    "en": "oauth unavailable",
+    "zh": "请先完成服务账号的 Codex OAuth 登录，再确认独占调度"
   },
   "observation_override_changed": {
     "en": "observation override changed",

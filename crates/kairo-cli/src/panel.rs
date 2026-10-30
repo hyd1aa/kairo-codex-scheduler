@@ -1259,7 +1259,7 @@ pub fn render_recovery(v: &Value, en: bool) {
             at.and_then(|at| local_time(at, timezone().ok()?))
                 .unwrap_or_else(|| "?".into())
         );
-        println!("{}",t(en,"服务重启保留等待；系统重启会保守重新计时，以 recover check 为准","Service restarts preserve the wait; a system reboot conservatively restarts timing; run recover check"));
+        println!("{}",t(en,"服务重启保留等待；系统重启保留已确认进度，关机时间不计入等待","Service restarts preserve waiting; reboots retain credited progress, excluding powered-off time"));
         println!(
             "{}: {}",
             t(
@@ -1269,7 +1269,7 @@ pub fn render_recovery(v: &Value, en: bool) {
             ),
             at.unwrap_or(now).saturating_sub(now).max(0)
         );
-        println!("{}",t(en,"等待不是自动授权；旧历史未恢复或证明为空。停止其他调度器和手动调用后，再选择复查与明确启用。","Waiting is not authorization; old history remains unknown. Stop other schedulers/manual requests, then recheck and explicitly enable."));
+        println!("{}",t(en,"旧历史仍未知。已选择自动启用的账号由后台复查并启用；否则请在主菜单04选择启动。","Old history stays unknown. Opted-in accounts recheck and enable in the background; otherwise choose Start in main menu04."));
     }
     if v.get("five_hour").is_some() {
         quota(v, en);
@@ -1426,12 +1426,26 @@ fn warmup_menu(cli: &Cli, en: bool) -> Result<()> {
             "" => return Ok(()),
             "1" => {
                 println!("{}",t(en,"继续表示授权安全条件满足后自动预热。无法检查其他机器：请确认同账号的其他调度器已停止，恢复等待期间避免手动请求。","Continuing authorizes automatic warmup once safe. Other machines cannot be checked: stop other schedulers for this account and avoid manual requests during recovery."));
-                if input(t(
-                    en,
-                    "确认此账号由本机独占调度？[yes/N]: ",
-                    "Confirm exclusive scheduling? [yes/N]: ",
-                ))?
-                .eq_ignore_ascii_case("yes")
+                let confirmed = {
+                    let s = configured(cli)?;
+                    let account = rt::runtime(&s)
+                        .and_then(|r| kairo_platform::identity(&r.codex_home.join("auth.json")))
+                        .ok();
+                    s.read::<kairo_platform::onboarding::Intent>("onboarding.json")
+                        .is_ok_and(|i| {
+                            i.exclusive_account
+                                && account.as_ref().is_some_and(|a| {
+                                    i.account.as_deref() == Some(a.fingerprint.as_str())
+                                })
+                        })
+                };
+                if confirmed
+                    || input(t(
+                        en,
+                        "确认此账号由本机独占调度？[yes/N]: ",
+                        "Confirm exclusive scheduling? [yes/N]: ",
+                    ))?
+                    .eq_ignore_ascii_case("yes")
                 {
                     report(
                         run(

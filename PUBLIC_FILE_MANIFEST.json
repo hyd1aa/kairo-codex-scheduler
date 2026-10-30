@@ -282,7 +282,7 @@
     },
     {
       "path": "crates/kairo-cli/src/messages.json",
-      "sha256": "fba9e975ea38f6702ec78fcba9b18075ccdda6cf7a73e003e6d9c2c5c8358aa1",
+      "sha256": "9d19e9ffff11f8561dee3b3ad6b73f35bd0e6a3f00106ae793e80e9ab327ba1c",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "cb0be29144025726353cc979f8c44b991743d5b2f45ba928954440347210113c"
+      "sha256": "8bddac3b850683520ddb411c7add86a43fb95493fc95b3883f59e64e9c04e191"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -447,7 +447,7 @@
       "source_path": "crates/kairo-platform/src/onboarding.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "806f644efc731257283b0f98464c68236224ea8cacb3e041217b5f43cea5b163"
+      "sha256": "bafd6841c29d424ea4a685dc4301e070771ae72e4f82e751a7241c622c740396"
     },
     {
       "path": "crates/kairo-platform/src/process.rs",
@@ -659,7 +659,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "4b8c1c69a74efa2982b31f9610c22ddeaa3c9eb1a4c618f3863bfd65957ca216",
+      "sha256": "4c3f685de24e1ed922b4af0294241b3a59764685739896a39dd0cc18c2105f9a",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",

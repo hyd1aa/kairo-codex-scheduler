@@ -51,6 +51,9 @@ pub fn request(store: &Store, exclusive: bool) -> Result<Value> {
     let id = rt::runtime(store)
         .and_then(|r| crate::identity(&r.codex_home.join("auth.json")))
         .ok();
+    if exclusive && id.is_none() {
+        bail!("oauth_unavailable / 请先完成服务账号的 Codex OAuth 登录，再确认独占调度");
+    }
     // A different account always requires a new one-time risk confirmation.
     if let Some(id) = id {
         if intent
