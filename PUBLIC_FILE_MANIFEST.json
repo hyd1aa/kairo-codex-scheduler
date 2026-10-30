@@ -258,7 +258,7 @@
     },
     {
       "path": "crates/kairo-cli/src/i18n.rs",
-      "sha256": "2e2332f21e376ddfb942c438fb035ab8249edd0efc3211087790d233af5bb1a9",
+      "sha256": "4dcbfb2ceedae7f142a046a38a2cde6ff693b27ffaeb63931d72e4b2085c7b91",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -670,7 +670,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "9c18b4111717b55a56af06ce3925912e31c0b31542e9850ee338f0885b8778a5",
+      "sha256": "83a27422de714cdb75450ae0c1f0123009a925bd0c5b3f0164a2846cea653994",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",

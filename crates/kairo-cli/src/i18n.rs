@@ -43,7 +43,7 @@ pub fn error(e: &anyhow::Error, en: bool) -> (String, String) {
             .to_lowercase()
             .replace([' ', '/'], "_");
         let english=match code.as_str() {
-            "account_recovery_required"=>Some("Binding or scheduler history is missing. Existing accounts: run recover begin --acknowledge-unknown-history or use wizard 06 -> 09. Do not declare FRESH."),
+            "account_recovery_required"=>Some("Binding or scheduler history is missing. Choose main menu04 Start for automatic safe recovery, or use maintenance wizard Advanced06 ->03. Do not declare FRESH."),
             "unknown_history_ack_required"=>Some("Acknowledge unknown history only after stopping other schedulers and manual requests; use the existing-account recovery wizard."),
             "recovery_wait_required"=>Some("The conservative wait has not ended or new activity extended it. Run recover check for the updated deadline; no production approval was granted."),
             "recovery_quota_blocked"=>Some("Quota is invalid, weekly allowance exhausted or the server denied access. Keep observation mode and recheck identity/quota; recovery is not authorized."),
