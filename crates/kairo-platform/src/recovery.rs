@@ -343,6 +343,9 @@ fn begin_verified(
     Ok(view(&r, now))
 }
 fn view(r: &Recovery, now: i64) -> Value {
+    if r.approved {
+        return json!({"recovery":r,"recovery_approved":true,"history_before_start":"unknown","next_step":"status"});
+    }
     json!({"recovery":r,"remaining_seconds":r.not_before.saturating_sub(now).max(0),"history_before_start":"unknown",
         "ready_for_explicit_approval":!r.approved && now>=r.not_before,"automatic_warmup_enabled":false,
         "next_step":if now<r.not_before{"wait; then recover check"}else{"enable --approve-production-cutover"}})
@@ -395,7 +398,6 @@ fn check_verified(
         }
     }
     let gate = Store::open(&guards.join(account))?;
-    let _authority = rt::authority_lease(&gate)?;
     let mut r: Recovery = gate
         .read("recovery.json")
         .context("recovery_not_started / 尚未开始恢复；请先运行 recover begin")?;
@@ -407,6 +409,25 @@ fn check_verified(
     if !gate.root.join("account.json").exists() {
         bail!("recovery_guard_missing / 等待期间账号保护文件丢失；请重新核查，不得直接授权");
     }
+    if r.approved {
+        let state = store.state()?;
+        if state.account != account {
+            bail!("account_mismatch / 本地历史属于其他账号");
+        }
+        crate::management::validate(store)?;
+        let expected = serde_json::to_value(&r)?;
+        if store.read::<Value>("recovery.json").ok().as_ref() != Some(&expected) {
+            archive(store, "recovery.json", r.started_at)?;
+            store.write("recovery.json", &r)?;
+        }
+        let mut result = view(&r, now);
+        result["account_fingerprint"] = json!(account);
+        result["five_hour"] = json!(f);
+        result["weekly"] = json!(w);
+        result["checked_at"] = json!(now);
+        return Ok(result);
+    }
+    let _authority = rt::authority_lease(&gate)?;
     if journal.last_attempt > now && journal.last_attempt > r.not_before {
         bail!("recovery_clock_or_request_pending / 存在未来请求保护或时钟回拨");
     }
@@ -439,14 +460,6 @@ fn check_verified(
     }
     if now < r.not_before {
         bail!("recovery_wait_required / 保守等待尚未结束或检测到新活动；请运行 recover check 查看新的截止时间");
-    }
-    if r.approved {
-        let s = store.state()?;
-        if s.account != account {
-            bail!("account_mismatch / 账号不匹配");
-        }
-        crate::management::validate(store)?;
-        return Ok(json!({"account_fingerprint":account,"recovery_approved":true}));
     }
     let mut state = match store.state() {
         Ok(s) if s.account == account => s,
@@ -814,6 +827,26 @@ mod tests {
         f.check(now, true).unwrap();
         let gate = crate::codex::AccountGate::open_existing(&f.guards, &f.account).unwrap();
         assert!(gate.check_local(&other.root).is_err());
+    }
+    #[test]
+    fn completed_recovery_recheck_is_read_only_and_does_not_requarantine_active_owners() {
+        let f = Fixture::new();
+        f.begin(f.start).unwrap();
+        f.check(f.start + QUIET_SECONDS, true).unwrap();
+        let before = f.record().not_before;
+        let gate = Store::open(&f.guards.join(&f.account)).unwrap();
+        let _live = rt::authority_lease(&gate).unwrap();
+        drop(gate);
+        let now = f.start + QUIET_SECONDS + 10;
+        let (mut five, week) = f.quotas(now);
+        five.used = 1.;
+        let v = check_verified(
+            &f.store, &f.guards, &f.account, five, week, false, now, false,
+        )
+        .unwrap();
+        assert_eq!(v["recovery_approved"], true);
+        assert!(v.get("automatic_warmup_enabled").is_none());
+        assert_eq!(f.record().not_before, before);
     }
     #[test]
     fn corrupt_or_foreign_global_journals_are_never_overwritten() {

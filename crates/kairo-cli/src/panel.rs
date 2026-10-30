@@ -1021,25 +1021,6 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn detail_redaction_covers_nested_credentials_without_hiding_scheduler_state() {
-        let mut value = json!({"event":"observation_only","nested":[{"refresh_token":"synthetic-sensitive-value","access_token":"synthetic-access"}],"Authorization":"synthetic-auth","account":"synthetic-account"});
-        redact(&mut value);
-        assert_eq!(value["event"], "observation_only");
-        assert_eq!(value["account"], "synthetic-account");
-        assert!(!value.to_string().contains("synthetic-sensitive-value"));
-        assert!(!value.to_string().contains("synthetic-access"));
-        assert!(!value.to_string().contains("synthetic-auth"));
-    }
-    #[test]
-    fn external_text_cannot_inject_terminal_controls() {
-        assert_eq!(clean("event\x1b[3J\r\n"), "event[3J");
-    }
-}
-
 pub fn render_recovery(v: &Value, en: bool) {
     if let Some(class) = v["classification"].as_str() {
         let message=match class {
@@ -1085,7 +1066,9 @@ pub fn render_recovery(v: &Value, en: bool) {
         }
     }
     let recovery = &v["recovery"];
-    if recovery.is_object() {
+    if recovery["approved"] == true {
+        println!("{}",color(t(en,"✓ 恢复基线已持久化；旧历史仍未知，实际授权和服务模式以 status 为准","✓ Recovery baseline persisted; old history remains unknown; use status to confirm approval and actual service mode"),32));
+    } else if recovery.is_object() {
         let now = chrono::Utc::now().timestamp();
         let at = recovery["not_before"].as_i64();
         println!(
@@ -1108,6 +1091,22 @@ pub fn render_recovery(v: &Value, en: bool) {
             at.unwrap_or(now).saturating_sub(now).max(0)
         );
         println!("{}",t(en,"等待不是自动授权；旧历史未恢复或证明为空。停止其他调度器和手动调用后，再选择复查与明确启用。","Waiting is not authorization; old history remains unknown. Stop other schedulers/manual requests, then recheck and explicitly enable."));
+    }
+    if v.get("five_hour").is_some() {
+        quota(v, en);
+    } else if v.get("ready_for_explicit_approval").is_some() && recovery.is_object() {
+        quota(
+            &json!({"five_hour":recovery["five"],"weekly":recovery["weekly"]}),
+            en,
+        );
+        println!(
+            "{}: {}",
+            t(en, "最近只读校验", "Latest read-only verification"),
+            recovery["checked_at"]
+                .as_i64()
+                .and_then(|at| local_time(at, timezone().ok()?))
+                .unwrap_or_else(|| "?".into())
+        );
     }
     if v["automatic_warmup_enabled"] == true && v["daemon_live_confirmed"] == true {
         println!("{}",color(t(en,"✓ 已确认正式运行，自动预热已启用；仍受额度、窗口及全局防重保护，不强制测试模型请求","✓ Production daemon confirmed; automatic warmup enabled with quota/window/global guards; no forced model test"),32));
@@ -1211,4 +1210,23 @@ fn titled(en: bool) -> String {
         "First use and existing-account recovery",
     )
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn detail_redaction_covers_nested_credentials_without_hiding_scheduler_state() {
+        let mut value = json!({"event":"observation_only","nested":[{"refresh_token":"synthetic-sensitive-value","access_token":"synthetic-access"}],"Authorization":"synthetic-auth","account":"synthetic-account"});
+        redact(&mut value);
+        assert_eq!(value["event"], "observation_only");
+        assert_eq!(value["account"], "synthetic-account");
+        assert!(!value.to_string().contains("synthetic-sensitive-value"));
+        assert!(!value.to_string().contains("synthetic-access"));
+        assert!(!value.to_string().contains("synthetic-auth"));
+    }
+    #[test]
+    fn external_text_cannot_inject_terminal_controls() {
+        assert_eq!(clean("event\x1b[3J\r\n"), "event[3J");
+    }
 }

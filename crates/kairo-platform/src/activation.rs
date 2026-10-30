@@ -221,6 +221,12 @@ pub fn enable(root: &Path, ack: bool) -> Result<Value> {
     {
         let store = Store::open(root)?;
         let health = crate::recovery::inspect(&store, &rt::guard_root())?;
+        if health["production_authorized"] == true && status(root)["daemon_live_confirmed"] == true
+        {
+            return Ok(
+                json!({"already_enabled":true,"production_authorized":true,"service_active":true,"daemon_live_confirmed":true,"automatic_warmup_enabled":true,"forced_model_requests":0}),
+            );
+        }
         if let Some(deadline) = health["recovery"]["not_before"].as_i64() {
             if chrono::Utc::now().timestamp() < deadline {
                 bail!(
@@ -247,7 +253,12 @@ pub fn enable(root: &Path, ack: bool) -> Result<Value> {
                 rt::runtime(&s).and_then(|r| crate::identity(&r.codex_home.join("auth.json")))?;
             let recovery_path = rt::guard_root().join(&id.fingerprint).join("recovery.json");
             if crate::recovery::present(&recovery_path)? {
-                crate::recovery::approve(&s)?;
+                let record: crate::recovery::Recovery =
+                    serde_json::from_slice(&crate::private_bytes(&recovery_path, 1024 * 1024)?)?;
+                record.validate(&id.fingerprint)?;
+                if !record.approved {
+                    crate::recovery::approve(&s)?;
+                }
             }
             rt::activate(&s, &id.fingerprint, true)
         },

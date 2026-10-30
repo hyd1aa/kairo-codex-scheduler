@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "4ae1b36416ef43d9e5c1261abee87f6430e2b4c11375c6290f23161d35136737"
+      "sha256": "059719dcb295dc48934012f7106b5e48b6d40040930e0b3e2ec455a59c574607"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -356,8 +356,8 @@
       "source_commit": null,
       "source_path": "crates/kairo-platform/src/activation.rs",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "20033e4f1f2ed89c37fde53160ba01193e723279b947b63ff8d6d8762389c363"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "ab24fc0f3bce8c4e3aceade07b136ab3b8d8186c6ea1f021a0674b1e1afc9a0b"
     },
     {
       "path": "crates/kairo-platform/src/codex.rs",
@@ -457,8 +457,8 @@
       "source_commit": null,
       "source_path": "crates/kairo-platform/src/recovery.rs",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "f42ad227a84bbdc47556d167bc2b71ef60a013ca7908f2b3f14b10d1ebf08ac3"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "473d8c823dff015f60748b98efcb68aa14e033db7411abee5c7fd0a1344140f2"
     },
     {
       "path": "crates/kairo-platform/src/replay.rs",
