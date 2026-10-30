@@ -227,7 +227,7 @@ fn service_summary(en: bool) {
         ),
     }
 }
-fn summary(cli: &Cli, en: bool, detailed: bool) -> Result<()> {
+fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
     service_summary(en);
     let store = configured(cli)?;
     let d = fs::read(cli.data_dir.join("deployment.json"))
@@ -292,73 +292,92 @@ fn summary(cli: &Cli, en: bool, detailed: bool) -> Result<()> {
             if live { "Enabled" } else { "Not enabled" }
         )
     );
-    println!(
-        "OAuth: {}",
-        t(
-            en,
-            if auth.is_some() {
-                "已发现；服务端校验请选 06 → 02"
-            } else {
-                "未登录或凭据无法读取"
-            },
-            if auth.is_some() {
-                "Discovered; verify server identity via 06 → 02"
-            } else {
-                "Not logged in or credentials unreadable"
-            }
-        )
-    );
-    let verified = VERIFIED.with(|v| {
-        v.borrow()
-            .as_ref()
-            .filter(|(id, at)| {
-                auth.as_ref().is_some_and(|a| a.fingerprint == *id)
-                    && chrono::Utc::now().timestamp() - at <= 300
-            })
-            .map(|(_, at)| *at)
-    });
-    println!(
-        "{}: {}",
-        t(en, "服务端身份", "Server identity"),
-        verified
-            .and_then(|at| local_time(at, timezone().ok()?))
-            .map(|at| format!("{} ({at})", t(en, "最近校验成功", "Recently verified")))
-            .unwrap_or_else(|| t(en, "待校验（06 → 02）", "Not verified (06 → 02)").into())
-    );
-    println!(
-        "{}: {}",
-        t(en, "本地账号绑定", "Local account binding"),
-        t(
-            en,
-            if bound {
-                "已绑定"
-            } else {
-                "未绑定或不匹配"
-            },
-            if bound {
-                "Bound"
-            } else {
-                "Unbound or mismatched"
-            }
-        )
-    );
-    println!(
-        "{}: {}",
-        t(en, "部署授权", "Deployment approval"),
-        t(
-            en,
-            if authorized {
-                "已取得"
-            } else {
-                "未取得或状态无效"
-            },
-            if authorized {
-                "Approved"
-            } else {
-                "Missing or invalid"
-            }
-        )
-    );
+    if compact {
+        let account = if auth.is_none() {
+            t(
+                en,
+                "未登录或 OAuth 无法读取",
+                "Not logged in / OAuth unreadable",
+            )
+        } else if !bound {
+            t(en, "OAuth 已发现，未绑定", "OAuth discovered, unbound")
+        } else {
+            t(
+                en,
+                "本地已绑定；服务端校验见 06",
+                "Locally bound; verify server via 06",
+            )
+        };
+        println!("{}: {account}", t(en, "账号状态", "Account"));
+    } else {
+        println!(
+            "OAuth: {}",
+            t(
+                en,
+                if auth.is_some() {
+                    "已发现；服务端校验请选 06 → 02"
+                } else {
+                    "未登录或凭据无法读取"
+                },
+                if auth.is_some() {
+                    "Discovered; verify server identity via 06 → 02"
+                } else {
+                    "Not logged in or credentials unreadable"
+                }
+            )
+        );
+        let verified = VERIFIED.with(|v| {
+            v.borrow()
+                .as_ref()
+                .filter(|(id, at)| {
+                    auth.as_ref().is_some_and(|a| a.fingerprint == *id)
+                        && chrono::Utc::now().timestamp() - at <= 300
+                })
+                .map(|(_, at)| *at)
+        });
+        println!(
+            "{}: {}",
+            t(en, "服务端身份", "Server identity"),
+            verified
+                .and_then(|at| local_time(at, timezone().ok()?))
+                .map(|at| format!("{} ({at})", t(en, "最近校验成功", "Recently verified")))
+                .unwrap_or_else(|| t(en, "待校验（06 → 02）", "Not verified (06 → 02)").into())
+        );
+        println!(
+            "{}: {}",
+            t(en, "本地账号绑定", "Local account binding"),
+            t(
+                en,
+                if bound {
+                    "已绑定"
+                } else {
+                    "未绑定或不匹配"
+                },
+                if bound {
+                    "Bound"
+                } else {
+                    "Unbound or mismatched"
+                }
+            )
+        );
+        println!(
+            "{}: {}",
+            t(en, "部署授权", "Deployment approval"),
+            t(
+                en,
+                if authorized {
+                    "已取得"
+                } else {
+                    "未取得或状态无效"
+                },
+                if authorized {
+                    "Approved"
+                } else {
+                    "Missing or invalid"
+                }
+            )
+        );
+    }
     let status = fs::read(cli.data_dir.join("status.json"))
         .ok()
         .and_then(|b| serde_json::from_slice::<Value>(&b).ok());
@@ -567,7 +586,11 @@ fn execute(cli: &Cli, cmd: Cmd, en: bool) -> Result<()> {
         println!(
             "{}: {}",
             t(en, "当前服务状态", "Current service state"),
-            i18n::value(state, en)
+            if state == "active" {
+                t(en, "运行中", "Running").into()
+            } else {
+                i18n::value(state, en)
+            }
         );
         println!(
             "{}",
@@ -796,7 +819,7 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
         page(title, false);
         match n {
             1 => {
-                if let Err(e) = summary(cli, en, true) {
+                if let Err(e) = summary(cli, en, true, false) {
                     let (_, m) = i18n::error(&e, en);
                     println!("{}", color(&m, 31));
                 }
@@ -866,7 +889,7 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
                     );
                 }
                 if n == 6 {
-                    summary(cli, en, false)?;
+                    summary(cli, en, false, false)?;
                 }
                 if n == 8 {
                     let s = configured(cli)?;
@@ -910,7 +933,7 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
             let en = c.language == "en-US";
             cli.lang = Some(c.language);
             page("", true);
-            if let Err(e) = summary(cli, en, false) {
+            if let Err(e) = summary(cli, en, false, true) {
                 let (_, m) = i18n::error(&e, en);
                 println!("{}", color(&m, 33));
             }

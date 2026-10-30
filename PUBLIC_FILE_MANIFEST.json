@@ -301,8 +301,8 @@
       "source_commit": null,
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "14bf93804548f209ac815e0e7f403517866c5e098e1709240ba14be9c3709977"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "029a0b51d7d490961a770bfc2385c8a451600999216295868202acdcf7861836"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
