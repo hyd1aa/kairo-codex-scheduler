@@ -176,7 +176,7 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "b9642cff024fa0b3aa9dca266f6a89153b0ffd5985082a3c15445166a1617ef3",
+      "sha256": "0c2edf0dca5a0718342549bbcd716c992880feb6575031033567369e6ec588ce",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -191,7 +191,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "24869842f9916e49e292ac477fa443f97bfae310c2d661f47e3561319f37e8b6",
+      "sha256": "8acb2ba09d1fdc04e4cf6c3a9fa93130787e4a904a2e52817f31feb822dd1c2c",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -265,7 +265,7 @@
       "source_path": "crates/kairo-cli/src/history.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "08b99053cc935191ded9e296b659045ae020ca844fe07a464d91d3983e5912a9"
+      "sha256": "3b73e0496e91a72455c5b2bd9c5d50313cf125554a9178a95bcbca5fd590a20c"
     },
     {
       "path": "crates/kairo-cli/src/i18n.rs",
@@ -313,7 +313,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "ad65c2b551cc6ee194446e68cab12b9fde6a50b8822c801b38e98b0d2c480c96"
+      "sha256": "b9a5386578727dc4e4dd2e6419484c3b05b8a6c034127d6fdec05a653aadf2b4"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -1304,7 +1304,7 @@
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "a8421aa061015d4632d503232de723c30cd4a8322c19d803c372286ae6387832"
+      "sha256": "45e14aea8092659f7b2eecc80d0ed20a187339c8712944482bbc3cc6556c4f15"
     },
     {
       "path": "tests/pipe_lifecycle.py",
@@ -1413,8 +1413,8 @@
       "source_commit": null,
       "source_path": "tests/warmup_display.py",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "a6a6254da0532052d06d2eba0abaa56eb5ee123c8bf0574a6bd5877a18ca8778"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "802b4be2f05700ffd9ad67e3467163a9047f0dbd61f451c0a304bf4ece827950"
     },
     {
       "path": "tests/workflow_policy.py",

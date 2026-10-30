@@ -39,9 +39,9 @@ impl Record {
     }
     pub fn label(&self, en: bool) -> &'static str {
         match (self.kind, en) {
-            (Kind::Confirmed, false) => "✓ 预热请求成功，五小时倒计时已确认（时间关联）",
+            (Kind::Confirmed, false) => "✓ 预热请求成功，五小时倒计时已确认（时间关联，归因不确定）",
             (Kind::Confirmed, true) => {
-                "✓ Request succeeded; five-hour countdown confirmed (time-correlated)"
+                "✓ Request succeeded; five-hour countdown confirmed (time-correlated; attribution uncertain)"
             }
             (Kind::Pending, false) => "○ 请求成功，等待倒计时确认",
             (Kind::Pending, true) => "○ Request succeeded; awaiting countdown confirmation",

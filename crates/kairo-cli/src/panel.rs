@@ -63,7 +63,14 @@ fn page(title: &str, main: bool) {
     }
     if main {
         println!("{}", color("[ K A I R O ]", 34));
-        println!("Codex Window Scheduler");
+        println!(
+            "{}",
+            if title.is_empty() {
+                "Codex Window Scheduler"
+            } else {
+                title
+            }
+        );
         println!(
             "v{} | {}",
             env!("CARGO_PKG_VERSION"),
@@ -1156,7 +1163,14 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
             };
             let en = c.language == "en-US";
             cli.lang = Some(c.language);
-            page("", true);
+            page(
+                t(
+                    en,
+                    "Codex 五小时额度自动预热",
+                    "Codex five-hour window warmup",
+                ),
+                true,
+            );
             if let Err(e) = summary(cli, en, false, true) {
                 let (_, m) = i18n::error(&e, en);
                 println!("{}", color(&m, 33));

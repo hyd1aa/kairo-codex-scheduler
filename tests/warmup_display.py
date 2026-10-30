@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory(prefix='kairo-evidence-') as temp:
  write('state.json',state);write('confirmations.json',dict(schema=1,account=account,tasks=[task]))
  write('recovery.json',dict(approved=True,not_before=done-10000))
  write('quota-cache.json',dict(account=account,at=int(time.time())-600,five_hour=dict(used=0.,reset_at=done+18000),weekly=dict(used=40.,reset_at=done+604800)))
- out=menu();assert '五小时倒计时已确认（时间关联）' in out and '06:08' in out and '06:10' in out
+ out=menu();assert '五小时倒计时已确认（时间关联，归因不确定）' in out and '06:08' in out and '06:10' in out
  assert '剩余100.0%' in out and '剩余60.0%' in out and '旧缓存' in out and '下次调度检查' in out
  assert '预计复查' not in out and '安全恢复复查' not in out and '2026-' not in out
  out=menu('01\n02\n\n03\n\n04\n00\n');assert '仅列出已保存记录' in out and 'request_ok_window_unconfirmed' not in out and 'countdown_confirmed_time_correlated' not in out

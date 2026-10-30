@@ -17,7 +17,7 @@ The fixed command selects the latest stable release, verifies the native binary 
 ```text
 Automatic warmup: Enabled; running normally
 Last warmup: Today 06:08
-Warmup result: ✓ Request succeeded; five-hour countdown confirmed (time-correlated)
+Warmup result: ✓ Request succeeded; five-hour countdown confirmed (time-correlated; attribution uncertain)
 Next scheduled check: Today 11:00
 Five-hour quota: Remaining 100.0%
 Weekly quota: Remaining 60.0%
