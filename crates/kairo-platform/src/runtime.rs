@@ -453,7 +453,7 @@ fn save_natural_receipt(
             );
         }
     }
-    if natural_check_event(&outcome) {
+    if natural_check_event(outcome) {
         let old = store.read::<Value>("natural-acceptance.json").ok();
         let mut result = old.unwrap_or_else(
             || json!({"status":"awaiting_first_future_natural_request","forced_model_requests":0}),

@@ -495,7 +495,7 @@
     },
     {
       "path": "crates/kairo-platform/src/runtime.rs",
-      "sha256": "19ab66394e380df13a08679fe0a81b6aa8fbe0449311ed50927a056c90e54f89",
+      "sha256": "8d5cce0cbc3dd095524391e8200dbc12336e8dcccfba8bd0deea52041e6b08b7",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
