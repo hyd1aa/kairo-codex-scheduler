@@ -273,14 +273,14 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         let auto = store
             .read::<Value>("onboarding-status.json")
             .unwrap_or_default();
-        let (zh, english, code) = if live {
-            ("自动预热运行中", "Automatic warmup running", 32)
-        } else if auth.is_none() || auto["status"] == "login_required" {
+        let (zh, english, code) = if auth.is_none() || auto["status"] == "login_required" {
             (
                 "需要登录 Codex（03 账号管理）",
                 "Log in to Codex (03 Account)",
                 33,
             )
+        } else if live {
+            ("自动预热运行中", "Automatic warmup running", 32)
         } else if intent.as_ref().is_some_and(|i| !i.requested) {
             ("已暂停", "Paused", 33)
         } else if auto["status"] == "exclusive_account_confirmation_required"
@@ -298,6 +298,14 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                 "Repair required (06 Advanced)",
                 31,
             )
+        } else if auto["status"] == "enable_failed" {
+            (
+                "启用失败，安全保护已保留",
+                "Enable failed; safety guards retained",
+                31,
+            )
+        } else if auto["status"] == "retry_wait" {
+            ("等待自动复查", "Waiting for automatic recheck", 33)
         } else if health["classification"] == "recovery_waiting" {
             ("等待安全恢复", "Waiting for safe recovery", 33)
         } else if uncertain {
@@ -368,7 +376,7 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
             }
         }
         if let Some(reason) = auto["reason"].as_str() {
-            println!("{}: {}", t(en, "提示", "Notice"), clean(reason));
+            println!("{}: {}", t(en, "提示", "Notice"), notice(en, reason));
         }
         let cache = store
             .read::<Value>("quota-cache.json")
@@ -1409,6 +1417,32 @@ fn titled(en: bool) -> String {
     .into()
 }
 
+fn notice(en: bool, code: &str) -> String {
+    let (zh, english) = if code.contains("HTTP 401") || code.contains("HTTP 403") {
+        (
+            "登录已失效或账号无权读取额度，请进入03重新登录或校验。",
+            "Login expired or quota access denied; log in or verify via03.",
+        )
+    } else if code.contains("account_mismatch") {
+        (
+            "账号已变化；原账号历史受到保护，请在高级账号配置中核对。",
+            "Account changed; original history is protected. Review advanced account profiles.",
+        )
+    } else if code.contains("transport") || code.contains("HTTP 429") {
+        (
+            "额度网络查询暂时失败，后台将退避重试。",
+            "Quota query temporarily failed; background retries use backoff.",
+        )
+    } else if code.contains("enable_failed") {
+        ("正式启用失败，保护未绕过；后台将重试，请在高级设置查看诊断。","Enablement failed without bypassing guards; background retries continue. Check advanced diagnostics.")
+    } else {
+        (
+            "初始化尚未完成；后台保留保护，请在高级设置查看诊断。",
+            "Initialization is incomplete; guards remain active. Check advanced diagnostics.",
+        )
+    };
+    t(en, zh, english).into()
+}
 fn warmup_menu(cli: &Cli, en: bool) -> Result<()> {
     loop {
         TITLE.with(|t| *t.borrow_mut() = t_string(en, "启动 / 暂停预热", "Start / pause warmup"));

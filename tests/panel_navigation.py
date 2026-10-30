@@ -92,6 +92,10 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  out=menu('01\n00\n00\n');assert 'Repair required' in out or '需要修复' in out
  (data/'state.json').unlink()
  out=menu('10\n00\n');assert json.loads((data/'config.json').read_text())['language']=='zh-CN'
+ (data/'onboarding-status.json').write_text(json.dumps({'status':'login_required','reason':'Quota HTTP 401 Unauthorized'}));(data/'onboarding-status.json').chmod(0o600)
+ out=menu('00\n',modern=True);assert '需要登录 Codex' in out and '登录已失效' in out and 'Quota HTTP' not in out
+ direct('lang','en-US');out=menu('00\n',modern=True);assert 'Log in to Codex' in out and 'Login expired' in out and '登录已失效' not in out
+ direct('lang','zh-CN');(data/'onboarding-status.json').unlink()
  out=menu('\n00\n',{'NO_COLOR':'1'});assert not re.search(r'\x1b\[[0-9;]*m',out);assert '\x1b[2J' in out and '\x1b[3J' not in out
  out=menu('00\n',{'TERM':'dumb'});assert '\x1b' not in out
  menu('\x04');menu('',interrupt=True)

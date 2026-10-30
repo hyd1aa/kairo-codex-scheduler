@@ -454,7 +454,21 @@ PYOAUTH
  fi
  systemctl enable --now kairo-onboarding.timer
  if (( fresh_install && new_auto_intent )) && { exec 8<>/dev/tty; } 2>/dev/null && [[ -t 8 ]]; then
+  login_needed=0
   if ! /usr/sbin/runuser -u kairo -- test -r /home/kairo/.codex/auth.json; then
+   login_needed=1
+  elif ! /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo --lang en-US --json auth verify >"$stage/oauth-check.json" 2>/dev/null; then
+   # Transport failures must not discard a valid login or force reauthentication.
+   needs_reauth=$(python3 - "$stage/oauth-check.json" <<'PYAUTHCHECK'
+import json,sys
+try:code=json.load(open(sys.argv[1]))['error']['code']
+except Exception:code=''
+print('yes' if code.startswith(('quota_http_401','quota_http_403','oauth_','chatgpt_oauth')) or code in ('io_error','json_invalid','private_permissions_required') else 'no')
+PYAUTHCHECK
+   )
+   if [[ $needs_reauth == yes ]]; then login_needed=1; fi
+  fi
+  if (( login_needed )); then
    msg '请完成官方 Codex OAuth 登录。' 'Complete official Codex OAuth login.'
    /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo auth login <&8 >&8 2>&1 || :
   fi

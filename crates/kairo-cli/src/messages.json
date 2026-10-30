@@ -1259,10 +1259,6 @@
     "en": "Quota limit flag missing",
     "zh": "缺少额度限制标志"
   },
-  "quota_refresh_failed": {
-    "en": "quota refresh failed",
-    "zh": "额度查询失败，将自动重试；预热仍受安全门禁约束"
-  },
   "quota_transport_failed": {
     "en": "quota transport failed",
     "zh": "网络失败"

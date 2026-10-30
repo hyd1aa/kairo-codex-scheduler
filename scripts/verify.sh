@@ -3,6 +3,7 @@ set -eu
 cargo fmt --check
 python3 scripts/i18n-catalog.py --check
 python3 tests/i18n_catalog.py
+python3 tests/installer_serialization.py
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 cargo build --release --locked
