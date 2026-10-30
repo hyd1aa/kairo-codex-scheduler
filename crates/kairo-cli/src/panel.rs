@@ -17,9 +17,16 @@ fn clean(s: &str) -> String {
     s.chars().filter(|c| !c.is_control()).collect()
 }
 fn width() -> usize {
-    std::env::var("COLUMNS")
-        .ok()
-        .and_then(|s| s.parse().ok())
+    let mut size = std::mem::MaybeUninit::<libc::winsize>::zeroed();
+    // TIOCGWINSZ only reads terminal dimensions; it never changes terminal modes.
+    let columns =
+        if unsafe { libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, size.as_mut_ptr()) } == 0 {
+            Some(unsafe { size.assume_init() }.ws_col as usize).filter(|n| *n > 0)
+        } else {
+            None
+        };
+    columns
+        .or_else(|| std::env::var("COLUMNS").ok().and_then(|s| s.parse().ok()))
         .unwrap_or(72)
         .clamp(20, 100)
 }
@@ -49,6 +56,7 @@ fn page(title: &str, main: bool) {
     }
     println!("{}", "─".repeat(width().min(48)));
 }
+thread_local! { static VERIFIED: std::cell::RefCell<Option<(String,i64)>> = const { std::cell::RefCell::new(None) }; }
 thread_local! { static TITLE: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) }; }
 pub fn action_page(_en: bool) {
     TITLE.with(|t| page(&t.borrow(), false));
@@ -79,7 +87,7 @@ const ZH: &[&str] = &[
     "查看运行状态",
     "查询 Codex 额度",
     "管理激活时间",
-    "启动 / 停止 / 重启服务",
+    "服务管理",
     "查看运行日志",
     "OAuth 登录与账号管理",
     "系统诊断与修复",
@@ -93,7 +101,7 @@ const EN: &[&str] = &[
     "Status",
     "Codex quota",
     "Activation schedule",
-    "Start / stop / restart service",
+    "Service management",
     "Logs",
     "OAuth login and accounts",
     "Diagnostics and repair",
@@ -255,6 +263,23 @@ fn summary(cli: &Cli, en: bool, detailed: bool) -> Result<()> {
             }
         )
     );
+    let verified = VERIFIED.with(|v| {
+        v.borrow()
+            .as_ref()
+            .filter(|(id, at)| {
+                auth.as_ref().is_some_and(|a| a.fingerprint == *id)
+                    && chrono::Utc::now().timestamp() - at <= 300
+            })
+            .map(|(_, at)| *at)
+    });
+    println!(
+        "{}: {}",
+        t(en, "服务端身份", "Server identity"),
+        verified
+            .and_then(|at| local_time(at, timezone().ok()?))
+            .map(|at| format!("{} ({at})", t(en, "最近校验成功", "Recently verified")))
+            .unwrap_or_else(|| t(en, "待校验（06 → 02）", "Not verified (06 → 02)").into())
+    );
     println!(
         "{}: {}",
         t(en, "本地账号绑定", "Local account binding"),
@@ -321,6 +346,9 @@ fn summary(cli: &Cli, en: bool, detailed: bool) -> Result<()> {
             file_state(cli, name, en);
         }
         println!("{}",t(en,"缺失部署/历史状态不等于 OAuth 失效。请先 06 → 02 校验、07 诊断，并核对历史；不要自动 FRESH 或删除保护记录。","Missing deployment/history does not imply invalid OAuth. Verify via 06 → 02, diagnose via 07 and review history; never automatically FRESH-bind or delete guards."));
+        if store.root.join("state.json").exists() && state.is_err() {
+            println!("{}",color(t(en,"✗ 调度状态无效或读取失败；请运行 doctor 并保留请求历史","✗ Invalid or unreadable scheduler state; run doctor and retain request history"),31));
+        }
         if let Ok(c) = store.config() {
             println!(
                 "{}: {}",
@@ -409,6 +437,27 @@ pub fn render(v: &Value, en: bool) {
         return;
     }
     if v.get("five_hour").is_some() {
+        if v["identity_server_verified"] == true {
+            if let Some(id) = v["account_fingerprint"].as_str() {
+                VERIFIED.with(|cache| {
+                    *cache.borrow_mut() = Some((id.into(), chrono::Utc::now().timestamp()))
+                });
+            }
+            println!("{}",color(t(en,"✓ 服务端身份验证成功（不代表已绑定或生产授权）","✓ Server identity verified (binding and production approval remain separate)"),32));
+        }
+        if v["server_denied"] == true {
+            println!(
+                "{}",
+                color(
+                    t(
+                        en,
+                        "! 服务端拒绝；保持保护，不发送预热请求",
+                        "! Server denial; protection remains active, no warmup requests"
+                    ),
+                    33
+                )
+            );
+        }
         quota(v, en);
         println!(
             "{}: {}",
@@ -565,12 +614,27 @@ fn logs(_cli: &Cli, en: bool) -> Result<()> {
                             .or_else(|| v["event"].as_str())
                             .or_else(|| v["message"].as_str())
                     })
-                    .unwrap_or(msg);
+                    .unwrap_or_else(|| {
+                        if parsed.is_some() {
+                            t(
+                                en,
+                                "结构化日志；选择详细信息查看",
+                                "Structured record; toggle details to inspect",
+                            )
+                        } else {
+                            msg
+                        }
+                    });
                 let priority = row["PRIORITY"]
                     .as_str()
                     .unwrap_or("6")
                     .parse::<u8>()
                     .unwrap_or(6);
+                let priority = if parsed.as_ref().is_some_and(|v| !v["error"].is_null()) {
+                    3
+                } else {
+                    priority
+                };
                 let text = if details {
                     clean(msg)
                 } else {

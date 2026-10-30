@@ -217,7 +217,7 @@ exit 86''');crashsha=hashlib.sha256(crash.read_bytes()).hexdigest()
     shell('bootstrap.sh','example/kairo','0.2.1',checksum,prefix)
     stage=base/'system-stage';shell('system-install.sh',binary,checksum,'root',stage);assert (stage/'etc/systemd/system/kairo.service').exists()
     versioned=stage/'opt/kairo';vd=stage/'var/lib/kairo'
-    old_target=os.readlink(versioned/'current');assert old_target.startswith('releases/0.2.1-')
+    old_target=os.readlink(versioned/'current');assert old_target.startswith('releases/'+raw(['--version']).stdout.strip().split()[-1]+'-')
     assert (versioned/'manager/kairo').exists()
     valid=tool('versioned-candidate', '[ "$1" = --version ] && { echo "kairo 9.9.9"; exit 0; }\nexec '+str(binary)+' "$@"')
     raw(['update','apply',str(valid),'--sha256',hashlib.sha256(valid.read_bytes()).hexdigest(),'--prefix',str(versioned)],vd)

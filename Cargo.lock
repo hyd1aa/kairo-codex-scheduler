@@ -658,6 +658,7 @@ dependencies = [
  "clap",
  "kairo-core",
  "kairo-platform",
+ "libc",
  "serde_json",
 ]
 

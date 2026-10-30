@@ -54,7 +54,7 @@ Run `kairo` as root, or `sudo kairo` as a non-root administrator. An interactive
 | 01 | Status | View timezone, identity, window, safety gates and next check | Data access |
 | 02 | Codex quota | Query five-hour/weekly usage after OAuth; unknown quota stays protected | Data access/OAuth |
 | 03 | Activation schedule | Open the time submenu below | Data access |
-| 04 | Start / stop / restart service | 01 status,02 start,03 stop,04 restart; starting is not authorization | root |
+| 04 | Service management | 01 status,02 start,03 stop,04 restart; starting is not authorization | root |
 | 05 | Logs | 20 readable records per page; refresh, page, filter warnings/errors and toggle details | root/log access |
 | 06 | OAuth login and accounts | 01 local status,02 server verification,03 human login,04 profiles,05 add,06 select,07 remove profile,08 fresh binding | Data access/human OAuth |
 | 07 | Diagnostics and repair | 01 diagnose;02 restore defaults while retaining request history | Data access |
@@ -80,7 +80,7 @@ Scheduling: Read-only observation
 Automatic warmup: Not enabled
 
 04 → Enter
-Kairo / Start / stop / restart service
+Kairo / Service management
 01. Status
 02. Start service
 03. Stop service

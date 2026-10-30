@@ -527,6 +527,10 @@
     "en": "Acknowledge a fresh account with no recent requests",
     "zh": "确认首次绑定且没有近期调用"
   },
+  "activation_history_missing": {
+    "en": "activation history missing",
+    "zh": "部署授权或调度历史文件缺失；OAuth 校验成功不代表已绑定或已授权。请运行 status、doctor 并人工核对历史；不要自动 FRESH、伪造状态或删除保护记录"
+  },
   "add_hh:mm": {
     "en": "Add HH:MM",
     "zh": "新增 HH:MM 时间"

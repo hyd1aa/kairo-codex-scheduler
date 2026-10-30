@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- Persistent bilingual management pages with safe visible-screen redraw, breadcrumbs, concise status and quota, bounded journal pagination and topic help.
+- Distinguish OAuth discovery, server verification, account binding, deployment approval and observation mode; explain missing activation history.
+- Verify service state after management actions; two-stage uninstall confirmation and read-only latest stable checks.
+- Isolated PTY regressions preserve JSON CLI behavior and terminal input/echo. Scheduler and request safety gates are unchanged.
+
 ## 0.2.1 — unpublished candidate
 
 - Persist delayed read-only confirmation after a successful prewarm; compare stable reset/countdown samples without replaying a model request.

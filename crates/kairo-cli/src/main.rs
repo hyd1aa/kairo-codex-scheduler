@@ -949,7 +949,18 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             account,
             approve_production_cutover,
         } => {
-            rt::activate(&store, &account, approve_production_cutover)?;
+            if let Err(e) = rt::activate(&store, &account, approve_production_cutover) {
+                if e.chain().any(|e| {
+                    e.downcast_ref::<io::Error>()
+                        .is_some_and(|e| e.kind() == io::ErrorKind::NotFound)
+                }) && ["deployment.json", "state.json", "cursor.json"]
+                    .iter()
+                    .any(|name| !store.root.join(name).exists())
+                {
+                    return Err(e.context("activation_history_missing / 部署授权或调度历史文件缺失；OAuth 校验成功不代表已绑定或已授权。请运行 status、doctor 并人工核对历史；不要自动 FRESH、伪造状态或删除保护记录"));
+                }
+                return Err(e);
+            }
             emit(cli, json!({"enabled":true}))
         }
         Cmd::Pause => {

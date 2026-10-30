@@ -55,7 +55,14 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   menu('08\n02\ninvalid\n\n03\n301\n\n01\n\n07\n\n00\n00\n')
   menu('09\n06\n\n00\n00\n') # Offline check fails; never updates.
   menu('11\n01\n\n02\n\n03\n\n00\n00\n')
-  menu('12\nno\n\n00\n') # No uninstall executor invoked.
+  menu('12\nno\n\n00\n');menu('12\nyes\nno\n\n00\n') # No uninstall executor invoked.
+ # Distinguish valid OAuth discovery from missing binding/deployment and corrupt state.
+ (root/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-panel','access_token':'synthetic-panel-placeholder'}}))
+ (root/'auth.json').chmod(0o600)
+ out=menu('01\n00\n00\n');assert 'OAuth' in out and 'state.json' in out
+ (data/'state.json').write_text('{invalid')
+ out=menu('01\n00\n00\n');assert 'Invalid' in out or '无效' in out
+ (data/'state.json').unlink()
  out=menu('10\n00\n');assert json.loads((data/'config.json').read_text())['language']=='zh-CN'
  out=menu('00\n',{'NO_COLOR':'1'});assert not re.search(r'\x1b\[[0-9;]*m',out);assert '\x1b[2J' in out and '\x1b[3J' not in out
  out=menu('00\n',{'TERM':'dumb','NO_COLOR':'1'});assert '\x1b' not in out
