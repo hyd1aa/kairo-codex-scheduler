@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "74f2459494e10d662488096451c2448fa6ce6b0509e6f1d178eabaf7e6e65ab7"
+      "sha256": "2fad31b8b3c65e200f3c85b4c6c526faa9f3d572e918e04722f803638b06ea2a"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",

@@ -315,7 +315,17 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
             color(t(en, zh, english), code)
         );
         if health["classification"] == "data_corrupt" && code != 31 {
-            println!("{}",color(t(en,"需要修复：状态数据损坏；请进入06高级设置检查。","Repair required: damaged state; check06 Advanced."),31));
+            println!(
+                "{}",
+                color(
+                    t(
+                        en,
+                        "需要修复：状态数据损坏；请进入06高级设置检查。",
+                        "Repair required: damaged state; check06 Advanced."
+                    ),
+                    31
+                )
+            );
         }
         println!(
             "{}: {}",
