@@ -273,7 +273,13 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         let auto = store
             .read::<Value>("onboarding-status.json")
             .unwrap_or_default();
-        let (zh, english, code) = if auth.is_none() || auto["status"] == "login_required" {
+        let (zh, english, code) = if auto["status"] == "manual_review_required" {
+            (
+                "需要人工检查，运行状态未确认",
+                "Manual review required; execution unconfirmed",
+                31,
+            )
+        } else if auth.is_none() || auto["status"] == "login_required" {
             (
                 "需要登录 Codex（03 账号管理）",
                 "Log in to Codex (03 Account)",
@@ -1418,7 +1424,11 @@ fn titled(en: bool) -> String {
 }
 
 fn notice(en: bool, code: &str) -> String {
-    let (zh, english) = if code.contains("HTTP 401") || code.contains("HTTP 403") {
+    let (zh, english) = if code.contains("cutover_rollback_incomplete")
+        || code.contains("observer_restart_failed")
+    {
+        ("自动启用已停止重试；服务可能仍在运行。请用04暂停，并在高级设置检查服务和诊断。","Automatic enable retries stopped; the service may still run. Pause via04 and inspect advanced service diagnostics.")
+    } else if code.contains("HTTP 401") || code.contains("HTTP 403") {
         (
             "登录已失效或账号无权读取额度，请进入03重新登录或校验。",
             "Login expired or quota access denied; log in or verify via03.",

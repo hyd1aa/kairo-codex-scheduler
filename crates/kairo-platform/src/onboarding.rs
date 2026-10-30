@@ -97,15 +97,77 @@ fn failure_status(code: &str) -> &'static str {
         "retry_wait"
     }
 }
-pub fn pause(store: &Store) -> Result<()> {
+/// A durable pause is an execution gate, even if the CLI exits before deployment is updated.
+pub(crate) fn execution_paused(store: &Store) -> Result<bool> {
+    execution_paused_path(&store.root)
+}
+pub(crate) fn execution_paused_path(root: &Path) -> Result<bool> {
+    if !recovery::present(&root.join("onboarding.json"))? {
+        return Ok(false);
+    }
+    let i: Intent = serde_json::from_slice(&crate::private_bytes(
+        &root.join("onboarding.json"),
+        1024 * 1024,
+    )?)?;
+    i.validate()?;
+    Ok(!i.requested)
+}
+/// Explicit manual production approval may resume a previously paused intent.
+pub(crate) fn resume_manual(store: &Store) -> Result<()> {
     if recovery::present(&store.root.join("onboarding.json"))? {
         let mut i: Intent = store.read("onboarding.json")?;
         i.validate()?;
-        i.requested = false;
-        store.write("onboarding.json", &i)?;
+        if !i.requested {
+            i.requested = true;
+            store.write("onboarding.json", &i)?;
+        }
     }
     Ok(())
 }
+pub fn pause(store: &Store) -> Result<()> {
+    let mut i = if recovery::present(&store.root.join("onboarding.json"))? {
+        let i: Intent = store.read("onboarding.json")?;
+        i.validate()?;
+        i
+    } else {
+        Intent {
+            schema: 1,
+            requested: false,
+            exclusive_account: false,
+            account: None,
+            next_attempt: 0,
+            failures: 0,
+        }
+    };
+    i.requested = false;
+    store.write("onboarding.json", &i)
+}
+pub fn pause_confirmed(store: &Store) -> Result<()> {
+    event(store, "paused", 0, None)?;
+    Ok(())
+}
+pub(crate) fn fatal_cutover(error: &anyhow::Error) -> bool {
+    error.chain().any(|e| {
+        let s = e.to_string();
+        s.contains("cutover_rollback_incomplete") || s.contains("observer_restart_failed")
+    })
+}
+pub(crate) fn block_failed_cutover(store: &Store) -> Result<Value> {
+    pause(store)?;
+    event(
+        store,
+        "manual_review_required",
+        0,
+        Some("cutover_rollback_incomplete"),
+    )
+}
+pub(crate) fn cutover_succeeded(store: &Store) -> Result<()> {
+    if recovery::present(&store.root.join("onboarding.json"))? {
+        event(store, "enabled", 0, None)?;
+    }
+    Ok(())
+}
+
 #[derive(Debug, PartialEq)]
 enum Step {
     Paused,
@@ -258,6 +320,13 @@ fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
     }
     let mut i: Intent = store.read("onboarding.json")?;
     i.validate()?;
+    if !i.requested {
+        if let Ok(v) = store.read::<Value>("onboarding-status.json") {
+            if v["status"] == "manual_review_required" {
+                return Ok(v);
+            }
+        }
+    }
     if i.next_attempt > now && i.requested {
         return Ok(json!({"status":"backoff","next_attempt":i.next_attempt}));
     }
@@ -280,7 +349,7 @@ fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
     if let Some(status) = status {
         if step == Step::Running && actions.needs_cutover(root) {
             drop(store);
-            return actions.enable(root);
+            return cutover(root, actions, now);
         }
         if step == Step::Running {
             if let Err(e) = actions.refresh_quota(&store, now) {
@@ -338,17 +407,23 @@ fn advance(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
     drop(store);
     if ready {
         // enable rechecks official quota and all guards after stopping daemon.
-        match actions.enable(root) {
-            Ok(_) => event(&Store::open(root)?, "enabled", 0, None),
-            Err(_) => event(
-                &Store::open(root)?,
-                "enable_failed",
-                now + 60,
-                Some("enable_failed / 启用失败，保留安全保护并自动重试"),
-            ),
-        }
+        cutover(root, actions, now)
     } else {
         Ok(json!({"status":"waiting_safety_recovery","next_attempt":i.next_attempt}))
+    }
+}
+
+fn cutover(root: &Path, actions: &mut impl Actions, now: i64) -> Result<Value> {
+    match actions.enable(root) {
+        Ok(_) => event(&Store::open(root)?, "enabled", 0, None),
+        Err(e) => {
+            let store = Store::open(root)?;
+            if fatal_cutover(&e) {
+                block_failed_cutover(&store)
+            } else {
+                event(&store, "enable_failed", now + 60, Some("enable_failed"))
+            }
+        }
     }
 }
 
@@ -445,6 +520,7 @@ mod tests {
         offline: bool,
         observing: bool,
         fail_enable: bool,
+        fatal: bool,
         begins: u32,
         checks: u32,
         enables: u32,
@@ -476,6 +552,9 @@ mod tests {
         fn enable(&mut self, root: &Path) -> Result<Value> {
             let s = Store::open(root)?;
             require_intent(&s, self.account.as_deref().unwrap())?;
+            if self.fatal {
+                bail!("cutover_rollback_incomplete / 模拟不完整回退");
+            }
             if self.fail_enable {
                 bail!("mock_cutover_failed / 模拟切换失败");
             }
@@ -514,11 +593,54 @@ mod tests {
                 offline: false,
                 observing: true,
                 fail_enable: false,
+                fatal: false,
                 begins: 0,
                 checks: 0,
                 enables: 0,
             },
         )
+    }
+    #[test]
+    fn incomplete_rollback_cancels_automatic_retries_and_blocks_execution() {
+        let (root, mut m) = fixture();
+        advance(&root, &mut m, 100).unwrap();
+        m.ready = true;
+        m.fatal = true;
+        assert_eq!(
+            advance(&root, &mut m, 160).unwrap()["status"],
+            "manual_review_required"
+        );
+        {
+            let s = Store::open(&root).unwrap();
+            assert!(execution_paused(&s).unwrap());
+        }
+        m.fatal = false;
+        assert_eq!(
+            advance(&root, &mut m, 220).unwrap()["status"],
+            "manual_review_required"
+        );
+        assert_eq!(m.enables, 0);
+        {
+            let s = Store::open(&root).unwrap();
+            resume_manual(&s).unwrap();
+            assert!(!execution_paused(&s).unwrap());
+        }
+        advance(&root, &mut m, 280).unwrap();
+        assert_eq!(m.enables, 1);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn absent_pause_policy_preserves_old_manual_execution_but_invalid_policy_blocks() {
+        let (root, _) = fixture();
+        let s = Store::open(&root).unwrap();
+        pause(&s).unwrap();
+        assert!(execution_paused(&s).unwrap());
+        std::fs::remove_file(root.join("onboarding.json")).unwrap();
+        assert!(!execution_paused(&s).unwrap());
+        s.write("onboarding.json", &json!({"schema":99})).unwrap();
+        assert!(execution_paused(&s).is_err());
+        drop(s);
+        std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
     fn expired_oauth_is_login_required_and_transient_network_errors_retry() {

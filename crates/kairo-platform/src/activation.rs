@@ -251,7 +251,7 @@ fn enable_policy(root: &Path, ack: bool, automatic: bool) -> Result<Value> {
             );
         }
     }
-    cutover(
+    let result = cutover(
         Path::new("/"),
         root,
         &mut Real,
@@ -281,7 +281,19 @@ fn enable_policy(root: &Path, ack: bool, automatic: bool) -> Result<Value> {
             }
             Ok(())
         },
-    )
+    );
+    match result {
+        Ok(v) => {
+            crate::onboarding::cutover_succeeded(&Store::open(root)?)?;
+            Ok(v)
+        }
+        Err(e) => {
+            if crate::onboarding::fatal_cutover(&e) {
+                crate::onboarding::block_failed_cutover(&Store::open(root)?)?;
+            }
+            Err(e)
+        }
+    }
 }
 
 fn live_record(v: &Value, pid: u32, since: i64, now: i64) -> bool {
@@ -318,7 +330,9 @@ pub fn status(root: &Path) -> Value {
         .ok()
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(0);
-    let live = active
+    let paused = crate::onboarding::execution_paused_path(root).unwrap_or(true);
+    let live = !paused
+        && active
         && managed
         && exec.contains(BASE_COMMAND)
         && !observing

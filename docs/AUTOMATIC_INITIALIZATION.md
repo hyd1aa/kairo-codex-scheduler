@@ -50,3 +50,16 @@ Advanced maintenance: `kairo onboard --request --confirm-exclusive-account`
 records the same explicit policy as menu04. `kairo onboard` is the privileged timer
 entry and rejects offline tests or nonstandard installation roots. Maintenance
 commands `recover`, `activate`, `enable`, JSON status and ordinary CLI remain.
+
+## Incomplete rollback / 不完整回退
+
+If systemd cutover cannot finish rollback or restart the observer, automatic retries
+stop and a durable pause blocks model execution even when the old deployment
+record still says enabled. The warning stays visible until an explicit operator
+pause/repair or successful new approval. A still-active service is not reported as
+confirmed warmup. Ordinary retryable failures retain automatic continuation.
+
+切换无法完成回退时，停止自动重试并持久化暂停。daemon 直接检查此暂停意愿，
+即使 CLI 在更新部署记录前中断，也不能继续发模型请求。界面保留人工检查提示，
+不把未知服务状态宣称为安全暂停或成功运行。管理员明确暂停或修复后重新启动；
+可恢复的普通失败仍自动退避。原有显式 activate/enable 可以恢复手工运行授权。

@@ -1077,6 +1077,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             if store.root.join("deployment.json").try_exists()? {
                 rt::pause(&store)?;
             }
+            kairo_platform::onboarding::pause_confirmed(&store)?;
             emit(cli, json!({"paused":true}))
         }
     }

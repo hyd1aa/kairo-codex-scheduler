@@ -741,7 +741,7 @@
   },
   "cutover_rollback_incomplete": {
     "en": "cutover rollback incomplete",
-    "zh": "切换失败且回退未完全完成；请检查 kairo.service 和 deployment 授权状态，禁止继续自动尝试"
+    "zh": "模拟不完整回退"
   },
   "daemon_already_running": {
     "en": "daemon already running",
@@ -786,10 +786,6 @@
   "edit_an_existing_time": {
     "en": "Edit an existing time",
     "zh": "修改已有时间"
-  },
-  "enable_failed": {
-    "en": "enable failed",
-    "zh": "启用失败，保留安全保护并自动重试"
   },
   "enable_live_scheduling_after_separate_production_approval": {
     "en": "Enable live scheduling after separate production approval",
