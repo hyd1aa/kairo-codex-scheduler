@@ -57,6 +57,7 @@ jobs:
       - run: cargo test -p kairo-cli --locked
       - run: cargo build --release --locked -p kairo-cli
       - run: python3 tests/online_cli.py target/release/kairo
+      - run: python3 tests/panel_navigation.py target/release/kairo
       - run: python3 tests/workflow_policy.py
       - run: |
           mkdir dist
@@ -90,7 +91,7 @@ jobs:
           curl -fLsS --max-time 60 https://raw.githubusercontent.com/spdx/spdx-spec/v2.3/schemas/spdx-schema.json -o "$RUNNER_TEMP/spdx.schema.json"
           printf '%s  %s\n' 239208b7ac287b3cf5d9a9af23f9d69863971102a5e1587a27a398b43490b89b "$RUNNER_TEMP/spdx.schema.json" | sha256sum -c -
           python3 tests/validate_sbom.py dist/sbom.spdx.json "$RUNNER_TEMP/spdx.schema.json"
-          python3 tests/package_contents.py dist/kairo-0.2.1.tar.gz
+          python3 tests/package_contents.py dist/kairo-0.2.2.tar.gz
           python3 scripts/check-release-secrets.py dist
           (cd dist && sha256sum -c SHA256SUMS)
           docker build -f tests/Dockerfile.online -t kairo-online-test .
