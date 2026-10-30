@@ -362,10 +362,7 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
     let r = runtime(store)?;
     let tz = timezone()?;
     let now = Utc::now().timestamp();
-    if observe_only
-        || crate::onboarding::execution_paused(store)?
-        || !store.root.join("deployment.json").exists()
-    {
+    if observe_only || !store.root.join("deployment.json").exists() {
         return shadow_iteration(store, &c, r, tz, now, startup);
     }
     let d: Deployment = store
@@ -389,7 +386,7 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
         store.write("cursor.json", &cursor)?;
     }
     validate_cursor(&cursor, &c, tz)?;
-    if !d.enabled {
+    if !d.enabled || crate::onboarding::execution_paused(store)? {
         let mut observer = Observer {
             r,
             account: d.account,
