@@ -70,14 +70,14 @@ exit 99''')
     # Actual numbered menu, submenu, persistent language toggle and EOF handling.
     master,slave=pty.openpty();menuenv=dict(env);menuenv.pop('NO_COLOR',None)
     p=subprocess.Popen([binary,'--data-dir',str(root)],stdin=slave,stdout=slave,stderr=slave,env=menuenv);os.close(slave)
-    os.write(master,b'03\n1\n\n00\n10\n01\n00\n00\n');out=b'';deadline=time.monotonic()+15
+    os.write(master,b'02\n1\n\n00\n06\n06\n01\n00\n00\n');out=b'';deadline=time.monotonic()+15
     while time.monotonic()<deadline:
         if select.select([master],[],[],.1)[0]:
             try:out+=os.read(master,65536)
             except OSError:break
         if p.poll() is not None:break
     assert p.wait(timeout=5)==0;os.close(master);text=out.decode(errors='replace')
-    assert '查看运行状态' in text and 'Status' in text and '\x1b[34m' in text
+    assert '查看状态与额度' in text and 'Status' in text and '\x1b[34m' in text
     checks+=1
     for language,label in [('zh-CN','查看运行状态'),('en-US','Status')]:
         call('lang',language)
@@ -216,6 +216,9 @@ exit 86''');crashsha=hashlib.sha256(crash.read_bytes()).hexdigest()
     assert json.loads((data/'state.json').read_text())['positive_until']==n
     shell('bootstrap.sh','example/kairo','0.2.1',checksum,prefix)
     stage=base/'system-stage';shell('system-install.sh',binary,checksum,'root',stage);assert (stage/'etc/systemd/system/kairo.service').exists()
+    # Re-provisioning an existing live unit must not reintroduce observation mode.
+    mode=stage/'etc/systemd/system/kairo.service.d/20-mode.conf';mode.unlink()
+    shell('system-install.sh',binary,checksum,'root',stage);assert not mode.exists()
     versioned=stage/'opt/kairo';vd=stage/'var/lib/kairo'
     old_target=os.readlink(versioned/'current');assert old_target.startswith('releases/'+raw(['--version']).stdout.strip().split()[-1]+'-')
     assert (versioned/'manager/kairo').exists()

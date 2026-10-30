@@ -79,6 +79,10 @@
     "en": "Configure idle prewarm and safety buffer",
     "zh": "设置空闲预热及安全缓冲"
   },
+  "Continue automatic safe initialization": {
+    "en": "Continue automatic safe initialization",
+    "zh": "自动接续安全初始化"
+  },
   "Control only kairo.service": {
     "en": "Control only kairo.service",
     "zh": "仅控制 kairo.service"
@@ -623,6 +627,10 @@
     "en": "Authorize and verify managed production scheduling",
     "zh": "明确授权并验证 systemd 正式调度"
   },
+  "automatic_enable_cancelled": {
+    "en": "automatic enable cancelled",
+    "zh": "自动启用已暂停或账号确认不匹配"
+  },
   "candidate_invalid": {
     "en": "candidate invalid",
     "zh": "候选程序校验失败"
@@ -695,6 +703,10 @@
     "en": "confirmation task invalid",
     "zh": "确认任务记录无效"
   },
+  "continue_automatic_safe_initialization": {
+    "en": "Continue automatic safe initialization",
+    "zh": "自动接续安全初始化"
+  },
   "control_only_kairo.service": {
     "en": "Control only kairo.service",
     "zh": "仅控制 kairo.service"
@@ -714,6 +726,10 @@
   "cursor_invalid": {
     "en": "cursor invalid",
     "zh": "调度游标无效"
+  },
+  "custom_initialization_unit": {
+    "en": "custom initialization unit",
+    "zh": "初始化任务已被修改，保留原件，请人工检查"
   },
   "custom_service_override": {
     "en": "custom service override",
@@ -770,6 +786,10 @@
   "edit_an_existing_time": {
     "en": "Edit an existing time",
     "zh": "修改已有时间"
+  },
+  "enable_failed": {
+    "en": "enable failed",
+    "zh": "启用失败，保留安全保护并自动重试"
   },
   "enable_live_scheduling_after_separate_production_approval": {
     "en": "Enable live scheduling after separate production approval",
@@ -842,6 +862,10 @@
   "independently_trusted_sha256": {
     "en": "Independently trusted SHA256",
     "zh": "独立可信的 SHA256 校验值"
+  },
+  "initialization_timer_failed": {
+    "en": "initialization timer failed",
+    "zh": "自动初始化定时任务未启动，请检查 systemd"
   },
   "initialize_configuration_without_starting_services": {
     "en": "Initialize configuration without starting services",
@@ -1013,7 +1037,7 @@
   },
   "managed_root_required": {
     "en": "managed root required",
-    "zh": "自动切换仅支持 root 和标准 /var/lib/kairo 安装；开发目录不会修改真实服务"
+    "zh": "后台初始化仅支持标准安装和 root"
   },
   "managed_service_changed": {
     "en": "managed service changed",
@@ -1021,7 +1045,7 @@
   },
   "managed_service_unsafe": {
     "en": "managed service unsafe",
-    "zh": "服务覆盖目录不安全"
+    "zh": "服务目录不安全"
   },
   "managed_unit_mismatch": {
     "en": "managed unit mismatch",
@@ -1055,6 +1079,10 @@
     "en": "Minimum spacing 10 minutes",
     "zh": "最小间隔十分钟"
   },
+  "mock_cutover_failed": {
+    "en": "mock cutover failed",
+    "zh": "模拟切换失败"
+  },
   "no_newer_release": {
     "en": "no newer release",
     "zh": "没有较新的可用版本"
@@ -1080,8 +1108,8 @@
     "zh": "OAuth 令牌缺失"
   },
   "oauth_unavailable": {
-    "en": "OAuth unavailable",
-    "zh": "OAuth 未授权"
+    "en": "oauth unavailable",
+    "zh": "请先完成服务账号的 Codex OAuth 登录，再确认独占调度"
   },
   "observation_override_changed": {
     "en": "observation override changed",
@@ -1106,6 +1134,14 @@
   "offline_tick_delay_in_milliseconds": {
     "en": "Offline tick delay in milliseconds",
     "zh": "离线测试每步间隔毫秒数"
+  },
+  "onboarding_intent_invalid": {
+    "en": "onboarding intent invalid",
+    "zh": "自动初始化授权记录无效"
+  },
+  "onboarding_lock_unsafe": {
+    "en": "onboarding lock unsafe",
+    "zh": "初始化锁不安全"
   },
   "online_update_failed": {
     "en": "online update failed",
@@ -1223,9 +1259,13 @@
     "en": "Quota limit flag missing",
     "zh": "缺少额度限制标志"
   },
+  "quota_refresh_failed": {
+    "en": "quota refresh failed",
+    "zh": "额度查询失败，将自动重试；预热仍受安全门禁约束"
+  },
   "quota_transport_failed": {
-    "en": "Quota transport failed",
-    "zh": "额度网络请求失败"
+    "en": "quota transport failed",
+    "zh": "网络失败"
   },
   "quota_usage_missing": {
     "en": "Quota usage missing",
@@ -1375,6 +1415,10 @@
     "en": "rollback missing",
     "zh": "没有可回滚版本"
   },
+  "root_required": {
+    "en": "root required",
+    "zh": "请使用 sudo kairo 启动自动预热"
+  },
   "run_the_scheduler;_observation_until_explicitly_activated": {
     "en": "Run the scheduler; observation until explicitly activated",
     "zh": "运行调度器，明确批准前仅观察"
@@ -1414,6 +1458,10 @@
   "service_not_stopped": {
     "en": "service not stopped",
     "zh": "服务或子进程尚未停止，未执行生产授权"
+  },
+  "service_oauth_unreadable": {
+    "en": "service oauth unreadable",
+    "zh": "服务账号无法读取此 OAuth，请在账号菜单登录"
   },
   "service_still_observing": {
     "en": "service still observing",
@@ -1554,6 +1602,10 @@
   "update_in_progress": {
     "en": "update in progress",
     "zh": "程序升级中，请稍后重试或运行 update recover"
+  },
+  "upgrade_in_progress": {
+    "en": "upgrade in progress",
+    "zh": "升级进行中，推迟自动启用"
   },
   "validate_state_without_requests": {
     "en": "Validate state without requests",

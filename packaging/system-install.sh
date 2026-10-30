@@ -76,7 +76,7 @@ if [ ! -e "$unit" ] && [ ! -L "$unit" ]; then new_unit=1; fi
 cp "$expected_unit" "$unit"
 chmod 644 "$staging/etc/systemd/system/kairo.service"
 mkdir -p "$staging/etc/systemd/system/kairo.service.d"
-if [ ! -f "$staging/etc/systemd/system/kairo.service.d/20-mode.conf" ]; then
+if [ "$new_unit" -eq 1 ] && [ ! -f "$staging/etc/systemd/system/kairo.service.d/20-mode.conf" ]; then
  new_dropin=1
  printf '[Service]\nExecStart=\nExecStart=%s/current/bin/kairo --data-dir /var/lib/kairo daemon --observe\n' "$prefix" > "$staging/etc/systemd/system/kairo.service.d/20-mode.conf"
 fi

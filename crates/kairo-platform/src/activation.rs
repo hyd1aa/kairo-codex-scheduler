@@ -212,6 +212,12 @@ fn cutover<S: System, F: FnOnce() -> Result<()>, P: FnOnce() -> Result<()>>(
     )
 }
 pub fn enable(root: &Path, ack: bool) -> Result<Value> {
+    enable_policy(root, ack, false)
+}
+pub(crate) fn enable_automatic(root: &Path) -> Result<Value> {
+    enable_policy(root, true, true)
+}
+fn enable_policy(root: &Path, ack: bool, automatic: bool) -> Result<Value> {
     if !ack {
         bail!("cutover_approval_required / 需要明确生产切换批准；之后守护进程可能在满足安全门禁时发送预热请求");
     }
@@ -254,6 +260,9 @@ pub fn enable(root: &Path, ack: bool) -> Result<Value> {
             let s = Store::open(root)?;
             let id =
                 rt::runtime(&s).and_then(|r| crate::identity(&r.codex_home.join("auth.json")))?;
+            if automatic {
+                crate::onboarding::require_intent(&s, &id.fingerprint)?;
+            }
             let recovery_path = rt::guard_root().join(&id.fingerprint).join("recovery.json");
             if crate::recovery::present(&recovery_path)? {
                 let record: crate::recovery::Recovery =

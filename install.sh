@@ -47,9 +47,10 @@ if ((missing)); then
   timeout 180 "$pm" -y install "${packages[@]}"
  else fail '缺少可用包管理器' 'No supported package manager'; fi
 fi
+msg 'Kairo：安装授权在安全条件满足后自动预热；可随时暂停。升级继承已有授权，不自动取消暂停。' 'Kairo: installation authorizes automatic warmup once safe; pause anytime. Upgrades preserve existing intent and pauses.'
 stage=$(mktemp -d /tmp/kairo-online.XXXXXXXX)
 chmod 700 "$stage"
-was_active=0; changed=0; old_hash=; completed=0
+was_active=0; changed=0; old_hash=; completed=0; fresh_install=0; new_auto_intent=0
 cleanup() {
  result=$?
  trap - EXIT
@@ -114,7 +115,9 @@ with tarfile.open(stage/asset) as archive:
    p.parent.mkdir(parents=True,exist_ok=True)
    with p.open('xb') as f:f.write(archive.extractfile(m).read())
    p.chmod(0o755 if m.mode & 0o111 else 0o644)
-for required in ['install.sh','packaging/system-first-install.sh','packaging/system-install.sh','packaging/install.sh','packaging/system-uninstall.sh','packaging/kairo.service']:
+required_files=['install.sh','packaging/system-first-install.sh','packaging/system-install.sh','packaging/install.sh','packaging/system-uninstall.sh','packaging/kairo.service']
+if tuple(map(int,version.split('.'))) >= (0,2,4):required_files+=['packaging/kairo-onboarding.service','packaging/kairo-onboarding.timer']
+for required in required_files:
  assert (stage/root/required).is_file(), 'Incomplete installation package: '+required
 binary=stage/root/'bin'/f'kairo-{target}'
 b=binary.read_bytes();assert b[:6]==b'\x7fELF\x02\x01' and struct.unpack('<H',b[18:20])[0]==(62 if target.startswith('x86_64') else 183), 'ELF architecture mismatch'
@@ -173,6 +176,7 @@ PYVERSION
  fi
 else
  [[ $action != update ]] || fail 'Kairo 尚未安装' 'Kairo is not installed'
+ fresh_install=1
  sh "$root/packaging/system-first-install.sh" "$binary" "$digest"
 fi
 [[ $(sha256sum /opt/kairo/current/bin/kairo | cut -d ' ' -f1) == "$digest" ]] || fail '安装后哈希不一致' 'Installed SHA256 mismatch'
@@ -274,6 +278,17 @@ try:
   required=['User=kairo','Group='+grp.getgrgid(pwd.getpwnam('kairo').pw_gid).gr_name,'Environment=HOME=/home/kairo','ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon','KillMode=control-group']
   if any(line not in text.splitlines() for line in required):raise RuntimeError('kairo.service differs from managed service identity; refusing removal')
  if exists(drop) and drop.is_symlink():raise RuntimeError('Unsafe service drop-in directory')
+ for name in ['kairo-onboarding.timer','kairo-onboarding.service']:
+  task=unit.parent/name
+  if exists(task):
+   safe_directory(task.parent)
+   m=task.lstat()
+   if not stat.S_ISREG(m.st_mode) or m.st_uid!=0 or m.st_mode&0o022:raise RuntimeError('Unsafe initialization unit')
+   body=task.read_text()
+   expected='Unit=kairo-onboarding.service' if name.endswith('.timer') else 'ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo onboard'
+   if expected not in body.splitlines():raise RuntimeError('Unknown initialization unit; preserved')
+   system('disable','--now',name) if name.endswith('.timer') else system('stop',name)
+   task.unlink()
  load=show('LoadState')
  if load!='not-found':
   fragment=show('FragmentPath')
@@ -373,9 +388,86 @@ for name in install.sh system-uninstall.sh; do
  mv -f "/opt/kairo/installer/.$name.new" "/opt/kairo/installer/$name"
 done
 if ((was_active)); then systemctl start kairo.service; fi
+# Installing authorizes automatic warmup once all safety gates pass. Existing
+# installations retain their intent, pause, deployment and observation override.
+if /opt/kairo/current/bin/kairo onboard --help >/dev/null 2>&1; then
+ for unit in kairo-onboarding.service kairo-onboarding.timer; do
+  target="/etc/systemd/system/$unit"
+  source="$root/packaging/$unit"
+  [[ -f $source && ! -L $target ]] || fail '初始化定时任务文件不安全' 'Unsafe initialization timer file'
+  if [[ -e $target ]]; then
+   cmp -s "$source" "$target" || fail '保留已有自定义初始化任务，请人工检查' 'Preserving custom initialization task; manual review required'
+  else
+   install -o root -g root -m 644 "$source" "$target"
+  fi
+ done
+ systemctl daemon-reload
+ if (( fresh_install )); then
+  msg '安装即授权：安全条件满足后自动预热；可随时在菜单04暂停。' 'Installation authorizes automatic warmup once safe; pause any time in menu04.'
+  # Import only the invoking administrator's private Codex login, never a browser
+  # session. Strict owner/mode/no-follow checks; no token in argv/stdout/logs.
+  python3 - <<'PYOAUTH'
+import os,pwd,json,stat
+try:
+ target=pwd.getpwnam('kairo')
+ user=pwd.getpwuid(int(os.environ.get('SUDO_UID','0')))
+ def directory(path,owner):
+  fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+  m=os.fstat(fd)
+  if m.st_uid!=owner or m.st_mode & 0o022:os.close(fd);raise ValueError('unsafe directory')
+  return fd
+ home=directory('/home/kairo',target.pw_uid)
+ try:os.mkdir('.codex',0o700,dir_fd=home)
+ except FileExistsError:pass
+ dest=os.open('.codex',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=home)
+ m=os.fstat(dest)
+ if m.st_uid==0:os.fchown(dest,target.pw_uid,target.pw_gid)
+ elif m.st_uid!=target.pw_uid:raise ValueError('wrong target owner')
+ if m.st_mode & 0o077:raise ValueError('target must be private')
+ try:os.stat('auth.json',dir_fd=dest,follow_symlinks=False)
+ except FileNotFoundError:
+  source_home=directory(user.pw_dir,user.pw_uid)
+  source=os.open('.codex',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=source_home)
+  sm=os.fstat(source)
+  if sm.st_uid!=user.pw_uid or sm.st_mode & 0o022:raise ValueError('source must be private')
+  f=os.open('auth.json',os.O_RDONLY|os.O_NOFOLLOW,dir_fd=source)
+  m=os.fstat(f)
+  if not stat.S_ISREG(m.st_mode) or m.st_uid!=user.pw_uid or m.st_nlink!=1 or m.st_mode & 0o077:raise ValueError('unsafe source')
+  data=os.read(f,1048577)
+  if len(data)>1048576:raise ValueError('oversize')
+  v=json.loads(data)
+  assert not v.get('OPENAI_API_KEY') and v['tokens']['account_id'] and v['tokens']['access_token']
+  out=os.open('auth.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=dest)
+  os.fchown(out,target.pw_uid,target.pw_gid)
+  with os.fdopen(out,'wb') as w:w.write(data);w.flush();os.fsync(w.fileno())
+  os.fsync(dest)
+  print('已安全复用管理员 Codex CLI 登录 / Reused administrator Codex CLI login securely')
+except Exception:
+ print('未导入管理员凭据；可在账号菜单完成官方登录 / No administrator credential imported; use the account menu for official login')
+PYOAUTH
+  new_auto_intent=0
+  if [[ ! -e /var/lib/kairo/onboarding.json && ! -L /var/lib/kairo/onboarding.json && ! -e /var/lib/kairo/deployment.json && ! -L /var/lib/kairo/deployment.json ]]; then
+   /opt/kairo/current/bin/kairo onboard --request
+   new_auto_intent=1
+  fi
+  systemctl enable --now kairo.service
+ fi
+ systemctl enable --now kairo-onboarding.timer
+ if (( fresh_install && new_auto_intent )) && { exec 8<>/dev/tty; } 2>/dev/null && [[ -t 8 ]]; then
+  if ! /usr/sbin/runuser -u kairo -- test -r /home/kairo/.codex/auth.json; then
+   msg '请完成官方 Codex OAuth 登录。' 'Complete official Codex OAuth login.'
+   /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo auth login <&8 >&8 2>&1 || :
+  fi
+  msg '其他机器使用同账号无法自动检测。已停止其他调度器，且恢复等待期间不手动请求？[yes/N]' 'Other machines cannot be checked. Other schedulers stopped, and no manual requests during recovery? [yes/N]'
+  answer=; read -r answer <&8 || :
+  if [[ $answer == yes ]]; then /opt/kairo/current/bin/kairo onboard --request --confirm-exclusive-account || msg '请先完成登录，再在菜单04确认。' 'Complete login, then confirm once in menu04.'; fi
+ fi
+ systemctl start --no-block kairo-onboarding.service
+fi
+
 completed=1
-msg 'Kairo 已就绪。输入 kairo 进入菜单；更新：sudo kairo update online。首次安装保持观察/停用，请先完成官方 Codex CLI 登录与安全检查。' 'Kairo is ready. Run kairo for the menu; update: sudo kairo update online. First installation stays stopped/observation-only: complete official Codex CLI login and safety checks first.'
-msg '授权：sudo -u kairo -H kairo auth login；诊断：sudo -u kairo -H kairo doctor。缺少 Codex 时请按安装文档安装官方 CLI。' 'Login: sudo -u kairo -H kairo auth login; diagnose: sudo -u kairo -H kairo doctor. Install the official Codex CLI first if it is missing (see installation guide).'
+msg 'Kairo 已就绪。输入 sudo kairo：03 登录，04 启动/暂停。安全恢复自动复查；升级保留已有运行及暂停状态。' 'Kairo is ready. Run sudo kairo: 03 login, 04 start/pause. Safe recovery rechecks automatically; upgrades preserve running/paused state.'
+msg '无交互安装不会等待认证；需要登录或一次账号独占确认时，进入 sudo kairo 菜单。' 'Noninteractive installation never waits for authentication. Use sudo kairo for login or a one-time exclusive-account confirmation.' 
 
 )
 # Child commands cannot consume shell source or interactive answers from the pipe.

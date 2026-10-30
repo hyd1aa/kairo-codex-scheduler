@@ -13,7 +13,9 @@ base=f'https://localhost:{server.server_port}/release'
 mock=work/'tools';mock.mkdir();(work/'base').write_text(base)
 (mock/'systemctl').write_text('''#!/bin/sh
 printf '%s\\n' "$*" >> /tmp/systemctl-calls
+case "$*" in *kairo-onboarding*) exit 0;; esac
 case "$1" in
+ enable) case "$*" in *--now*) touch /tmp/service-active;; esac;;
  show)
   case "$*" in
    *LoadState*) test ! -f /etc/systemd/system/kairo.service && echo not-found || echo loaded;;
@@ -58,14 +60,28 @@ def call(args,ok=True,env=None):
  p=subprocess.run(args,capture_output=True,text=True,env=env,timeout=60)
  assert (p.returncode==0)==ok,(args,p.returncode,p.stdout[-500:],p.stderr[-1000:]);count+=1;return p
 entry=['bash','/source/install.sh','--version',version,'--base-url',base]
+# A world-readable administrator token must never be imported.
+admin=pathlib.Path('/root/.codex');admin.mkdir(mode=0o700,exist_ok=True)
+auth=admin/'auth.json';auth.write_text(json.dumps({'tokens':{'account_id':'synthetic-onboarding-account','access_token':'synthetic-onboarding-placeholder'}}));auth.chmod(0o644)
 call(entry)
 binary=pathlib.Path('/opt/kairo/current/bin/kairo');original=hashlib.sha256(binary.read_bytes()).hexdigest();state=pathlib.Path('/var/lib/kairo')
 assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and pathlib.Path('/etc/systemd/system/kairo.service').exists()
-assert not pathlib.Path('/tmp/service-active').exists() and 'daemon --observe' in pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').read_text()
+automatic = tuple(map(int,version.split('.'))) >= (0,2,4)
+assert pathlib.Path('/tmp/service-active').exists()==automatic
+assert 'daemon --observe' in pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').read_text()
+if automatic:
+ assert json.loads((state/'onboarding.json').read_text())['requested']
+ assert not json.loads((state/'onboarding.json').read_text())['exclusive_account']
+ assert pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
+ call(['kairo','--json','onboard'],False) # Offline prohibits actual root coordinator/network/cutover.
+ # Pause before any deployment exists must cancel automatic initialization durably.
+ call(['kairo','pause'])
+ assert not json.loads((state/'onboarding.json').read_text())['requested']
 assert not pathlib.Path('/home/kairo/.codex/auth.json').exists()
 call(entry);call(['kairo','schedule','add','03:37']);before=(state/'config.json').read_bytes()
 call(['kairo','update','online'])
 assert (state/'config.json').read_bytes()==before
+if automatic:assert not json.loads((state/'onboarding.json').read_text())['requested']
 # Fixed corrupted download rejected before stopping a previously active service.
 pathlib.Path('/tmp/service-active').touch();archive=assets/f'kairo-{version}-x86_64-unknown-linux-gnu.tar.gz';clean=archive.read_bytes();archive.write_bytes(clean+b'changed')
 call(entry,False);assert pathlib.Path('/tmp/service-active').exists() and hashlib.sha256(binary.read_bytes()).hexdigest()==original;archive.write_bytes(clean)
@@ -117,6 +133,15 @@ assert hashlib.sha256(binary.read_bytes()).hexdigest()==original
 call(['kairo','system-uninstall','--yes'])
 assert not pathlib.Path('/usr/local/bin/kairo').exists() and not pathlib.Path('/etc/systemd/system/kairo.service').exists()
 assert state.exists() and (state/'config.json').read_bytes()==before
-call(entry);assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and (state/'config.json').read_bytes()==before
+if automatic:assert not pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
+auth.chmod(0o600)
+p=call(entry);assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and (state/'config.json').read_bytes()==before
+if automatic:
+ import pwd,stat
+ copied=pathlib.Path('/home/kairo/.codex/auth.json')
+ assert copied.read_bytes()==auth.read_bytes() and copied.stat().st_uid==pwd.getpwnam('kairo').pw_uid
+ assert stat.S_IMODE(copied.stat().st_mode)==0o600
+ assert 'synthetic-onboarding-placeholder' not in p.stdout+p.stderr
+ assert not json.loads((state/'onboarding.json').read_text())['requested']
 server.shutdown();key.unlink()
 print(f'{count} focused HTTPS/install/update/refusal/recovery/uninstall checks passed; container with mocked systemd, zero real model requests')

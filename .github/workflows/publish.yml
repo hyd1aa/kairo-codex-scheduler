@@ -37,9 +37,9 @@ jobs:
           python3 -c 'import os,re; assert re.fullmatch("[0-9a-f]{40}",os.environ["SOURCE"]); assert re.fullmatch("[0-9]+",os.environ["RUN"])'
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN" > run.json
           python3 -c 'import json,os; r=json.load(open("run.json")); assert r["conclusion"]=="success" and r["head_sha"]==os.environ["SOURCE"] and r["head_branch"]=="main" and r["path"]==".github/workflows/release.yml" and r["event"]=="workflow_dispatch"'
-          git fetch origin refs/tags/v0.2.3:refs/tags/v0.2.3
-          test "$(git rev-list -n1 v0.2.3)" = "$SOURCE"
+          git fetch origin refs/tags/v0.2.4:refs/tags/v0.2.4
+          test "$(git rev-list -n1 v0.2.4)" = "$SOURCE"
           gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name release-candidate --dir dist
           (cd dist && sha256sum -c SHA256SUMS)
           python3 scripts/check-release-secrets.py dist
-          gh release create v0.2.3 --repo "$GITHUB_REPOSITORY" --draft --verify-tag --target "$SOURCE" --title 'Kairo v0.2.3' --notes-file docs/RELEASE_NOTES_0.2.3.md dist/*
+          gh release create v0.2.4 --repo "$GITHUB_REPOSITORY" --draft --verify-tag --target "$SOURCE" --title 'Kairo v0.2.4' --notes-file docs/RELEASE_NOTES_0.2.4.md dist/*

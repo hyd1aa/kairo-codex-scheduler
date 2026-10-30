@@ -6,6 +6,8 @@ if [ -n "$staging" ]; then
  case "$staging" in /tmp/*|/opt/Kairo/sandbox/*) ;; *) exit 2;; esac
 else
  [ "$(id -u)" -eq 0 ] || exit 1
+ systemctl disable --now kairo-onboarding.timer 2>/dev/null || :
+ systemctl stop kairo-onboarding.service 2>/dev/null || :
  systemctl disable --now kairo.service
 fi
 "$staging/opt/kairo/bin/kairo" --lang "${KAIRO_LANG:-zh-CN}" --data-dir "$staging/var/lib/kairo" uninstall --prefix "$staging/opt/kairo"

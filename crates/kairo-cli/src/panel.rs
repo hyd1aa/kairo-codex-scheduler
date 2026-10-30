@@ -266,6 +266,147 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         .read::<rt::Deployment>("deployment.json")
         .is_ok_and(|d| d.enabled);
     let uncertain = requested && !live && service_mode["observation_override"] != true;
+    if compact {
+        let intent = store
+            .read::<kairo_platform::onboarding::Intent>("onboarding.json")
+            .ok();
+        let auto = store
+            .read::<Value>("onboarding-status.json")
+            .unwrap_or_default();
+        let (zh, english, code) = if live {
+            ("自动预热运行中", "Automatic warmup running", 32)
+        } else if auth.is_none() || auto["status"] == "login_required" {
+            (
+                "需要登录 Codex（03 账号管理）",
+                "Log in to Codex (03 Account)",
+                33,
+            )
+        } else if intent.as_ref().is_some_and(|i| !i.requested) {
+            ("已暂停", "Paused", 33)
+        } else if auto["status"] == "exclusive_account_confirmation_required"
+            || auto["status"] == "account_changed_confirmation_required"
+        {
+            (
+                "需要一次确认（04 启动预热）",
+                "One confirmation required (04 Start)",
+                33,
+            )
+        } else if health["classification"] == "data_corrupt" || auto["status"] == "repair_required"
+        {
+            (
+                "需要修复（06 高级设置）",
+                "Repair required (06 Advanced)",
+                31,
+            )
+        } else if health["classification"] == "recovery_waiting" {
+            ("等待安全恢复", "Waiting for safe recovery", 33)
+        } else if uncertain {
+            (
+                "运行状态待确认；可能执行请求",
+                "Execution unconfirmed; requests possible",
+                33,
+            )
+        } else {
+            ("尚未启用（04 启动预热）", "Not enabled (04 Start)", 33)
+        };
+        println!(
+            "{}: {}",
+            t(en, "状态", "Status"),
+            color(t(en, zh, english), code)
+        );
+        if health["classification"] == "data_corrupt" && code != 31 {
+            println!(
+                "{}",
+                color(
+                    t(
+                        en,
+                        "需要修复：状态数据损坏；请进入06高级设置检查。",
+                        "Repair required: damaged state; check06 Advanced."
+                    ),
+                    31
+                )
+            );
+        }
+        println!(
+            "{}: {}",
+            t(en, "账号", "Account"),
+            t(
+                en,
+                if auth.is_some() {
+                    "已发现 Codex 登录"
+                } else {
+                    "未登录"
+                },
+                if auth.is_some() {
+                    "Codex login discovered"
+                } else {
+                    "Not logged in"
+                }
+            )
+        );
+        if let Some(deadline) = health["effective_not_before"].as_i64() {
+            println!(
+                "{}: {}",
+                t(en, "预计复查", "Estimated recheck"),
+                local_time(deadline, timezone()?).unwrap_or_else(|| deadline.to_string())
+            );
+            if intent.as_ref().is_some_and(|i| {
+                i.requested
+                    && i.exclusive_account
+                    && auth
+                        .as_ref()
+                        .is_some_and(|a| i.account.as_deref() == Some(a.fingerprint.as_str()))
+            }) {
+                println!(
+                    "{}",
+                    t(
+                        en,
+                        "恢复方式：自动复查并启用；无需人工操作",
+                        "Recovery: automatic recheck and enable; no manual action needed"
+                    )
+                );
+            }
+        }
+        if let Some(reason) = auto["reason"].as_str() {
+            println!("{}: {}", t(en, "提示", "Notice"), clean(reason));
+        }
+        let cache = store
+            .read::<Value>("quota-cache.json")
+            .ok()
+            .filter(|v| auth.as_ref().is_some_and(|a| v["account"] == a.fingerprint));
+        if let Some(v) = cache.filter(|v| {
+            v["at"].as_i64().is_some_and(|at| {
+                chrono::Utc::now().timestamp() - at <= 300 && at <= chrono::Utc::now().timestamp()
+            })
+        }) {
+            if let Some(used) = v["five_hour"]["used"].as_f64() {
+                println!(
+                    "{}: {:.1}%",
+                    t(en, "五小时额度剩余", "Five-hour remaining"),
+                    (100.0 - used).clamp(0.0, 100.0)
+                );
+            }
+        } else {
+            println!(
+                "{}",
+                t(
+                    en,
+                    "五小时额度：待查询（01）",
+                    "Five-hour quota: query via01"
+                )
+            );
+        }
+        let next = next_checks(&store, &store.config()?, 48)?;
+        if let Some(at) = next["checks"]
+            .as_array()
+            .and_then(|a| a.first())
+            .and_then(Value::as_str)
+        {
+            println!("{}: {}", t(en, "下次检查", "Next check"), clean(at));
+        }
+        return Ok(());
+    }
+
     println!(
         "{}: {}",
         t(en, "调度模式", "Scheduling"),
@@ -323,8 +464,8 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
         } else {
             t(
                 en,
-                "本地已绑定；服务端校验见 06",
-                "Locally bound; verify server via 06",
+                "本地已绑定；服务端校验见 03",
+                "Locally bound; verify server via 03",
             )
         };
         println!("{}: {account}", t(en, "账号状态", "Account"));
@@ -334,12 +475,12 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
             t(
                 en,
                 if auth.is_some() {
-                    "已发现；服务端校验请选 06 → 02"
+                    "已发现；服务端校验请选 03 → 02"
                 } else {
                     "未登录或凭据无法读取"
                 },
                 if auth.is_some() {
-                    "Discovered; verify server identity via 06 → 02"
+                    "Discovered; verify server identity via 03 → 02"
                 } else {
                     "Not logged in or credentials unreadable"
                 }
@@ -360,7 +501,7 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
             verified
                 .and_then(|at| local_time(at, timezone().ok()?))
                 .map(|at| format!("{} ({at})", t(en, "最近校验成功", "Recently verified")))
-                .unwrap_or_else(|| t(en, "待校验（06 → 02）", "Not verified (06 → 02)").into())
+                .unwrap_or_else(|| t(en, "待校验（03 → 02）", "Not verified (03 → 02)").into())
         );
         println!(
             "{}: {}",
@@ -916,19 +1057,24 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
         page(title, false);
         match n {
             1 => {
-                if let Err(e) = summary(cli, en, true, false) {
+                if let Err(e) = summary(cli, en, false, true) {
                     let (_, m) = i18n::error(&e, en);
                     println!("{}", color(&m, 31));
                 }
                 match submenu(
                     en,
-                    &["刷新摘要", "查看详细状态（JSON）"],
-                    &["Refresh summary", "Detailed status (JSON)"],
+                    &["刷新摘要", "查看详细状态（JSON）", "查询实时额度（只读）"],
+                    &[
+                        "Refresh summary",
+                        "Detailed status (JSON)",
+                        "Query live quota (read only)",
+                    ],
                 )?
                 .trim_start_matches('0')
                 {
                     "" => return Ok(()),
                     "1" => continue,
+                    "3" => report(execute(cli, Cmd::Quota { fixture: None }, en), en)?,
                     "2" => {
                         DETAILS.store(true, Ordering::Relaxed);
                         let result = run(cli, Cmd::Status);
@@ -1024,36 +1170,41 @@ pub fn menu(cli: &mut Cli) -> Result<()> {
                 let (_, m) = i18n::error(&e, en);
                 println!("{}", color(&m, 33));
             }
-            let choice = numbered(en, ZH, EN, t(en, "退出 Kairo", "Exit Kairo"))?;
+            let choice = numbered(
+                en,
+                &[
+                    "查看状态与额度",
+                    "设置预热时间",
+                    "Codex 账号管理",
+                    "启动 / 暂停预热",
+                    "检查更新",
+                    "高级设置",
+                ],
+                &[
+                    "Status and quota",
+                    "Warmup schedule",
+                    "Codex account",
+                    "Start / pause warmup",
+                    "Check updates",
+                    "Advanced settings",
+                ],
+                t(en, "退出 Kairo", "Exit Kairo"),
+            )?;
             let n = choice.parse::<usize>().unwrap_or(usize::MAX);
             if n == 0 {
                 return Ok(());
             }
-            if n == 10 {
-                run(
-                    cli,
-                    Cmd::Lang {
-                        language: if en { "zh-CN" } else { "en-US" }.into(),
-                    },
-                )?;
-                continue;
-            }
-            if (1..=12).contains(&n) {
-                if n == 12 {
-                    TITLE.with(|t| *t.borrow_mut() = if en { EN[11] } else { ZH[11] }.into());
-                    action_page(en);
-                    report(
-                        choose(en, "12").and_then(|c| c.map_or(Ok(()), |c| execute(cli, c, en))),
-                        en,
-                    )?;
-                } else {
-                    section(cli, en, n)?;
-                }
-            } else {
-                report(
+            match n {
+                1 => section(cli, en, 1)?,
+                2 => section(cli, en, 3)?,
+                3 => account_menu(cli, en)?,
+                4 => warmup_menu(cli, en)?,
+                5 => section(cli, en, 9)?,
+                6 => advanced(cli, en)?,
+                _ => report(
                     Err(anyhow::anyhow!("menu_choice_invalid / 菜单选项无效")),
                     en,
-                )?;
+                )?,
             }
         }
     })();
@@ -1126,7 +1277,7 @@ pub fn render_recovery(v: &Value, en: bool) {
             at.and_then(|at| local_time(at, timezone().ok()?))
                 .unwrap_or_else(|| "?".into())
         );
-        println!("{}",t(en,"服务重启保留等待；系统重启会保守重新计时，以 recover check 为准","Service restarts preserve the wait; a system reboot conservatively restarts timing; run recover check"));
+        println!("{}",t(en,"服务重启保留等待；系统重启保留已确认进度，关机时间不计入等待","Service restarts preserve waiting; reboots retain credited progress, excluding powered-off time"));
         println!(
             "{}: {}",
             t(
@@ -1136,7 +1287,7 @@ pub fn render_recovery(v: &Value, en: bool) {
             ),
             at.unwrap_or(now).saturating_sub(now).max(0)
         );
-        println!("{}",t(en,"等待不是自动授权；旧历史未恢复或证明为空。停止其他调度器和手动调用后，再选择复查与明确启用。","Waiting is not authorization; old history remains unknown. Stop other schedulers/manual requests, then recheck and explicitly enable."));
+        println!("{}",t(en,"旧历史仍未知。已选择自动启用的账号由后台复查并启用；否则请在主菜单04选择启动。","Old history stays unknown. Opted-in accounts recheck and enable in the background; otherwise choose Start in main menu04."));
     }
     if v.get("five_hour").is_some() {
         quota(v, en);
@@ -1256,6 +1407,163 @@ fn titled(en: bool) -> String {
         "First use and existing-account recovery",
     )
     .into()
+}
+
+fn warmup_menu(cli: &Cli, en: bool) -> Result<()> {
+    loop {
+        TITLE.with(|t| *t.borrow_mut() = t_string(en, "启动 / 暂停预热", "Start / pause warmup"));
+        page(&t_string(en, "自动预热", "Automatic warmup"), false);
+        let choice = submenu(
+            en,
+            &["启动：自动初始化及安全恢复", "暂停预热"],
+            &[
+                "Start: automatic initialization and safe recovery",
+                "Pause warmup",
+            ],
+        )?;
+        match choice.trim_start_matches('0') {
+            "" => return Ok(()),
+            "1" => {
+                println!("{}",t(en,"继续表示授权安全条件满足后自动预热。无法检查其他机器：请确认同账号的其他调度器已停止，恢复等待期间避免手动请求。","Continuing authorizes automatic warmup once safe. Other machines cannot be checked: stop other schedulers for this account and avoid manual requests during recovery."));
+                let confirmed = {
+                    let s = configured(cli)?;
+                    let account = rt::runtime(&s)
+                        .and_then(|r| kairo_platform::identity(&r.codex_home.join("auth.json")))
+                        .ok();
+                    s.read::<kairo_platform::onboarding::Intent>("onboarding.json")
+                        .is_ok_and(|i| {
+                            i.exclusive_account
+                                && account.as_ref().is_some_and(|a| {
+                                    i.account.as_deref() == Some(a.fingerprint.as_str())
+                                })
+                        })
+                };
+                if confirmed
+                    || input(t(
+                        en,
+                        "确认此账号由本机独占调度？[yes/N]: ",
+                        "Confirm exclusive scheduling? [yes/N]: ",
+                    ))?
+                    .eq_ignore_ascii_case("yes")
+                {
+                    report(
+                        run(
+                            cli,
+                            Cmd::Onboard {
+                                request: true,
+                                confirm_exclusive_account: true,
+                            },
+                        ),
+                        en,
+                    )?;
+                }
+            }
+            "2" => report(run(cli, Cmd::Pause), en)?,
+            _ => {}
+        }
+    }
+}
+fn t_string(en: bool, zh: &str, english: &str) -> String {
+    t(en, zh, english).into()
+}
+fn advanced(cli: &mut Cli, en: bool) -> Result<()> {
+    loop {
+        let title = t(en, "高级设置", "Advanced settings");
+        TITLE.with(|t| *t.borrow_mut() = title.into());
+        page(title, false);
+        let choice = submenu(
+            en,
+            &[
+                "运行日志",
+                "系统诊断",
+                "安全恢复（维护）",
+                "预热参数",
+                "服务管理",
+                "中文 / English",
+                "帮助",
+                "卸载 Kairo",
+                "高级账号配置",
+            ],
+            &[
+                "Logs",
+                "Diagnostics",
+                "Recovery (maintenance)",
+                "Warmup parameters",
+                "Service management",
+                "中文 / English",
+                "Help",
+                "Uninstall Kairo",
+                "Advanced account profiles",
+            ],
+        )?;
+        match choice.trim_start_matches('0') {
+            "" => return Ok(()),
+            "1" => section(cli, en, 5)?,
+            "2" => section(cli, en, 7)?,
+            "3" => recovery_wizard(cli)?,
+            "4" => section(cli, en, 8)?,
+            "5" => section(cli, en, 4)?,
+            "6" => {
+                run(
+                    cli,
+                    Cmd::Lang {
+                        language: if en { "zh-CN" } else { "en-US" }.into(),
+                    },
+                )?;
+                return Ok(());
+            }
+            "7" => section(cli, en, 11)?,
+            "9" => section(cli, en, 6)?,
+            "8" => report(
+                choose(en, "12").and_then(|c| c.map_or(Ok(()), |c| execute(cli, c, en))),
+                en,
+            )?,
+            _ => {}
+        }
+    }
+}
+
+fn account_menu(cli: &Cli, en: bool) -> Result<()> {
+    loop {
+        let title = t(en, "Codex 账号管理", "Codex account");
+        TITLE.with(|t| *t.borrow_mut() = title.into());
+        page(title, false);
+        let choice = submenu(
+            en,
+            &[
+                "登录 Codex（官方 OAuth）",
+                "校验账号与查询额度",
+                "查看账号状态",
+            ],
+            &[
+                "Log in to Codex (official OAuth)",
+                "Verify account and quota",
+                "Account status",
+            ],
+        )?;
+        let action = match choice.trim_start_matches('0') {
+            "" => return Ok(()),
+            "1" => "login",
+            "2" => "verify",
+            "3" => "status",
+            _ => continue,
+        };
+        report(
+            run(
+                cli,
+                Cmd::Auth {
+                    action: action.into(),
+                    name: None,
+                    home: None,
+                    acknowledge_fresh: false,
+                },
+            ),
+            en,
+        )?;
+        if action == "login" {
+            println!("{}",t(en,"登录完成后后台继续检查；首次需在04确认一次账号独占调度。","Background checks continue after login; confirm exclusive scheduling once via04."));
+        }
+    }
 }
 
 #[cfg(test)]

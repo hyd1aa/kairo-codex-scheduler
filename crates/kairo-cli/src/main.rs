@@ -193,6 +193,13 @@ enum Cmd {
     #[command(
         about = "Run the scheduler; observation until explicitly activated / 运行调度器，明确批准前仅观察"
     )]
+    #[command(about = "Continue automatic safe initialization / 自动接续安全初始化")]
+    Onboard {
+        #[arg(long)]
+        request: bool,
+        #[arg(long)]
+        confirm_exclusive_account: bool,
+    },
     Daemon {
         #[arg(
             long,
@@ -492,6 +499,21 @@ fn possible_prewarm(
 }
 fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     match cmd {
+        Cmd::Onboard {
+            request,
+            confirm_exclusive_account,
+        } => {
+            let v = if request {
+                if std::env::var_os("KAIRO_OFFLINE").as_deref() != Some(std::ffi::OsStr::new("1")) {
+                    kairo_platform::onboarding::prepare(&cli.data_dir)?;
+                }
+                let store = configured(cli)?;
+                kairo_platform::onboarding::request(&store, confirm_exclusive_account)?
+            } else {
+                kairo_platform::onboarding::tick(&cli.data_dir)?
+            };
+            return emit(cli, v);
+        }
         Cmd::Enable {
             approve_production_cutover,
         } => {
@@ -683,7 +705,8 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     }
     let mut c = store.config()?;
     match cmd {
-        Cmd::Recover { .. }
+        Cmd::Onboard { .. }
+        | Cmd::Recover { .. }
         | Cmd::Enable { .. }
         | Cmd::Init
         | Cmd::SystemUninstall { .. }
@@ -748,7 +771,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                 .and_then(|v| v["error"].as_str().or_else(|| v["event"].as_str()));
             emit(
                 cli,
-                json!({"version":env!("CARGO_PKG_VERSION"),"timezone":tz.to_string(),"config":c,"next_check":next,"next_possible_prewarm":next_possible,"prewarm_conditional":true,"state_valid":recovery["scheduler_state_ready"],"state_file_valid":state.is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"recovery_status":recovery,"service_mode":service_mode,"automatic_warmup_enabled":automatic_warmup_enabled,"status_file":status_file,"recent_reason":recent_reason,"deployment":deployment,"acceptance":acceptance,"current_quota":current_quota}),
+                json!({"version":env!("CARGO_PKG_VERSION"),"timezone":tz.to_string(),"config":c,"next_check":next,"next_possible_prewarm":next_possible,"prewarm_conditional":true,"state_valid":recovery["scheduler_state_ready"],"state_file_valid":state.is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"recovery_status":recovery,"onboarding":store.read::<Value>("onboarding-status.json").ok(),"service_mode":service_mode,"automatic_warmup_enabled":automatic_warmup_enabled,"status_file":status_file,"recent_reason":recent_reason,"deployment":deployment,"acceptance":acceptance,"current_quota":current_quota}),
             )
         }
         Cmd::Acceptance => {
@@ -887,7 +910,9 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                 kairo_platform::parse_usage(&v, now)?
             } else {
                 let id = kairo_platform::identity(&r.codex_home.join("auth.json"))?;
-                rt::verified_usage(&id, &kairo_platform::quota(&id)?, now)?
+                let usage = rt::verified_usage(&id, &kairo_platform::quota(&id)?, now)?;
+                store.write("quota-cache.json",&json!({"five_hour":usage.0,"weekly":usage.1,"server_denied":usage.2,"at":now,"account":id.fingerprint}))?;
+                usage
             };
             emit(cli, json!({"five_hour":f,"weekly":w,"server_denied":d}))
         }
@@ -1047,7 +1072,10 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             emit(cli, json!({"enabled":true}))
         }
         Cmd::Pause => {
-            rt::pause(&store)?;
+            kairo_platform::onboarding::pause(&store)?;
+            if store.root.join("deployment.json").try_exists()? {
+                rt::pause(&store)?;
+            }
             emit(cli, json!({"paused":true}))
         }
     }
