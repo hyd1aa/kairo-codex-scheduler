@@ -373,18 +373,13 @@ fn summary(cli: &Cli, en: bool, detailed: bool, compact: bool) -> Result<()> {
                 )
             );
         }
-        let tz = timezone()?;
         let next = next_checks(&store, &store.config()?, 48)?;
         if let Some(at) = next["checks"]
             .as_array()
             .and_then(|a| a.first())
-            .and_then(|v| v["at"].as_i64())
+            .and_then(Value::as_str)
         {
-            println!(
-                "{}: {}",
-                t(en, "下次检查", "Next check"),
-                local_time(at, tz).unwrap_or_default()
-            );
+            println!("{}: {}", t(en, "下次检查", "Next check"), clean(at));
         }
         return Ok(());
     }

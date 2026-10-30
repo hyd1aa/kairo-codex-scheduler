@@ -302,7 +302,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "5f98ebacfcfe75842f362179b709a17789201b615e240272d0c101e3d786ae1e"
+      "sha256": "63489fe80b60980971aaca142fd597e2e7eff34bd57d653e443d40405768048e"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -1260,7 +1260,7 @@
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "bb60e3ecf5eab4ddbca8c209243ec46843fdf092006725b992ad8acf4c0dc78b"
+      "sha256": "5f034465842f8c00bf0d3a06bd0d2a1e484afaa65362083b4db3b6f0f901c048"
     },
     {
       "path": "tests/pipe_lifecycle.py",

@@ -22,12 +22,12 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
   assert (p.returncode==0)==ok,(args,p.stdout,p.stderr);return p
  (root/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-panel','access_token':'synthetic-panel-placeholder'}}));(root/'auth.json').chmod(0o600)
  direct('init');expected_version=direct('--version').stdout.strip().split()[-1];direct('runtime','--home',temp,'--codex-home',temp,'--codex','/nonexistent-kairo-synthetic')
- def menu(text,extra=None,interrupt=False):
+ def menu(text,extra=None,interrupt=False,modern=False):
   # Legacy feature-case paths mapped to the simplified shipping navigation.
   first, sep, rest = text.partition('\n')
   mapping={'01':'01','02':'01','03':'02','04':'06\n05','05':'06\n01','06':'03','07':'06\n02','08':'06\n04','09':'05','10':'06\n06','11':'06\n07','12':'06\n08'}
   normalized=f'{int(first):02}' if first.isdigit() else first
-  if normalized in mapping:
+  if normalized in mapping and not modern:
    text=mapping[normalized]+sep+rest
    if normalized in ('04','05','07','08','11','12'):text+='00\n'
 
@@ -53,6 +53,16 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  def plain(s):return re.sub(r'\x1b\[[0-9;]*[mHJ]','',s).replace('\r','')
  for lang in ('zh-CN','en-US'):
   direct('lang',lang)
+  for name in ('onboarding.json','onboarding-status.json'):(data/name).unlink(missing_ok=True)
+  menu('04\n01\nno\n00\n00\n',modern=True)
+  assert not (data/'onboarding.json').exists()
+  menu('04\n01\nyes\n\n00\n00\n',modern=True)
+  intent=json.loads((data/'onboarding.json').read_text());assert intent['requested'] and intent['exclusive_account'] and intent['account']
+  menu('04\n02\n\n00\n00\n',modern=True)
+  assert not json.loads((data/'onboarding.json').read_text())['requested']
+  menu('04\n01\n\n00\n00\n',modern=True) # one-time confirmation is remembered for the same account
+  assert json.loads((data/'onboarding.json').read_text())['requested']
+  direct('pause');assert not json.loads((data/'onboarding.json').read_text())['requested']
   # Every top-level page returns exactly one level; invalid selection remains local.
   for n in (1,2,3,4,5,6,7,8,9,11):
    out=menu(f'{n:02}\n00\n00\n');assert 'Kairo / ' in out
