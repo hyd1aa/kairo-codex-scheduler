@@ -313,7 +313,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "b9a5386578727dc4e4dd2e6419484c3b05b8a6c034127d6fdec05a653aadf2b4"
+      "sha256": "1c19a4caaeea320330170435f87fe7343ba84af7a0da6bd10ca2462496adb6a8"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "tests/acceptance.py",
-      "sha256": "89da59de5d8386ffaacfd6262704620567954ea073de896d3fd3cc0a7d6be267",
+      "sha256": "dc489ebe9b228bd762a53a7139cb327f3536d1c2d23ddfdca5ff8492359419eb",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",

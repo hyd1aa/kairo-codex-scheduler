@@ -667,6 +667,28 @@ fn quota(v: &Value, en: bool) {
     }
 }
 pub fn render(v: &Value, en: bool) {
+    if let Some(checks) = v["checks"].as_array() {
+        println!(
+            "{}",
+            color(
+                t(
+                    en,
+                    "调度检查计划（不保证发送请求）",
+                    "Scheduled checks (requests are conditional)"
+                ),
+                34
+            )
+        );
+        for at in checks
+            .iter()
+            .filter_map(Value::as_str)
+            .filter_map(|v| chrono::DateTime::parse_from_rfc3339(v).ok())
+        {
+            println!("{}", human(at.timestamp(), en));
+        }
+        return;
+    }
+
     if v.get("tag_name").is_some() {
         println!(
             "{}: v{}",
@@ -1078,10 +1100,12 @@ fn section(cli: &mut Cli, en: bool, n: usize) -> Result<()> {
     if n == 5 {
         return logs(cli, en);
     }
+    if n == 1 {
+        return records_page(cli, en);
+    }
     loop {
         page(title, false);
         match n {
-            1 => return records_page(cli, en),
             2 => {
                 match submenu(
                     en,

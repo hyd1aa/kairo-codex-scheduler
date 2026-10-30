@@ -77,9 +77,9 @@ exit 99''')
             except OSError:break
         if p.poll() is not None:break
     assert p.wait(timeout=5)==0;os.close(master);text=out.decode(errors='replace')
-    assert '查看额度和预热记录' in text and 'Status' in text and '\x1b[34m' in text
+    assert '查看额度和预热记录' in text and 'Quota and warmup history' in text and '\x1b[34m' in text
     checks+=1
-    for language,label in [('zh-CN','查看运行状态'),('en-US','Status')]:
+    for language,label in [('zh-CN','查看额度和预热记录'),('en-US','Quota and warmup history')]:
         call('lang',language)
         master,slave=pty.openpty()
         fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack('HHHH',24,40,0,0))
