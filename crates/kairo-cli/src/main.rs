@@ -1,3 +1,4 @@
+mod history;
 mod i18n;
 mod panel;
 use anyhow::{bail, Context, Result};
@@ -1515,7 +1516,18 @@ fn prescan() -> (String, bool, PathBuf) {
         root,
     )
 }
+extern "C" fn output_closed(_: libc::c_int) {
+    // Async-signal-safe: a closed consumer is normal CLI termination, not a Rust panic.
+    unsafe { libc::_exit(0) }
+}
 fn main() {
+    unsafe {
+        libc::signal(
+            libc::SIGPIPE,
+            output_closed as *const () as libc::sighandler_t,
+        );
+    }
+
     let (lang, json, _) = prescan();
     let en = lang == "en-US";
     let matches = match localize(Cli::command(), en, json).try_get_matches() {

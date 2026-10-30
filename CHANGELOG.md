@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5
+
+- Show verified warmup and countdown history in the ordinary dashboard.
+- Human dates, explicit cached quota ages, and hide completed recovery deadlines.
+- Continue existing natural check receipts after the first request; handle closed pipes quietly.
+
+
 ## 0.2.4
 
 - Automatic safe onboarding and timed recovery continuation with durable pause/intent.

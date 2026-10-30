@@ -419,15 +419,31 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
     };
     let outcome = engine::tick(store, &c, &mut cursor, &mut s, tz, now, &mut adapter)?;
     confirmation::sync(store, &s)?;
-    if let Some(a) = s
+    save_natural_receipt(store, &s, adapter.d.approved_at, &outcome, now, cursor.due)?;
+
+    Ok(
+        json!({"event":outcome,"at":now,"timezone":tz.to_string(),"next_check":cursor.due,"execution":if adapter.enabled(){"live"}else{"observation_only"}}),
+    )
+}
+fn save_natural_receipt(
+    store: &Store,
+    state: &State,
+    approved_at: Option<i64>,
+    outcome: &str,
+    now: i64,
+    next: Option<i64>,
+) -> Result<()> {
+    if let Some(a) = state
         .attempts
         .iter()
-        .find(|a| a.at >= adapter.d.approved_at.unwrap_or(i64::MAX))
+        .find(|a| a.at >= approved_at.unwrap_or(i64::MAX))
     {
         let old = store.read::<Value>("natural-acceptance.json").ok();
         let mut result = json!({"status":"first_natural_request_recorded","anchor":a.anchor,"at":a.at,"completed_at":a.completed_at,"outcome":a.outcome,"request_ok":matches!(a.outcome.as_str(),"request_ok_window_unconfirmed"|"five_hour_window_confirmed"),"window_confirmed":a.outcome=="five_hour_window_confirmed","forced_model_requests":0});
-        if let Some(check) = old.as_ref().and_then(|v| v.get("first_natural_check")) {
-            result["first_natural_check"] = check.clone();
+        for key in ["first_natural_check", "latest_natural_check"] {
+            if let Some(check) = old.as_ref().and_then(|v| v.get(key)) {
+                result[key] = check.clone();
+            }
         }
         if old.as_ref() != Some(&result) {
             store.write("natural-acceptance.json", &result)?;
@@ -436,12 +452,13 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
                 json!({"event":"first_natural_request_acceptance","result":result})
             );
         }
-    } else if natural_check_event(&outcome) {
+    }
+    if natural_check_event(&outcome) {
         let old = store.read::<Value>("natural-acceptance.json").ok();
         let mut result = old.unwrap_or_else(
             || json!({"status":"awaiting_first_future_natural_request","forced_model_requests":0}),
         );
-        let check = json!({"at":now,"event":outcome,"next_check":cursor.due});
+        let check = json!({"at":now,"event":outcome,"next_check":next});
         if result.get("first_natural_check").is_none() {
             result["first_natural_check"] = check.clone();
         }
@@ -455,9 +472,7 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
         }
     }
 
-    Ok(
-        json!({"event":outcome,"at":now,"timezone":tz.to_string(),"next_check":cursor.due,"execution":if adapter.enabled(){"live"}else{"observation_only"}}),
-    )
+    Ok(())
 }
 fn natural_check_event(event: &str) -> bool {
     !matches!(
@@ -655,6 +670,46 @@ mod tests {
             token: "synthetic".into(),
             account_id: "synthetic-account".into(),
         }
+    }
+    #[test]
+    fn latest_check_is_saved_after_a_request_and_not_lost_on_waiting_ticks() {
+        let root = std::env::temp_dir().join(format!("kairo-receipt-{}", std::process::id()));
+        let store = Store::open(&root).unwrap();
+        let state = State {
+            schema: 1,
+            account: "synthetic-receipt".into(),
+            attempts: vec![kairo_core::Attempt {
+                anchor: "synthetic".into(),
+                at: 100,
+                completed_at: Some(102),
+                before: Quota {
+                    duration: 18000,
+                    used: 0.,
+                    reset_at: 18100,
+                    remaining: 18000,
+                },
+                after: None,
+                outcome: "request_ok_window_unconfirmed".into(),
+            }],
+            ..Default::default()
+        };
+        save_natural_receipt(
+            &store,
+            &state,
+            Some(90),
+            "idle:request_ok_window_unconfirmed",
+            102,
+            Some(200),
+        )
+        .unwrap();
+        save_natural_receipt(&store, &state, Some(90), "deferred", 200, Some(300)).unwrap();
+        save_natural_receipt(&store, &state, Some(90), "waiting", 201, Some(300)).unwrap();
+        let receipt: Value = store.read("natural-acceptance.json").unwrap();
+        assert_eq!(receipt["request_ok"], true);
+        assert_eq!(receipt["latest_natural_check"]["event"], "deferred");
+        assert_eq!(receipt["latest_natural_check"]["at"], 200);
+        drop(store);
+        fs::remove_dir_all(root).unwrap();
     }
     #[test]
     fn authenticated_account_contract() {

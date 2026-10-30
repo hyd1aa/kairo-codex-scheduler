@@ -322,7 +322,13 @@ pub fn run_due(store: &Store, state: &State, codex_home: &Path, now: i64) -> Res
 }
 pub fn summary(store: &Store, state: &State, tz: chrono_tz::Tz) -> Result<Value> {
     let ledger = read(store, state)?;
-    let latest = ledger.tasks.last();
+    let request = state.attempts.last();
+    let latest = request.and_then(|a| {
+        ledger
+            .tasks
+            .iter()
+            .find(|t| t.anchor == a.anchor && t.request_at == a.at)
+    });
     let local = |at: i64| {
         chrono::DateTime::from_timestamp(at, 0).map(|d| d.with_timezone(&tz).to_rfc3339())
     };
@@ -330,7 +336,7 @@ pub fn summary(store: &Store, state: &State, tz: chrono_tz::Tz) -> Result<Value>
         json!({"recent_request_at":state.attempts.last().and_then(|a|local(a.at)),
         "recent_request_outcome":state.attempts.last().map(|a|a.outcome.as_str()),
         "confirmation_status":latest.map(|t|t.status.as_str()),
-        "request_success":latest.map(|t|t.request_success),
+        "request_success":request.and_then(|a|if a.outcome=="attempt_persisted_unknown" {None}else{Some(request_succeeded(a))}),
         "countdown_confirmed":latest.map(|t|t.countdown_confirmed),
         "time_correlated":latest.map(|t|t.time_correlated),
         "attribution_uncertain":latest.map(|t|t.attribution_uncertain),

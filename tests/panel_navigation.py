@@ -87,7 +87,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  # A saved lifecycle remains visible under 08, while 01 details uses full status JSON.
  (data/'state.json').write_text(json.dumps({'schema':1,'account':'synthetic-panel','last_clock':0,'attempts':[],'positive_until':1793300000,'pending':None,'observations':[],'weekly':None,'server_denied':True,'legacy_attempts':[]}));(data/'state.json').chmod(0o600)
  out=menu('08\n05\n\n00\n00\n');assert 'Window lifecycle (last saved state)' in out and '2026-' in out and 'Denied (automatic requests blocked)' in out
- out=menu('01\n02\n\n00\n00\n');assert '"prewarm_conditional": true' in out and f'"version": "{expected_version}"' in out and '"saved_state"' in out
+ out=menu('06\n10\n\n00\n00\n',modern=True);assert '"prewarm_conditional": true' in out and f'"version": "{expected_version}"' in out and '"saved_state"' in out
  (data/'state.json').write_text('{invalid')
  out=menu('01\n00\n00\n');assert 'Repair required' in out or '需要修复' in out
  (data/'state.json').unlink()
