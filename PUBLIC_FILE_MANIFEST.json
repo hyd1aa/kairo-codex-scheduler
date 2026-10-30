@@ -357,7 +357,7 @@
       "source_path": "crates/kairo-platform/src/activation.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "3eaff998d316fcccec37b03156c2f263e57b4f09d996ac0856686bbc7ecca43f"
+      "sha256": "d771cfe60aeb77042dfb54e6aac124834a17f3799af31e6368df8f3a33eadeb1"
     },
     {
       "path": "crates/kairo-platform/src/codex.rs",

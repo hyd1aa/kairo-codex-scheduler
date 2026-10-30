@@ -215,6 +215,9 @@ pub fn enable(root: &Path, ack: bool) -> Result<Value> {
     if !ack {
         bail!("cutover_approval_required / 需要明确生产切换批准；之后守护进程可能在满足安全门禁时发送预热请求");
     }
+    if std::env::var_os("KAIRO_OFFLINE").as_deref() == Some(std::ffi::OsStr::new("1")) {
+        bail!("offline_mode / 离线测试模式禁止真实服务切换");
+    }
     if unsafe { libc::geteuid() } != 0 || fs::canonicalize(root)? != Path::new("/var/lib/kairo") {
         bail!("managed_root_required / 自动切换仅支持 root 和标准 /var/lib/kairo 安装；开发目录不会修改真实服务");
     }
