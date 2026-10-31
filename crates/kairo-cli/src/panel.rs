@@ -1611,17 +1611,35 @@ fn records_page(cli: &Cli, en: bool) -> Result<()> {
                     }
                     println!("{}",t(en,"仅列出已保存记录；早期未保存的跳过记录无法补造。时间关联不等于排他因果证明。","Only saved history is listed; older unsaved skips cannot be reconstructed. Time correlation is not exclusive causation."));
                 } else {
-                    let record = view.records.iter().rev().find(|r| {
-                        matches!(
-                            r.kind,
-                            history::Kind::Failed
-                                | history::Kind::Blocked
-                                | history::Kind::Unknown
-                                | history::Kind::Unconfirmed
-                        )
-                    });
+                    let record = view
+                        .request
+                        .as_ref()
+                        .filter(|r| {
+                            matches!(
+                                r.kind,
+                                history::Kind::Failed
+                                    | history::Kind::Unknown
+                                    | history::Kind::Unconfirmed
+                            )
+                        })
+                        .or_else(|| {
+                            view.records.iter().rev().find(|r| {
+                                matches!(
+                                    r.kind,
+                                    history::Kind::Failed
+                                        | history::Kind::Blocked
+                                        | history::Kind::Unknown
+                                        | history::Kind::Unconfirmed
+                                )
+                            })
+                        });
                     if let Some(r) = record {
-                        println!("{}\n{}", r.label(en), r.explanation(en));
+                        println!(
+                            "{}  {}\n{}",
+                            r.at.map(|at| human(at, en)).unwrap_or_else(|| "—".into()),
+                            r.label(en),
+                            r.explanation(en)
+                        );
                     } else {
                         println!(
                             "{}",

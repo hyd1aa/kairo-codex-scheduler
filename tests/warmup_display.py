@@ -35,7 +35,9 @@ with tempfile.TemporaryDirectory(prefix='kairo-evidence-') as temp:
  failed={**attempt,'anchor':'synthetic-failure','at':done+200,'completed_at':done+202,'before':{**before,'reset_at':done+200+18000},'outcome':'request_failed'}
  state['last_clock']=done+202;state['attempts'].append(failed);write('state.json',state)
  out=menu();assert '✗ 预热请求失败' in out and '预热结果: ✓' not in out
+ write('status.json',dict(event='attempt_guard',at=done+250))
  out=menu('01\n03\n\n00\n00\n');assert '模型请求未成功' in out
+ (data/'status.json').unlink()
  state['attempts']=[attempt];write('state.json',state);(data/'confirmations.json').unlink()
  out=menu();assert '请求成功，等待倒计时确认' in out and '预热结果: ✓' not in out
  state['attempts']=[];state['last_clock']=0;write('state.json',state);(data/'recovery.json').unlink()
