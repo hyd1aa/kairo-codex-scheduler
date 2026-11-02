@@ -181,6 +181,16 @@ if modern:
  foreign=pathlib.Path('/home/kairo/.codex');foreign.mkdir(mode=0o700)
  foreign_auth=foreign/'auth.json';foreign_auth.write_text('synthetic-unrelated-user-login')
  owner=pwd.getpwnam('kairo');os.chown(foreign,owner.pw_uid,owner.pw_gid);os.chown(foreign_auth,owner.pw_uid,owner.pw_gid);foreign_auth.chmod(0o600)
+ # Missing runtime on a non-root installation must resolve that user's home,
+ # not adopt the root upgrader's OAuth directory.
+ owned=pathlib.Path(tempfile.mkdtemp(prefix='kairo-owned-runtime-'))
+ call([str(binary),'--data-dir',str(owned),'init'])
+ (owned/'runtime.json').unlink();(owned/'.runtime.json.previous').unlink(missing_ok=True)
+ for p in [owned,*owned.iterdir()]:os.chown(p,owner.pw_uid,owner.pw_gid)
+ call([str(binary),'--data-dir',str(owned),'migrate'])
+ runtime=json.loads((owned/'runtime.json').read_text())
+ assert runtime['home']==owner.pw_dir and runtime['codex_home']==owner.pw_dir+'/.codex'
+ assert (owned/'runtime.json').stat().st_uid==owner.pw_uid
  call(['bash','/source/uninstall.sh','--purge-data','--confirm','DELETE-KAIRO-DATA'])
  assert foreign_auth.read_text()=='synthetic-unrelated-user-login'
  assert auth.is_file() and not state.exists()

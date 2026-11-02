@@ -739,9 +739,21 @@
     "en": "cursor invalid",
     "zh": "调度游标无效"
   },
+  "custom_initialization_unit": {
+    "en": "custom initialization unit",
+    "zh": "保留自定义初始化任务"
+  },
+  "custom_service_dropin": {
+    "en": "custom service dropin",
+    "zh": "保留自定义服务配置"
+  },
   "custom_service_override": {
     "en": "custom service override",
     "zh": "存在自定义或运行时覆盖，禁止自动接管"
+  },
+  "custom_service_unit": {
+    "en": "custom service unit",
+    "zh": "保留自定义服务配置，请检查诊断"
   },
   "cutover_approval_required": {
     "en": "cutover approval required",
@@ -959,6 +971,10 @@
     "en": "legacy attempts invalid",
     "zh": "旧调用历史结构无效"
   },
+  "legacy_helper_unsafe": {
+    "en": "legacy helper unsafe",
+    "zh": "更新辅助文件不安全"
+  },
   "legacy_history_invalid": {
     "en": "legacy history invalid",
     "zh": "旧窗口历史结构无效"
@@ -978,6 +994,14 @@
   "legacy_schema_invalid": {
     "en": "legacy schema invalid",
     "zh": "旧状态版本或账号指纹不匹配"
+  },
+  "legacy_service_handoff_failed": {
+    "en": "legacy service handoff failed",
+    "zh": "旧服务自动迁移失败，请检查 systemd"
+  },
+  "legacy_service_unsafe": {
+    "en": "legacy service unsafe",
+    "zh": "旧服务文件权限或所属用户无法验证"
   },
   "legacy_status_unknown": {
     "en": "legacy status unknown",
@@ -1035,9 +1059,13 @@
     "en": "managed installer missing",
     "zh": "需要通过在线安装器安装"
   },
+  "managed_marker_invalid": {
+    "en": "managed marker invalid",
+    "zh": "安装标记无效"
+  },
   "managed_root_required": {
     "en": "managed root required",
-    "zh": "自动切换仅支持 root 和标准 /var/lib/kairo 安装；开发目录不会修改真实服务"
+    "zh": "服务目录不安全"
   },
   "managed_service_changed": {
     "en": "managed service changed",
@@ -1426,6 +1454,10 @@
   "run_the_scheduler;_observation_until_explicitly_activated": {
     "en": "Run the scheduler; observation until explicitly activated",
     "zh": "运行调度器，明确批准前仅观察"
+  },
+  "runtime_group_missing": {
+    "en": "runtime group missing",
+    "zh": "服务所属组不存在"
   },
   "runtime_invalid": {
     "en": "runtime invalid",

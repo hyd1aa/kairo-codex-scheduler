@@ -230,7 +230,9 @@ pub fn migrate(store: &Store) -> Result<()> {
             use std::os::unix::fs::MetadataExt;
             let owner = fs::metadata(&store.root)?.uid();
             let mut r = Runtime::default();
-            if fs::metadata(&r.home).map_or(true, |m| m.uid() != owner) {
+            if std::env::var_os("HOME").is_none()
+                || fs::metadata(&r.home).map_or(true, |m| m.uid() != owner)
+            {
                 let user = unsafe { libc::getpwuid(owner) };
                 if user.is_null() {
                     bail!("runtime_user_missing / 服务所属用户不存在");

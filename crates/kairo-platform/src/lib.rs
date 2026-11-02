@@ -555,3 +555,5 @@ pub mod onboarding;
 pub mod automatic;
 
 pub mod codex_auth;
+
+mod legacy_service;

@@ -25,6 +25,8 @@ All identities, quota responses, requests and OAuth renewal responses in accepta
 | Rust CLI and bilingual terminal | Pass: CLI/process/transaction suite, bilingual PTY navigation, NO_COLOR, dumb terminal, small-screen, EOF, SIGINT and closed-pipe regressions. README menus are compared to the shipping binary. |
 | No new login/authorization on upgrade | Pass: v0.2.5 state/OAuth paths retained. Managed token renewal is delegated to official CLI account/read with refreshToken=true after HTTP401; the renewal protocol test permits only initialize/initialized/account/read. No thread/turn/reset API is called. |
 
+A one-time legacy cached-installer handoff is tested with an owned temporary filesystem and mocked systemd commands: exact old units are retired, helpers are refreshed, repeated calls are no-ops and custom units remain untouched.
+
 The installer additionally tests SHA256, TLS failure, malformed packages, wrong versions, interrupted downloads, state retention and uninstall. CI repeats current-binary installer acceptance and previous-release compatibility. Release candidates build each real architecture on its native runner.
 
 The local system's timezone is Asia/Shanghai. Synthetic scheduling cases specify UTC and Asia/Shanghai explicitly. Default checks retain the configured safety buffer; a window expiring just after an anchor can make the following anchor ineligible. The UI reports a later configured opportunity instead of claiming a new window was activated.

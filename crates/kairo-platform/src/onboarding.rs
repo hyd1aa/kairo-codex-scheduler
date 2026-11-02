@@ -148,6 +148,9 @@ pub fn prepare(_root: &Path) -> Result<()> {
     Ok(())
 }
 pub fn tick(root: &Path) -> Result<Value> {
+    if crate::legacy_service::retire(root)? {
+        return Ok(json!({"status":"daemon_managed_initialization","forced_model_requests":0}));
+    }
     crate::automatic::ensure(&Store::open(root)?)
 }
 pub(crate) fn require_intent(store: &Store, account: &str) -> Result<()> {

@@ -52,6 +52,8 @@ sudo kairo update online
 
 Upgrades preserve schedules, OAuth paths, request/confirmation history, account guards and explicit pauses. Partial state is reconstructed from surviving valid records and verified server quota. Corrupt or mismatched records block execution and remain intact. Old recovery records remain as migration evidence; their fixed timer leaves the normal execution path. `onboard` and `enable` remain compatible start commands without production approval or exclusivity confirmation.
 
+If v0.2.5's cached updater rejects missing records before loading the new binary, rerun the install command above to use the verified new updater. No recovery command or new OAuth is needed. Only absent primary records can use valid backups; corrupt originals are never silently replaced.
+
 Uninstall preserves state by default:
 
 ```sh
