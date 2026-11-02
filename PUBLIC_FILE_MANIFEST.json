@@ -280,7 +280,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "85f3198c544594a6c0b33954269bfab956baf1ce282fc270a44ffe902f2d27ad",
+      "sha256": "a7aa538129c2c1dc8aac05880e817673e7d69d43e7c48df6742054b22c48c05a",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -313,7 +313,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "2a0d1d9198d0aa5312c2e3602740628751cb04d3f3e2b107d0fa47706a5388a5"
+      "sha256": "f7f999fe7f1a732b59218853ad391510861c2f41335cc2341910de14ed1b57f6"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",

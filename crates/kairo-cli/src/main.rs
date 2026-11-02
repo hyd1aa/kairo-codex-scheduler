@@ -1626,6 +1626,16 @@ mod tests {
             possible_prewarm(&next, &quota, &config, 0, None, tz).as_deref(),
             Some("2026-11-02T21:00:30+08:00")
         );
+        let mut boundary = quota.clone();
+        boundary["five_hour"]["reset_at"] = json!(chrono::DateTime::parse_from_rfc3339(
+            "2026-11-02T21:00:00+08:00"
+        )
+        .unwrap()
+        .timestamp());
+        assert_eq!(
+            possible_prewarm(&next, &boundary, &config, 0, None, tz).as_deref(),
+            Some("2026-11-02T21:00:30+08:00")
+        );
     }
     #[test]
     fn prewarm_estimate_refuses_denial_and_weekly_exhaustion() {

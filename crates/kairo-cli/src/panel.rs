@@ -1705,7 +1705,8 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
     let next = plan(
         &config,
         timezone()?,
-        chrono::DateTime::from_timestamp(eligible, 0).context("clock_invalid")?,
+        chrono::DateTime::from_timestamp(if eligible > now { eligible - 1 } else { now }, 0)
+            .context("clock_invalid")?,
         72,
     )?
     .first()
