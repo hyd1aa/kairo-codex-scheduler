@@ -15,7 +15,7 @@ mock=work/'tools';mock.mkdir();(work/'base').write_text(base)
 printf '%s\\n' "$*" >> /tmp/systemctl-calls
 case "$*" in *kairo-onboarding*) exit 0;; esac
 case "$1" in
- enable) case "$*" in *--now*) touch /tmp/service-active;; esac;;
+ enable) case "$*" in *--now*) test ! -f /tmp/fail-start || exit 1; touch /tmp/service-active;; esac;;
  show)
   case "$*" in
    *LoadState*) test ! -f /etc/systemd/system/kairo.service && echo not-found || echo loaded;;
@@ -26,7 +26,7 @@ case "$1" in
   esac;;
  is-active) test -f /tmp/service-active;;
  stop|disable) rm -f /tmp/service-active;;
- start) test ! -f /tmp/fail-start || exit 1; touch /tmp/service-active;;
+ start|restart) test ! -f /tmp/fail-start || exit 1; touch /tmp/service-active;;
  *) exit 0;;
 esac
 ''')

@@ -1319,7 +1319,7 @@
     },
     {
       "path": "tests/online_install_guest.py",
-      "sha256": "46d029aa1bbffd5da60f6be861306bff122e8c33a4ee2b929f252a54927d46a8",
+      "sha256": "b3d1ace4af85facb0a408d20fbb1e6e32220aafb32e7e005514fbdae4fc6e536",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
