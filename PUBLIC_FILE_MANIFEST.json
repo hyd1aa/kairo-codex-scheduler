@@ -747,7 +747,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "6849f6514d18249b969146d187f41cb39cc72cdeff6fac7c04395fec1f476ac4",
+      "sha256": "01db645bef25fafb97b4fb8b46701dc2021c726dd3a18dac7e2b0c11bcf6f8e6",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",

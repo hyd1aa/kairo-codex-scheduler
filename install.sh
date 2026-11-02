@@ -134,8 +134,12 @@ chmod 700 /var/lib/kairo-installer
 [[ ! -L /var/lib/kairo-installer/online.lock ]] || exit 1
 exec 9>/var/lib/kairo-installer/online.lock
 flock -n 9 || fail '另一个安装或更新正在运行' 'Another installation or update is running'
+# Detect the selected service user's existing native CLI before downloading one.
+cli_user=${SUDO_USER:-$(id -un)}
+if [[ -f /var/lib/kairo/runtime.json && ! -L /var/lib/kairo ]]; then cli_user=$(stat -c %U /var/lib/kairo); fi
+cli_home=$(getent passwd "$cli_user" | cut -d: -f6)
 # Install the official native CLI only if absent; never authenticate or overwrite an existing CLI.
-if (( !skip_codex )) && [[ ! -x /usr/local/bin/codex && ! -x /usr/bin/codex && ! -x /home/kairo/.local/bin/codex ]]; then
+if (( !skip_codex )) && [[ ! -x "$cli_home/.local/bin/codex" ]] && [[ ! -x /usr/local/bin/codex && ! -x /usr/bin/codex && ! -x /home/kairo/.local/bin/codex ]]; then
  codex_version=0.164.0
  case $target in
   x86_64*) codex_arch=x86_64; codex_sha=90dd0b03b28afcb7fa733a4f73b413db2916a47347efd43fb669cc1c774ee8e4;;
