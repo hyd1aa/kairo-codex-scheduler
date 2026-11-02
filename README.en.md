@@ -1,8 +1,8 @@
 # Kairo
 
-A small Rust tool that automatically warms Codex five-hour quota windows. [中文](README.md)
+A lightweight Rust tool that warms up Codex five-hour quota windows at configured times. [中文](README.md)
 
-Install → complete official Codex OAuth → automatic initialization and safe recovery → automatic warmup. Kairo never increases or bypasses official quotas.
+Install → detect official Codex login → stand by automatically → check quota and warm up when eligible.
 
 ## Install
 
@@ -10,35 +10,17 @@ Install → complete official Codex OAuth → automatic initialization and safe 
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/install.sh | sudo bash'
 ```
 
-The fixed command selects the latest stable release, verifies the native binary and prepares Codex CLI, the dedicated service account and systemd. **Installing authorizes automatic warmup once safe. Pause any time in menu04.** Upgrades preserve existing authorization, pauses, schedules, OAuth and request history.
+Downloads the latest stable GitHub release, verifies SHA256 and provisions a native binary with systemd boot startup. **Installing authorizes automatic warmup within quota and safety limits. Pause at any time in menu03.** Users complete official OAuth and MFA themselves.
 
-## Read the dashboard
+New installations use the installing user's official Codex directory (SUDO_USER under sudo), without copying or editing official credentials. Login before installation is detected and verified. Login after installation is detected automatically; no restart, binding or enable command is needed. Run `codex login` as the installing user, or use menu04. Upgrades preserve the existing service user and OAuth directory.
 
-```text
-Automatic warmup: Enabled; running normally
-Last warmup: Today 06:08
-Warmup result: ✓ Request succeeded; five-hour countdown confirmed (time-correlated; attribution uncertain)
-Next scheduled check: Today 11:00
-Five-hour quota: Remaining 100.0%
-Weekly quota: Remaining 60.0%
-Quota last queried: Today 06:10 (cached, not live)
-```
+## Scheduling
 
-Illustrative layout only: all actual results, times and percentages come from saved evidence. **A running service or 100% remaining quota is not proof of a successful warmup.** A green result requires a successful request plus the existing validated countdown confirmation. Time correlation does not prove exclusive causation; other clients may affect the window.
+Missing local history does not trigger a fixed five-hour wait. Kairo verifies credential ownership, server account identity and both quota windows, then establishes a local baseline. Unverifiable quotas, changed accounts and explicit local scheduler conflicts stop requests with a reason.
 
-Menu **01** refreshes quota read-only and shows the latest request, confirmation time, saved recent history and failure details. ○ means awaiting/unverified confirmation or an active window that needs no request; ! means a safety gate prevented execution; ✗ means the request failed. Missing old evidence says “No verifiable history”, never an invented success. Confirmed results survive restarts and upgrades.
+Default local times are 06:00, 11:00, 16:00 and 21:00. Add, edit or remove them in menu02. If a window remains active at16:00, that slot is skipped and a later configured opportunity is selected. No implicit reset-time request is sent and skipping is never reported as successful activation. Each real request rechecks quota and persists its reservation first. Failed requests retain evidence and apply a safe backoff. Missed slots are not replayed in a burst after downtime.
 
-“Next scheduled check” is a check, not a promise to send a model request. Completed recovery deadlines are hidden. Cached quota always shows its query time; old caches are labelled stale. Raw JSON and logs remain in **06 More settings**.
-
-## Codex login and automatic recovery
-
-The installer reuses an existing service-account Codex login. On a fresh installation it can securely import the invoking administrator’s private Codex CLI OAuth, without printing tokens or overwriting service credentials. Browser login is not VPS Codex CLI authorization.
-
-In an interactive terminal, missing OAuth opens the official device login. Without a terminal, installation does not block: run `sudo kairo`, choose **03**, then login. After login, initialization continues in the background.
-
-Other machines cannot be inspected reliably. Confirm once that this account has no competing schedulers, and avoid manual requests during recovery (**04 → Start**, answer `yes`). This confirmation is the only required exception to unattended enablement. Noninteractive installation waits safely for it.
-
-Missing history is always unknown, including apparently new accounts. The program automatically starts conservative recovery (at least 5h6m30s), rechecks read-only quotas and enables scheduling when safe. Activity may extend the wait; network failures back off. No FRESH / RECOVER / ENABLE strings or deadline commands are needed. Service restart and upgrade preserve progress. After an OS reboot, credited waiting is retained; unverifiable downtime does not count. Corrupt or foreign guard records require repair and are never silently overwritten.
+The server can describe an idle window with zero usage and a fresh full duration. Warmup requires valid quota evidence and local duplicate guards. Kairo does not reset, accelerate or bypass official limits. Server quota cannot prove complete request history on other machines or identify every concurrent scheduler. Cross-machine absolute deduplication is not guaranteed.
 
 ## Menu
 
@@ -48,19 +30,19 @@ sudo kairo
 
 | Number | Menu |
 | --- | --- |
-| 01 | Quota and warmup history |
+| 01 | Status and quota |
 | 02 | Warmup schedule |
-| 03 | Codex account |
-| 04 | Start / pause warmup |
-| 05 | Check updates |
-| 06 | More settings |
+| 03 | Start / pause |
+| 04 | Codex login and account |
+| 05 | Updates / more settings |
+| 06 | Exit |
 | 00 | Exit Kairo |
 
-Number + Enter opens a separate page; 00 goes back. Advanced settings contains logs, diagnostics, maintenance recovery, parameters, services, language, help and uninstall. **04 pauses automatic initialization as well as warmup.**
+The home screen shows enabled status, login, last request result, next opportunity and actual cached quota. Local times use today/tomorrow. Quota includes its read time; stale data is labelled. Chinese, English, SSH, tmux and small terminals use numbers plus Enter, with00 to return. Logs, service controls, language, diagnostics and uninstall are in menu05.
 
-## Schedule, status, update and uninstall
+Success requires an actual successful request and subsequent countdown evidence. Until then the result remains pending or unconfirmed. Advanced diagnostics retain evidence and attribution limitations.
 
-Use menu02 to change warmup times. Defaults: 06:00 / 11:00 / 16:00 / 21:00 in the system timezone. Advanced CLI commands remain compatible.
+## Upgrade and compatibility
 
 ```sh
 kairo status
@@ -68,12 +50,22 @@ kairo --json status
 sudo kairo update online
 ```
 
-Uninstall (stops services, keeps account data and OAuth):
+Upgrades preserve schedules, OAuth paths, request/confirmation history, account guards and explicit pauses. Partial state is reconstructed from surviving valid records and verified server quota. Corrupt or mismatched records block execution and remain intact. Old recovery records remain as migration evidence; their fixed timer leaves the normal execution path. `onboard` and `enable` remain compatible start commands without production approval or exclusivity confirmation.
+
+Uninstall preserves state by default:
 
 ```sh
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/uninstall.sh | sudo bash'
 ```
 
-An active systemd service alone does not prove warmup is enabled: check `automatic_warmup_enabled: true`. Existing v0.2.3 observers opt in once via menu04; an upgrade never grants new authorization or cancels an existing pause.
+## Development
 
-[Technical details](docs/AUTOMATIC_INITIALIZATION.md) · [Advanced commands](docs/ADVANCED.en.md) · [Install details](docs/INSTALL.md) · [Latest release](https://github.com/hyd1aa/kairo-codex-scheduler/releases/latest)
+```sh
+KAIRO_OFFLINE=1 CARGO_BUILD_JOBS=1 sh scripts/verify.sh
+```
+
+Tests use synthetic identities, mocked official quotas and mocked requests, never real model quota. Installation acceptance belongs in disposable containers or guests, never production instances or credentials.
+
+[MIT License](LICENSE) · [Source provenance](SOURCE_ORIGIN.json)
+
+[Full mocked acceptance results](docs/ACCEPTANCE_0.2.6.md)

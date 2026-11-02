@@ -68,18 +68,18 @@ exit 99''')
     call('service','stop codex-window-scheduler.service',ok=False);call('logs');call('logs','--lines','10001',ok=False)
     call('auth','login',ok=False);call('help-info');call('validate');call('migrate')
     # Actual numbered menu, submenu, persistent language toggle and EOF handling.
-    master,slave=pty.openpty();menuenv=dict(env);menuenv.pop('NO_COLOR',None)
+    master,slave=pty.openpty();menuenv=dict(env);menuenv.pop('NO_COLOR',None);menuenv['TERM']='xterm-256color'
     p=subprocess.Popen([binary,'--data-dir',str(root)],stdin=slave,stdout=slave,stderr=slave,env=menuenv);os.close(slave)
-    os.write(master,b'02\n1\n\n00\n06\n06\n01\n00\n00\n');out=b'';deadline=time.monotonic()+15
+    os.write(master,b'05\n06\n00\n');out=b'';deadline=time.monotonic()+15
     while time.monotonic()<deadline:
         if select.select([master],[],[],.1)[0]:
             try:out+=os.read(master,65536)
             except OSError:break
         if p.poll() is not None:break
     assert p.wait(timeout=5)==0;os.close(master);text=out.decode(errors='replace')
-    assert '查看额度和预热记录' in text and 'Quota and warmup history' in text and '\x1b[34m' in text
+    assert '查看状态与额度' in text and 'Status and quota' in text and '\x1b[34m' in text,text[-6000:]
     checks+=1
-    for language,label in [('zh-CN','查看额度和预热记录'),('en-US','Quota and warmup history')]:
+    for language,label in [('zh-CN','查看状态与额度'),('en-US','Status and quota')]:
         call('lang',language)
         master,slave=pty.openpty()
         fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack('HHHH',24,40,0,0))
@@ -100,7 +100,9 @@ exit 99''')
     converted=call('migrate','--legacy',str(old),'--legacy-account','a'*16,'--legacy-timezone','Asia/Shanghai','--account','b'*64,'--dry-run')
     assert len(converted['state']['legacy_attempts'])==2 and converted['state']['pending'] is None and not (root/'state.json').exists()
     # Full offline daemon, identical engine and shared durable account gate.
-    n=1792387044
+    n=1792396830
+    start=1792378830
+    reset=1792387014
     def usage(now,used=0,weekly=49,denied=False,active_reset=None):
         def window(d,u):return dict(limit_window_seconds=d,used_percent=u,reset_at=now+d,reset_after_seconds=d)
         f=window(18000,used)
@@ -114,9 +116,9 @@ exit 99''')
         cursor=dict(schema=1,timezone=ticks[0]['timezone'],observed=now,due=due if due is not None else now,anchor='2026-10-19/11:00',cutoff=1792425600,finished=[],config_signature='')
         path=base/(name+'.json');path.write_text(json.dumps(dict(state=state,cursor=cursor,ticks=ticks)));return where,path
     def tick(now,**options):return dict(now=now,timezone=options.pop('timezone','Asia/Shanghai'),usage=options.pop('usage',usage(now)),**options)
-    where,f=fixture('timeline',[tick(n-8214,usage=usage(n-8214,used=2,active_reset=n-30)),tick(n,completed_at=n+5,after=usage(n+5)),tick(n+5)])
+    where,f=fixture('timeline',[tick(start,usage=usage(start,used=2,active_reset=reset)),tick(n,completed_at=n+5,after=usage(n+5)),tick(n+5)])
     p=raw(['daemon','--fixture',str(f)],where);events=[json.loads(l) for l in p.stdout.splitlines()]
-    assert events[0]['event']=='deferred' and events[1]['simulated_calls']==1 and events[-1]['simulated_calls']==1
+    assert events[0]['event']=='current_window_active' and events[1]['simulated_calls']==1 and events[-1]['simulated_calls']==1
     state=json.loads((where/'state.json').read_text());assert state['attempts'][0]['at']==n and state['attempts'][0]['completed_at']==n+5 and state['attempts'][0]['outcome']=='request_ok_window_unconfirmed' and state['pending'] is None
     acceptance=call('acceptance',where=where)
     assert acceptance['pending_confirmation'] is True and acceptance['request_success'] is True and acceptance['countdown_confirmed'] is False
@@ -136,12 +138,12 @@ exit 99''')
     call('update','rollback','--prefix',str(confirm_prefix),where=where)
     assert (where/'confirmations.json').read_bytes()==confirmation_before
     assert all(e['model_requests']==0 for e in events)
-    dense_time=n-8214+3600
-    dense,df=fixture('dense',[tick(n-8214,usage=usage(n-8214,used=2,active_reset=n-30)),tick(dense_time-1,usage=usage(dense_time-1,used=2,active_reset=n-30)),tick(dense_time,usage=usage(dense_time,used=2,active_reset=n-30)),tick(n,completed_at=n+5,after=usage(n+5)),tick(n+5)])
+    dense_time=start+3600
+    dense,df=fixture('dense',[tick(start,usage=usage(start,used=2,active_reset=reset)),tick(dense_time-1,usage=usage(dense_time-1,used=2,active_reset=reset)),tick(dense_time,usage=usage(dense_time,used=2,active_reset=reset)),tick(n,completed_at=n+5,after=usage(n+5)),tick(n+5)])
     call('schedule','add','12:00',where=dense)
     events=[json.loads(l) for l in raw(['daemon','--fixture',str(df)],dense).stdout.splitlines()]
-    assert events[2]['event']=='deferred' and events[-1]['simulated_calls']==1
-    assert '2026-10-19/12:00' in json.loads((dense/'cursor.json').read_text())['finished']
+    assert events[2]['event']=='waiting' and events[-1]['simulated_calls']==1
+    assert events[2]['simulated_calls']==0
     for name,u in [('weekly',usage(n,weekly=100)),('denial',usage(n,denied=True))]:
         where,f=fixture(name,[tick(n,usage=u)]);p=raw(['daemon','--fixture',str(f)],where);assert json.loads(p.stdout)['simulated_calls']==0
     shared=hashlib.sha256(b'shared').hexdigest()
@@ -163,12 +165,12 @@ exit 99''')
     raw(['daemon','--fixture',str(f)],where,ok=False)
     p.send_signal(signal.SIGTERM);assert p.wait(timeout=5)==0
     # Adding a future anchor while an earlier anchor waits must preserve that reset.
-    keep,kf=fixture('hot-keep',[tick(n-8214,usage=usage(n-8214,used=2,active_reset=n-30)),tick(n-8213)])
+    keep,kf=fixture('hot-keep',[tick(start,usage=usage(start,used=2,active_reset=reset)),tick(start+1)])
     p=subprocess.Popen([binary,'--data-dir',str(keep),'daemon','--fixture',str(kf),'--poll-ms','500','--hold'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True);running.append(p)
-    assert json.loads(p.stdout.readline())['event']=='deferred'
+    assert json.loads(p.stdout.readline())['event']=='current_window_active'
     call('schedule','add','14:00',where=keep)
     assert json.loads(p.stdout.readline())['event']=='config_replanned'
-    assert json.loads((keep/'cursor.json').read_text())['due']==n and json.loads((keep/'state.json').read_text())['pending']==n
+    assert json.loads((keep/'cursor.json').read_text())['anchor']=='2026-10-19/14:00' and json.loads((keep/'state.json').read_text())['pending'] is None
     p.send_signal(signal.SIGTERM);assert p.wait(timeout=5)==0
     # Transactional installation and failure recovery.
     prefix=base/'install';data=prefix/'var/lib/kairo';checksum=hashlib.sha256(pathlib.Path(binary).read_bytes()).hexdigest()
@@ -217,7 +219,7 @@ exit 86''');crashsha=hashlib.sha256(crash.read_bytes()).hexdigest()
     shell('bootstrap.sh','example/kairo','0.2.1',checksum,prefix)
     stage=base/'system-stage';shell('system-install.sh',binary,checksum,'root',stage);assert (stage/'etc/systemd/system/kairo.service').exists()
     # Re-provisioning an existing live unit must not reintroduce observation mode.
-    mode=stage/'etc/systemd/system/kairo.service.d/20-mode.conf';mode.unlink()
+    mode=stage/'etc/systemd/system/kairo.service.d/20-mode.conf';assert not mode.exists()
     shell('system-install.sh',binary,checksum,'root',stage);assert not mode.exists()
     versioned=stage/'opt/kairo';vd=stage/'var/lib/kairo'
     old_target=os.readlink(versioned/'current');assert old_target.startswith('releases/'+raw(['--version']).stdout.strip().split()[-1]+'-')

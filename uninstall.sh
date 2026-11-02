@@ -86,7 +86,12 @@ try:
   if not stat.S_ISREG(s.st_mode) or s.st_uid!=0:raise RuntimeError('Unknown unit ownership/type')
   text=unit.read_text()
   # Fixed managed service identity; never stop an unrelated replacement service.
-  required=['User=kairo','Group='+grp.getgrgid(pwd.getpwnam('kairo').pw_gid).gr_name,'Environment=HOME=/home/kairo','ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon','KillMode=control-group']
+  user_line=next((line[5:] for line in text.splitlines() if line.startswith('User=')),None)
+  if not user_line:raise RuntimeError('Missing service user')
+  service_user=pwd.getpwnam(user_line)
+  data=pathlib.Path('/var/lib/kairo')
+  if data.exists() and data.stat().st_uid!=service_user.pw_uid:raise RuntimeError('Service/state owner mismatch')
+  required=['User='+service_user.pw_name,'Group='+grp.getgrgid(service_user.pw_gid).gr_name,'Environment=HOME='+service_user.pw_dir,'ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon','KillMode=control-group']
   if any(line not in text.splitlines() for line in required):raise RuntimeError('kairo.service differs from managed service identity; refusing removal')
  if exists(drop) and drop.is_symlink():raise RuntimeError('Unsafe service drop-in directory')
  for name in ['kairo-onboarding.timer','kairo-onboarding.service']:
@@ -169,8 +174,9 @@ try:
  left=residuals()
  if left:raise RuntimeError('保留未知残留，未完全卸载 / Unknown residuals preserved: '+', '.join(left))
  if purge:
-  user=pwd.getpwnam('kairo')
-  if user.pw_dir!='/home/kairo':raise RuntimeError('Unexpected user home; refusing purge')
+  try:user=pwd.getpwnam('kairo')
+  except KeyError:user=None
+  if user is not None and user.pw_dir!='/home/kairo':raise RuntimeError('Unexpected user home; refusing purge')
   for path in map(pathlib.Path,retained[:3]):
    if path.is_symlink():raise RuntimeError('Refusing linked data path: '+str(path))
   for path in map(pathlib.Path,retained[:3]):

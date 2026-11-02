@@ -25,7 +25,7 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  def menu(text,extra=None,interrupt=False,modern=False):
   # Legacy feature-case paths mapped to the simplified shipping navigation.
   first, sep, rest = text.partition('\n')
-  mapping={'01':'01','02':'01','03':'02','04':'06\n05','05':'06\n01','06':'06\n09','07':'06\n02','08':'06\n04','09':'05','10':'06\n06','11':'06\n07','12':'06\n08'}
+  mapping={'01':'01','02':'01','03':'02','04':'05\n05','05':'05\n01','06':'05\n09','07':'05\n02','08':'05\n04','09':'05\n03','10':'05\n06','11':'05\n07','12':'05\n08'}
   normalized=f'{int(first):02}' if first.isdigit() else first
   if normalized in mapping and not modern:
    text=mapping[normalized]+sep+rest
@@ -53,58 +53,33 @@ for n in range(65):print(json.dumps({'MESSAGE':json.dumps({'event':'observation_
  def plain(s):return re.sub(r'\x1b\[[0-9;]*[mHJ]','',s).replace('\r','')
  for lang in ('zh-CN','en-US'):
   direct('lang',lang)
-  for name in ('onboarding.json','onboarding-status.json'):(data/name).unlink(missing_ok=True)
-  menu('03\n03\n\n02\n\n00\n00\n',modern=True)
-  menu('04\n01\nno\n00\n00\n',modern=True)
-  assert not (data/'onboarding.json').exists()
-  menu('04\n01\nyes\n\n00\n00\n',modern=True)
-  intent=json.loads((data/'onboarding.json').read_text());assert intent['requested'] and intent['exclusive_account'] and intent['account']
-  menu('04\n02\n\n00\n00\n',modern=True)
-  assert not json.loads((data/'onboarding.json').read_text())['requested']
-  menu('04\n01\n\n00\n00\n',modern=True) # one-time confirmation is remembered for the same account
+  menu('04\n03\n\n02\n\n00\n00\n',modern=True)
+  menu('03\n01\n\n00\n00\n',modern=True)
   assert json.loads((data/'onboarding.json').read_text())['requested']
-  direct('pause');assert not json.loads((data/'onboarding.json').read_text())['requested']
-  # Every top-level page returns exactly one level; invalid selection remains local.
-  for n in (1,2,3,4,5,6,7,8,9,11):
-   out=menu(f'{n:02}\n00\n00\n');assert 'Kairo / ' in out
-  out=plain(menu('03\n\n99\n01\n\n02\n02:00\n\n03\n02:00\n03:00\n\n04\n03:00\n\n05\n\n06\n\n07\n\n00\n00\n'))
-  assert out.count('[ K A I R O ]')==2,'Actions returned to main'
-  out=menu('04\n02\n\n03\n\n04\n\n01\n\n00\n00\n');assert out.count('[ K A I R O ]')==2
-  out=menu('04\n02\n\n00\n00\n',{'MOCK_START_FAIL':'1'});assert ('尚未运行' if lang=='zh-CN' else 'not active') in out
-  out=menu('05\n02\n03\n04\n05\n01\n00\n00\n');assert 'observation only' in out or '只读观察' in out or 'observation_only' in out
-  menu('06\n01\n\n02\n\n03\n\n04\n\n05\nsecondary\n'+temp+'\n\n06\nsecondary\n\n07\nsecondary\n\n08\nNO\n\n00\n00\n')
-  menu('06\n09\n02\n\n03\nNO\n\n04\nRECOVER\n\n05\n\n06\nENABLE\n\n07\n\n00\n00\n00\n')
-  menu('07\n01\n\n02\n\n00\n00\n')
-  menu('08\n02\ninvalid\n\n03\n301\n\n01\n\n07\n\n00\n00\n')
-  menu('08\n02\ntrue\n\n03\n30\n\n04\n\n05\n\n06\n\n00\n00\n')
-  menu('09\n01\n'+temp+'/missing-manifest\n\n02\n'+temp+'/missing-binary\n'+'0'*64+'\n'+temp+'/prefix\n\n04\n'+temp+'/prefix\n\n05\n'+temp+'/prefix\n\n06\n\n00\n00\n') # Offline check fails; never updates.
-  menu('11\n01\n\n02\n\n03\n\n00\n00\n')
-  menu('12\nno\n\n00\n');menu('12\nyes\nno\n\n00\n') # No uninstall executor invoked.
- # Distinguish valid OAuth discovery from missing binding/deployment and corrupt state.
- (root/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-panel','access_token':'synthetic-panel-placeholder'}}))
- (root/'auth.json').chmod(0o600)
- out=menu('01\n00\n00\n');assert 'Codex' in out and 'state.json' not in out
- # A saved lifecycle remains visible under 08, while 01 details uses full status JSON.
- (data/'state.json').write_text(json.dumps({'schema':1,'account':'synthetic-panel','last_clock':0,'attempts':[],'positive_until':1793300000,'pending':None,'observations':[],'weekly':None,'server_denied':True,'legacy_attempts':[]}));(data/'state.json').chmod(0o600)
- out=menu('08\n05\n\n00\n00\n');assert 'Window lifecycle (last saved state)' in out and '2026-' in out and 'Denied (automatic requests blocked)' in out
- out=menu('06\n10\n\n00\n00\n',modern=True);assert '"prewarm_conditional": true' in out and f'"version": "{expected_version}"' in out and '"saved_state"' in out
- (data/'state.json').write_text('{invalid')
- out=menu('01\n00\n00\n');assert 'Repair required' in out or '需要修复' in out
- (data/'state.json').unlink()
- out=menu('10\n00\n');assert json.loads((data/'config.json').read_text())['language']=='zh-CN'
- (data/'onboarding-status.json').write_text(json.dumps({'status':'login_required','reason':'Quota HTTP 401 Unauthorized'}));(data/'onboarding-status.json').chmod(0o600)
- out=menu('00\n',modern=True);assert '需要登录 Codex' in out and '登录已失效' in out and 'Quota HTTP' not in out
- direct('lang','en-US');out=menu('00\n',modern=True);assert 'Log in to Codex' in out and 'Login expired' in out and '登录已失效' not in out
- direct('lang','zh-CN');(data/'onboarding-status.json').unlink()
- out=menu('\n00\n',{'NO_COLOR':'1'});assert not re.search(r'\x1b\[[0-9;]*m',out);assert '\x1b[2J' in out and '\x1b[3J' not in out
- out=menu('00\n',{'TERM':'dumb'});assert '\x1b' not in out
- menu('\x04');menu('',interrupt=True)
+  menu('03\n02\n\n00\n00\n',modern=True)
+  assert not json.loads((data/'onboarding.json').read_text())['requested']
+  menu('03\n01\n\n00\n00\n',modern=True)
+  assert json.loads((data/'onboarding.json').read_text())['requested']
+  for n in (1,2,3,4,5):
+   out=menu(f'{n:02}\n00\n00\n',modern=True);assert 'Kairo / ' in out
+  out=plain(menu('02\n\n99\n01\n\n02\n02:00\n\n03\n02:00\n03:00\n\n04\n03:00\n\n05\n\n06\n\n07\n\n00\n00\n',modern=True))
+  assert out.count('[ K A I R O ]')==2
+  for path in ['05\n01\n00\n00\n00\n','05\n02\n01\n\n00\n00\n00\n','05\n03\n06\n\n00\n00\n00\n','05\n04\n01\n\n00\n00\n00\n','05\n07\n01\n\n00\n00\n00\n']:
+   menu(path,modern=True)
+  out=menu('05\n10\n\n00\n00\n',modern=True)
+  assert '"prewarm_conditional": true' in out and f'"version": "{expected_version}"' in out
+  out=menu('00\n',modern=True)
+  for internal in ['deployment.json','FRESH','RECOVER','ENABLE','生产切换','安全恢复复查']:
+   assert internal not in out
+  assert ('下次预热机会' if lang=='zh-CN' else 'Next warmup opportunity') in out
+  out=menu('00\n',{'NO_COLOR':'1'},modern=True);assert not re.search(r'\x1b\[[0-9;]*m',out)
+  out=menu('00\n',{'TERM':'dumb'},modern=True);assert '\x1b' not in out
+  menu('06\n',modern=True)
+ menu('\x04',modern=True);menu('',interrupt=True,modern=True)
  p=direct(ok=False);assert '\x1b' not in p.stdout+p.stderr
  v=json.loads(direct('--json','status').stdout);assert v['version']==expected_version and 'state_valid' in v
- v=json.loads(direct('--json','schedule','list').stdout);assert len(v['anchors'])==4
- v=json.loads(direct('--json','recover','status').stdout);assert v['classification']=='history_unknown' and not v['scheduler_state_ready']
- v=json.loads(direct('--json','doctor').stdout);assert not v['state_valid'] and v['existing_records_valid']
- for command in [('recover','begin'),('recover','begin','--acknowledge-unknown-history'),('recover','check'),('enable','--approve-production-cutover'),('activate','--account','bad','--approve-production-cutover')]:
-  p=direct('--json',*command,ok=False);assert 'error' in json.loads(p.stdout)
+ assert len(json.loads(direct('--json','schedule','list').stdout)['anchors'])==4
+ direct('--json','enable')
+ assert json.loads((data/'onboarding.json').read_text())['requested']
  assert not (data/'deployment.json').exists() and not (data/'state.json').exists()
-print(f'{checks} isolated bilingual menu/PTY sessions passed; JSON, EOF, SIGINT, NO_COLOR and terminal echo verified')
+print(f'{checks} bilingual PTY sessions passed; start/pause without confirmation, navigation, JSON, EOF, SIGINT and terminal modes verified')

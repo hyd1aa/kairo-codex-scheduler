@@ -92,10 +92,28 @@ pub fn verified_usage(id: &crate::Identity, v: &Value, now: i64) -> Result<(Quot
     }
     parse_usage(v, now)
 }
+pub(crate) fn quota_with_renewal(
+    store: &Store,
+    r: &Runtime,
+    expected: &crate::Identity,
+) -> Result<Value> {
+    match quota(expected) {
+        Ok(v) => Ok(v),
+        Err(e) if e.to_string().contains("HTTP 401") => {
+            crate::codex_auth::renew(store, r)?;
+            let id = identity(&r.codex_home.join("auth.json"))?;
+            if id.fingerprint != expected.fingerprint {
+                bail!("account_changed / 续期后账号变化，已暂停");
+            }
+            quota(&id)
+        }
+        Err(e) => Err(e),
+    }
+}
 pub fn verify(store: &Store) -> Result<Value> {
     let r = runtime(store)?;
     let id = identity(&r.codex_home.join("auth.json"))?;
-    let v = quota(&id)?;
+    let v = quota_with_renewal(store, &r, &id)?;
     let (f, w, d) = verified_usage(&id, &v, Utc::now().timestamp())?;
     Ok(
         json!({"account_fingerprint":id.fingerprint,"identity_server_verified":true,"five_hour":f,"weekly":w,"server_denied":d}),
@@ -310,7 +328,7 @@ impl Adapter for Live<'_> {
         if id.fingerprint != self.d.account {
             bail!("account_changed / 账号变化")
         };
-        let v = quota(&id)?;
+        let v = quota_with_renewal(self.store, &self.r, &id)?;
         verified_usage(&id, &v, Utc::now().timestamp())
     }
     fn enabled(&self) -> bool {
@@ -529,6 +547,14 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
     loop {
         let store = Store::open(root)?;
         let result = (|| -> Result<Value> {
+            if !observe_only {
+                let ready = crate::automatic::ensure(&store)?;
+                if ready["status"] != "ready" {
+                    return Ok(
+                        json!({"event":ready["status"],"at":Utc::now().timestamp(),"execution":"waiting"}),
+                    );
+                }
+            }
             if !observe_only
                 && !crate::onboarding::execution_paused(&store)?
                 && store.root.join("deployment.json").exists()
@@ -585,7 +611,11 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
             std::io::stdout().flush()?;
             previous = signature;
         }
-        let interval = runtime(&store).map(|r| r.interval_seconds).unwrap_or(1);
+        let interval = if failed {
+            60
+        } else {
+            runtime(&store).map(|r| r.interval_seconds).unwrap_or(1)
+        };
         drop(store);
         startup = failed;
         if once {

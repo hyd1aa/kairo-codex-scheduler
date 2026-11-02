@@ -68,8 +68,10 @@ binary=pathlib.Path('/opt/kairo/current/bin/kairo');original=hashlib.sha256(bina
 assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and pathlib.Path('/etc/systemd/system/kairo.service').exists()
 automatic = tuple(map(int,version.split('.'))) >= (0,2,4)
 assert pathlib.Path('/tmp/service-active').exists()==automatic
-assert 'daemon --observe' in pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').read_text()
-if automatic:
+modern = tuple(map(int,version.split('.'))) >= (0,2,6)
+if not modern: assert 'daemon --observe' in pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').read_text()
+else: assert not pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').exists()
+if automatic and not modern:
  assert json.loads((state/'onboarding.json').read_text())['requested']
  assert not json.loads((state/'onboarding.json').read_text())['exclusive_account']
  assert pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
@@ -77,6 +79,10 @@ if automatic:
  # Pause before any deployment exists must cancel automatic initialization durably.
  call(['kairo','pause'])
  assert not json.loads((state/'onboarding.json').read_text())['requested']
+if modern:
+ assert not pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
+ assert json.loads((state/'runtime.json').read_text())['codex_home']=='/root/.codex'
+ call(['kairo','pause'])
 assert not pathlib.Path('/home/kairo/.codex/auth.json').exists()
 call(entry);call(['kairo','schedule','add','03:37']);before=(state/'config.json').read_bytes()
 call(['kairo','update','online'])
@@ -136,12 +142,16 @@ assert state.exists() and (state/'config.json').read_bytes()==before
 if automatic:assert not pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
 auth.chmod(0o600)
 p=call(entry);assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and (state/'config.json').read_bytes()==before
-if automatic:
+if automatic and not modern:
  import pwd,stat
  copied=pathlib.Path('/home/kairo/.codex/auth.json')
  assert copied.read_bytes()==auth.read_bytes() and copied.stat().st_uid==pwd.getpwnam('kairo').pw_uid
  assert stat.S_IMODE(copied.stat().st_mode)==0o600
  assert 'synthetic-onboarding-placeholder' not in p.stdout+p.stderr
+ assert not json.loads((state/'onboarding.json').read_text())['requested']
+if modern:
+ assert auth.read_text().find('synthetic-onboarding-placeholder')>=0
+ assert not pathlib.Path('/home/kairo/.codex/auth.json').exists()
  assert not json.loads((state/'onboarding.json').read_text())['requested']
 server.shutdown();key.unlink()
 print(f'{count} focused HTTPS/install/update/refusal/recovery/uninstall checks passed; container with mocked systemd, zero real model requests')

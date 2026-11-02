@@ -43,7 +43,7 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "13a07da22ce0324bf3950d8a9b4a8bd9fe724de275402abc46f8162ca6e3f9a8",
+      "sha256": "f5e67505ff492c43d95d8fb5aaabdc2167c6f90f563aed7f6bd63253df739206",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -57,7 +57,7 @@
     },
     {
       "path": ".github/workflows/publish.yml",
-      "sha256": "9d4017a6f833167aa891fdc59230048a981757b3724b900d5da6e6214a8c02c6",
+      "sha256": "5cdddae5bf9e495ef6089f36da10f042fb8991cd8102f893e045804596bd46a7",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -70,7 +70,7 @@
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "3802a01ab7afda2f1810680aa3cd7b15ce65c8ff63f1b2b734be4bbfdf7bd10a",
+      "sha256": "bd4a7b69bab80681a205ad20dd64f83778d2376cb0d5be414ca129a063ed2344",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -132,7 +132,7 @@
     },
     {
       "path": "Cargo.lock",
-      "sha256": "3920747c3519f9e555ffb0b122642fdc17f1e19bfe0ba348641c3c47ffa20031",
+      "sha256": "009f66301ee2d46857c392a6b71b4e9c137847516fefd0fc2e4eac83563d15bd",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -143,7 +143,7 @@
     },
     {
       "path": "Cargo.toml",
-      "sha256": "e5ea17f5e1b0873996be0edbc3edb10944e8689c1581ee6e44d2e05f8cfe10f8",
+      "sha256": "d39457eca6278599d2ba0610ca4f73594d767518dd9f04bc4227a83964bfcd4e",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -176,7 +176,7 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "0c2edf0dca5a0718342549bbcd716c992880feb6575031033567369e6ec588ce",
+      "sha256": "044287bcb136be4baf2e693c308edd8a48abba479822d6a11582409e625b976d",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -191,7 +191,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "8acb2ba09d1fdc04e4cf6c3a9fa93130787e4a904a2e52817f31feb822dd1c2c",
+      "sha256": "9ed22a806f460d3c1d32ecb2cc131625f8368ce0b6577fe57fee5526f31d12d8",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -265,7 +265,7 @@
       "source_path": "crates/kairo-cli/src/history.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "a1e1593e4bfe1aee5ac4bb76bc238097cf33e3d9b0013da001efab7592e1ad0f"
+      "sha256": "3fd223337a817643d8bf0527992110537bd02ade648bf149ac1609410f60250e"
     },
     {
       "path": "crates/kairo-cli/src/i18n.rs",
@@ -280,7 +280,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "16a98cb9df1d97d9b2708500f92a126620bf46acbb6c6f8681e555927d9a7b8e",
+      "sha256": "6a62866b17f6f0c319ffa03f4a9cfc07fba75bb502420e6affc4488ed37a8f0c",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -293,7 +293,7 @@
     },
     {
       "path": "crates/kairo-cli/src/messages.json",
-      "sha256": "606ab6b1472fc33456e85f46a96c8035f90e3bde3bfadfdcdc0c7212b9491bcf",
+      "sha256": "1c3afeaf6c817492250caabdcdd997225899f4fcbb738cef5996291eb797ffea",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -313,7 +313,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "40a1680b05e6877905d8167ad946e84d13612dc25332e8c2e725b86729d5fedf"
+      "sha256": "e853517e7696f0872525a8d611332ba4f21ebae93d0d99a58d6b185a8bbcd318"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -368,7 +368,18 @@
       "source_path": "crates/kairo-platform/src/activation.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "2e3d887bb95ce0054e3075249c66b36d87fb4d699be61c385d6b6ac647fd984a"
+      "sha256": "46553bdad34124b6dd3a2cc1794ab163efdbff97a8d70354f16886840a93fa42"
+    },
+    {
+      "path": "crates/kairo-platform/src/automatic.rs",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "crates/kairo-platform/src/automatic.rs",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "c86e511ce881931bca8c7233a608e05d9fb9eb12ed89ae7628ab46122d67e377"
     },
     {
       "path": "crates/kairo-platform/src/codex.rs",
@@ -380,6 +391,17 @@
       "source_path": "crates/kairo-platform/src/codex.rs",
       "source_sha256": "04e17980ff55d7c55a99ea7cc0a2a14a0c9596150eb42f5347012adffe794d9f",
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance"
+    },
+    {
+      "path": "crates/kairo-platform/src/codex_auth.rs",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "crates/kairo-platform/src/codex_auth.rs",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "8c4ea5c995e985f00fd48af667c423135bf4e43b241566c82899ba833fa178a3"
     },
     {
       "path": "crates/kairo-platform/src/confirmation.rs",
@@ -394,14 +416,14 @@
     },
     {
       "path": "crates/kairo-platform/src/engine.rs",
-      "sha256": "5f01cac1e8c61d7f5f27ab9ef24c26739e51d1ffc9c56ed05a2e4d83ad2d7f14",
+      "sha256": "2fa85702f8be6f36c551ca01d1b198b69e01adf8770ae1f23e1182b777eb8fd5",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "crates/kairo-platform/src/engine.rs",
       "source_sha256": "5f01cac1e8c61d7f5f27ab9ef24c26739e51d1ffc9c56ed05a2e4d83ad2d7f14",
-      "transformation": "byte-identical"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance"
     },
     {
       "path": "crates/kairo-platform/src/guardian.rs",
@@ -427,7 +449,7 @@
     },
     {
       "path": "crates/kairo-platform/src/lib.rs",
-      "sha256": "74f22310a1d5557911747ac5e0f9a07f9ce4322a1753aa1b9697d7e4c2ca6465",
+      "sha256": "83c2cbb115df5de1adda1fa1457064fa19280e23fd5e15126092e0d3ea174735",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -458,7 +480,7 @@
       "source_path": "crates/kairo-platform/src/onboarding.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "542d51fef837e8d7b937668f92b27245403bd0ffbe37a9b65c7097cfacb2f319"
+      "sha256": "181e03433331ec4bedc985e60c4046f3e01621addefb810a60662c87b6e35701"
     },
     {
       "path": "crates/kairo-platform/src/process.rs",
@@ -495,7 +517,7 @@
     },
     {
       "path": "crates/kairo-platform/src/runtime.rs",
-      "sha256": "8d5cce0cbc3dd095524391e8200dbc12336e8dcccfba8bd0deea52041e6b08b7",
+      "sha256": "b1ed61f67b375900bf9d7dc29460f62e5fdb9b67d7db14ea8adcad3b5f0d068f",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -514,6 +536,17 @@
       "source_path": "crates/kairo-platform/src/update.rs",
       "source_sha256": "aa84c7cee91d03c84573c96c6abeb8743f913c4f46b96cc794cd70ec1c6aec6b",
       "transformation": "byte-identical"
+    },
+    {
+      "path": "docs/ACCEPTANCE_0.2.6.md",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "docs/ACCEPTANCE_0.2.6.md",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "70491bb7a3ac441d2272f341863156db4f6631f02738a2e9fb88371540d83073"
     },
     {
       "path": "docs/ADVANCED.en.md",
@@ -667,6 +700,17 @@
       "sha256": "f35ef83642ae4fe4011237d3fc0e7e8fe5d9c9ff9178100832e48878dfca6247"
     },
     {
+      "path": "docs/RELEASE_NOTES_0.2.6.md",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "docs/RELEASE_NOTES_0.2.6.md",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "be596d1c82ec8e6a1cf03e8093607fdf2ad379e79d5675f9181dd58b2746967d"
+    },
+    {
       "path": "docs/RELEASING.md",
       "sha256": "a09adf089d36d91c8fb54d025a8040c067bbf3ec8db9ef9a242089dc1601ca1f",
       "category": "first-party",
@@ -703,7 +747,7 @@
     },
     {
       "path": "install.sh",
-      "sha256": "78e4ba4a18aec6c360b951d05d779db3edef1dd10c1d12cde0db0a86b35d2f73",
+      "sha256": "3df66a5589ce91a98904408e685b57be91942f7194f80f6dfd1675ef2ea15f7f",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
@@ -991,18 +1035,18 @@
     },
     {
       "path": "packaging/system-first-install.sh",
-      "sha256": "da0079938a6ad429c35ef869494273e994fa6cda63e4a4f25dbb94f3cc804126",
+      "sha256": "0151e8af784f1fc5ce2a7e01d71b0324d7f127f181f180c3cb9ffa0f831fd18c",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
       "source_commit": "0b7660ad1f5b310154ae152aa81073aef8844620",
       "source_path": "packaging/system-first-install.sh",
       "source_sha256": "da0079938a6ad429c35ef869494273e994fa6cda63e4a4f25dbb94f3cc804126",
-      "transformation": "byte-identical"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance"
     },
     {
       "path": "packaging/system-install.sh",
-      "sha256": "b26f503641624e90198a4fd4ed2e578bb8f369cf3d80ac08b1f53aa5e9d10935",
+      "sha256": "a32ecce198833f61fc291203dd93844a88e01b09eb02e130e98b10a642d2476a",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1185,7 +1229,7 @@
     },
     {
       "path": "tests/acceptance.py",
-      "sha256": "dc489ebe9b228bd762a53a7139cb327f3536d1c2d23ddfdca5ff8492359419eb",
+      "sha256": "635ff583eaeb0d50b0e2a39bc9d02ee21f0f47b9aa4a94e0ceea5b047220f601",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1275,7 +1319,7 @@
     },
     {
       "path": "tests/online_install_guest.py",
-      "sha256": "bd099a92f09d63150ed016e01d974b952f8e58eb428fa1e798d8f0b70ce39526",
+      "sha256": "973bc10a5482d984e8b5833073ef71b137ae2c925b439701e9242ca02ce05496",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "New independently authored Kairo online installation/release tooling and fixed benign tests; project MIT",
@@ -1304,7 +1348,7 @@
       "source_path": "tests/panel_navigation.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "45e14aea8092659f7b2eecc80d0ed20a187339c8712944482bbc3cc6556c4f15"
+      "sha256": "51436c5da853d277c53545ffd51b243e8d77728a1ead4f49f9e4dc47571c285d"
     },
     {
       "path": "tests/pipe_lifecycle.py",
@@ -1327,6 +1371,17 @@
       "source_path": null,
       "source_sha256": null,
       "transformation": "New maintenance implementation; genuine follow-up history"
+    },
+    {
+      "path": "tests/prepare_install_fixture.py",
+      "category": "first-party",
+      "license_expression": "MIT",
+      "license_basis": "Project-authored development under the existing MIT license",
+      "source_commit": null,
+      "source_path": "tests/prepare_install_fixture.py",
+      "source_sha256": null,
+      "transformation": "New development after the recorded source snapshot",
+      "sha256": "bda5b773ab9ad16e20ce2790313a9d98af8f2f5c3a0b4362361a4406c6f74037"
     },
     {
       "path": "tests/readme_links.py",
@@ -1414,7 +1469,7 @@
       "source_path": "tests/warmup_display.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "381f913c1c5d1bf68c5e459e3106376898166924898e784200a2f6441ab3cb67"
+      "sha256": "13046a920c209248b658bccde878a3acd2a037ce3f58baca0d682bf4ef0f5fb0"
     },
     {
       "path": "tests/workflow_policy.py",
@@ -1431,7 +1486,7 @@
     },
     {
       "path": "uninstall.sh",
-      "sha256": "beacf55d676b9c5231f1ac1da0d68e30af805ca4d4c3f404e7984f2cb556e072",
+      "sha256": "50ceb25df29f0e7372825fc787999b3f99459cea0205db6a9c2e02eb1091a8ae",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Independently authored Kairo maintenance script or focused test under project MIT",
