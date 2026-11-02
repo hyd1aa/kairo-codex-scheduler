@@ -1653,6 +1653,28 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
             )
         );
     }
+    let weekly_reset = cache
+        .as_ref()
+        .filter(|v| v["weekly"]["used"].as_f64().is_some_and(|u| u >= 100.))
+        .and_then(|v| v["weekly"]["reset_at"].as_i64())
+        .unwrap_or(now);
+    if weekly_reset > now {
+        println!(
+            "{}",
+            t(
+                en,
+                "每周额度已用尽，等待重置",
+                "Weekly quota exhausted; waiting for reset"
+            )
+        );
+    }
+    if view.latest.kind == history::Kind::Blocked && view.latest.at > last.and_then(|r| r.at) {
+        println!(
+            "{}：{}",
+            t(en, "上次检查", "Last check"),
+            view.latest.explanation(en)
+        );
+    }
     let config = store.config()?;
     let recent = store
         .state()
@@ -1672,6 +1694,7 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
         } else {
             0
         })
+        .max(weekly_reset)
         .max(recent)
         .max(now);
     let next = plan(
