@@ -117,8 +117,20 @@ impl Store {
         File::open(&self.root)?.sync_all()?;
         Ok(())
     }
+    /// Prefer the primary record. Only absence permits reading its durable backup.
+    pub fn retained<T: DeserializeOwned>(&self, name: &str) -> Result<Option<T>> {
+        validate_name(name)?;
+        for candidate in [name.to_string(), format!(".{name}.previous")] {
+            if crate::recovery::present(&self.root.join(&candidate))? {
+                return self.read(&candidate).map(Some);
+            }
+        }
+        Ok(None)
+    }
     pub fn config(&self) -> Result<Config> {
-        let c: Config = self.read("config.json")?;
+        let c: Config = self
+            .retained("config.json")?
+            .ok_or_else(|| anyhow::anyhow!("config_missing / 配置缺失"))?;
         c.validate()?;
         Ok(c)
     }

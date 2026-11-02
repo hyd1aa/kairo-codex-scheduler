@@ -563,11 +563,15 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             let prefix = up::safe_prefix(&prefix)?;
             {
                 let s = configured(cli)?;
-                if !s.root.join("config.json").exists() {
-                    let c = Config {
-                        language: cli.lang.clone().unwrap_or("zh-CN".into()),
-                        ..Default::default()
-                    };
+                if fs::symlink_metadata(s.root.join("config.json"))
+                    .is_err_and(|e| e.kind() == io::ErrorKind::NotFound)
+                {
+                    let c = s
+                        .retained::<Config>("config.json")?
+                        .unwrap_or_else(|| Config {
+                            language: cli.lang.clone().unwrap_or("zh-CN".into()),
+                            ..Default::default()
+                        });
                     c.validate()?;
                     s.write("config.json", &c)?;
                 }

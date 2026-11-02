@@ -691,6 +691,10 @@
     "en": "Codex five-hour window scheduler",
     "zh": "Codex 五小时窗口智能调度管理器"
   },
+  "config_missing": {
+    "en": "config missing",
+    "zh": "配置缺失"
+  },
   "configure_idle_prewarm_and_safety_buffer": {
     "en": "Configure idle prewarm and safety buffer",
     "zh": "设置空闲预热及安全缓冲"
@@ -1371,6 +1375,10 @@
     "en": "Repair configuration defaults; never reset attempt history",
     "zh": "修复默认配置，不重置调用历史"
   },
+  "request_history_incomplete": {
+    "en": "request history incomplete",
+    "zh": "缺少请求主记录及备份，保留确认记录等待检查"
+  },
   "reservation_invalid": {
     "en": "reservation invalid",
     "zh": "调用前记录无效"
@@ -1423,9 +1431,17 @@
     "en": "runtime invalid",
     "zh": "运行配置无效"
   },
+  "runtime_missing": {
+    "en": "runtime missing",
+    "zh": "运行配置缺失"
+  },
   "runtime_user_mismatch": {
     "en": "runtime user mismatch",
     "zh": "模型执行用户与 OAuth 用户不一致"
+  },
+  "runtime_user_missing": {
+    "en": "runtime user missing",
+    "zh": "服务所属用户不存在"
   },
   "schema_invalid": {
     "en": "Schema invalid",
@@ -1506,6 +1522,10 @@
   "state_name_invalid": {
     "en": "state name invalid",
     "zh": "状态文件名称无效"
+  },
+  "state_or_clock": {
+    "en": "state or clock",
+    "zh": "时钟回拨，保留原记录并停止请求"
   },
   "state_too_large": {
     "en": "state too large",

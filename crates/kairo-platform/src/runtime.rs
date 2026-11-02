@@ -79,7 +79,9 @@ pub struct Deployment {
     pub approved_at: Option<i64>,
 }
 pub fn runtime(store: &Store) -> Result<Runtime> {
-    let r: Runtime = store.read("runtime.json")?;
+    let r: Runtime = store
+        .retained("runtime.json")?
+        .context("runtime_missing / 运行配置缺失")?;
     r.validate()?;
     Ok(r)
 }
@@ -446,7 +448,28 @@ fn resume_schedule(
     tz: chrono_tz::Tz,
     now: i64,
 ) -> Result<()> {
-    if state.pending.is_some() {
+    if now < cursor.observed || now < state.last_clock {
+        bail!("state_or_clock / 时钟回拨，保留原记录并停止请求");
+    }
+    use chrono::TimeZone;
+    let deferred = cursor
+        .anchor
+        .as_deref()
+        .and_then(|a| chrono::NaiveDateTime::parse_from_str(a, "%Y-%m-%d/%H:%M").ok())
+        .zip(cursor.timezone.parse::<chrono_tz::Tz>().ok())
+        .and_then(|(local, zone)| zone.from_local_datetime(&local).earliest())
+        .map(|at| {
+            at.timestamp().saturating_add(
+                cursor
+                    .config_signature
+                    .rsplit_once(':')
+                    .and_then(|(_, b)| b.parse::<i64>().ok())
+                    .unwrap_or(c.buffer_seconds),
+            )
+        })
+        .zip(cursor.due)
+        .is_some_and(|(scheduled, due)| due != scheduled);
+    if state.pending.is_some() || deferred {
         // v0.2.5 may have persisted a reset-time retry outside configured slots.
         // Preserve finished slots and requests, but plan the next configured time.
         cursor.due = None;
@@ -893,6 +916,7 @@ mod automatic_upgrade_tests {
         cursor.anchor = Some("2026-11-02/11:00".into());
         cursor.due = Some(now + 3600);
         cursor.cutoff = now + 43200;
+        let original = cursor.clone();
         let mut state = State {
             schema: 1,
             account: "synthetic".into(),
@@ -902,5 +926,11 @@ mod automatic_upgrade_tests {
         resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).unwrap();
         assert_eq!(cursor.anchor.as_deref(), Some("2026-11-02/16:00"));
         assert!(state.pending.is_none());
+        cursor = original;
+        state.pending = None;
+        resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).unwrap();
+        assert_eq!(cursor.anchor.as_deref(), Some("2026-11-02/16:00"));
+        cursor.observed = now + 1;
+        assert!(resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).is_err());
     }
 }

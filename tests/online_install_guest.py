@@ -135,6 +135,22 @@ if old.exists():
  old_hash=hashlib.sha256(binary.read_bytes()).hexdigest();pathlib.Path('/tmp/service-active').touch();pathlib.Path('/tmp/fail-start').touch()
  call(entry,False);assert hashlib.sha256(binary.read_bytes()).hexdigest()==old_hash
  pathlib.Path('/tmp/fail-start').unlink();call(entry);assert hashlib.sha256(binary.read_bytes()).hexdigest()==original
+if modern and old.exists():
+ # Simulate an actual v0.2.5 manager with one missing scheduler record.
+ account=hashlib.sha256(b'synthetic-onboarding-account').hexdigest()
+ records={'state.json':dict(schema=1,account=account,last_clock=0,attempts=[],positive_until=0,pending=None),
+          'deployment.json':dict(schema=1,account=account,enabled=False,approved_at=None),
+          'cursor.json':dict(schema=1,timezone='Etc/UTC',observed=0,due=None,anchor=None,cutoff=0,finished=[])}
+ for name,value in records.items():
+  p=state/name;p.write_text(json.dumps(value));p.chmod(0o600)
+ call(['kairo','update','apply',str(old),'--sha256',hashlib.sha256(old.read_bytes()).hexdigest(),'--prefix','/opt/kairo'])
+ manager=pathlib.Path('/opt/kairo/manager/kairo');manager.write_bytes(old.read_bytes());manager.chmod(0o755)
+ (state/'cursor.json').unlink();(state/'.cursor.json.previous').unlink(missing_ok=True)
+ call([str(manager),'--data-dir',str(state),'validate'],False)
+ call(entry)
+ assert hashlib.sha256(binary.read_bytes()).hexdigest()==original
+ assert json.loads((state/'state.json').read_text())['account']==account
+ assert not json.loads((state/'onboarding.json').read_text())['requested']
 # Optional actual official binary is used only for --version, never login/models.
 if pathlib.Path('/official-codex.tar.gz').exists():
  codex.unlink();call(entry);assert codex.read_bytes()[:4]==b'\x7fELF'

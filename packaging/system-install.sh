@@ -61,7 +61,7 @@ else
  [ -d /run/systemd/system ] || { msg '系统安装需要 systemd' 'System installation requires systemd' >&2; exit 1; }
  systemctl daemon-reload || { msg 'systemd 无法重新加载；未开始安装' 'systemd cannot reload; installation has not started' >&2; exit 1; }
  had_runtime=0
- if [ -f /var/lib/kairo/runtime.json ]; then had_runtime=1; fi
+ if [ -f /var/lib/kairo/runtime.json ] || [ -f /var/lib/kairo/.runtime.json.previous ]; then had_runtime=1; fi
  mkdir -p /opt/kairo/releases
  "$script_dir/install.sh" "$binary" "$checksum" /opt/kairo /var/lib/kairo
  prefix=/opt/kairo

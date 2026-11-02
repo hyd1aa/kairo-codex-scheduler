@@ -6,6 +6,14 @@ use kairo_core::{Cursor, Quota, State};
 use serde_json::{json, Value};
 use std::path::Path;
 
+/// A missing primary can reuse its existing durable backup; corruption is never absence.
+pub(crate) fn retained_state(store: &Store) -> Result<Option<State>> {
+    let state: Option<State> = store.retained("state.json")?;
+    if let Some(s) = &state {
+        s.validate()?;
+    }
+    Ok(state)
+}
 /// Uses verified server data; also used by offline acceptance without credentials.
 #[allow(clippy::too_many_arguments)]
 pub fn initialize(
@@ -25,13 +33,11 @@ pub fn initialize(
         bail!("account_invalid / 账号无效");
     }
     // Parse every surviving record before writing anything. Corruption is not absence.
-    let old_state = if present(&store.root.join("state.json"))? {
-        Some(store.state()?)
-    } else {
-        None
-    };
-    let deployment = if present(&store.root.join("deployment.json"))? {
-        let d: rt::Deployment = store.read("deployment.json")?;
+    let old_state = retained_state(store)?;
+    if old_state.is_none() && present(&store.root.join("confirmations.json"))? {
+        bail!("request_history_incomplete / 请求主记录与备份均缺失，无法验证保留的确认记录");
+    }
+    let deployment = if let Some(d) = store.retained::<rt::Deployment>("deployment.json")? {
         if d.schema != 1 || d.account != account {
             bail!("account_mismatch / 账号变化，已暂停");
         }
@@ -46,8 +52,7 @@ pub fn initialize(
         bail!("account_or_clock_mismatch / 账号变化或时钟回拨");
     }
     let config = store.config()?;
-    let mut cursor = if present(&store.root.join("cursor.json"))? {
-        let c: Cursor = store.read("cursor.json")?;
+    let mut cursor = if let Some(c) = store.retained::<Cursor>("cursor.json")? {
         if c.schema != 1 || c.observed > now {
             bail!("cursor_invalid / 调度记录无效");
         }
@@ -59,8 +64,7 @@ pub fn initialize(
     };
     let gate = Store::open(&guards.join(account))?;
     let _authority = rt::authority_lease(&gate)?;
-    let mut journal = if present(&gate.root.join("account.json"))? {
-        let j: AccountJournal = gate.read("account.json")?;
+    let mut journal = if let Some(j) = gate.retained::<AccountJournal>("account.json")? {
         if j.schema != 1 || j.account != account || j.last_attempt < 0 {
             bail!("account_guard_invalid / 账号请求记录无效");
         }
