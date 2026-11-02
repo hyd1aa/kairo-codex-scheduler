@@ -478,7 +478,11 @@ fn possible_prewarm(
         .ok()?
         .timestamp();
     let used = quota["five_hour"]["used"].as_f64()?;
-    if used > 0.0 {
+    if used > 0.0
+        || quota["five_hour"]["remaining"]
+            .as_i64()
+            .is_some_and(|r| (0..kairo_core::WINDOW - 60).contains(&r))
+    {
         at = at.max(
             quota["five_hour"]["reset_at"]
                 .as_i64()?
@@ -1607,6 +1611,20 @@ mod tests {
         assert_eq!(
             possible_prewarm(&next, &next_day, &config, cutoff, None, tz).as_deref(),
             Some("2026-10-21T06:00:30+08:00")
+        );
+    }
+    #[test]
+    fn zero_percent_partial_window_waits_for_reset_then_next_slot() {
+        let config = Config::default();
+        let tz = chrono_tz::Asia::Shanghai;
+        let next = json!("2026-11-02T16:00:30+08:00");
+        let reset = chrono::DateTime::parse_from_rfc3339("2026-11-02T18:00:00+08:00")
+            .unwrap()
+            .timestamp();
+        let quota = json!({"server_denied":false,"weekly":{"used":0.},"five_hour":{"used":0.,"remaining":7200,"reset_at":reset}});
+        assert_eq!(
+            possible_prewarm(&next, &quota, &config, 0, None, tz).as_deref(),
+            Some("2026-11-02T21:00:30+08:00")
         );
     }
     #[test]

@@ -265,7 +265,7 @@
       "source_path": "crates/kairo-cli/src/history.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "3fd223337a817643d8bf0527992110537bd02ade648bf149ac1609410f60250e"
+      "sha256": "2e39b9d008ea2003120788370067d2a3a3300437bb2c34d4e67ba2839e1cd4cf"
     },
     {
       "path": "crates/kairo-cli/src/i18n.rs",
@@ -280,7 +280,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "6a62866b17f6f0c319ffa03f4a9cfc07fba75bb502420e6affc4488ed37a8f0c",
+      "sha256": "85f3198c544594a6c0b33954269bfab956baf1ce282fc270a44ffe902f2d27ad",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -313,7 +313,7 @@
       "source_path": "crates/kairo-cli/src/panel.rs",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "1130568b40a66ceb1b619e8763a4a2d7ade5cd2aedab2d53f12d2b1831d505ef"
+      "sha256": "2a0d1d9198d0aa5312c2e3602740628751cb04d3f3e2b107d0fa47706a5388a5"
     },
     {
       "path": "crates/kairo-core/Cargo.toml",
@@ -378,8 +378,8 @@
       "source_commit": null,
       "source_path": "crates/kairo-platform/src/automatic.rs",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "c86e511ce881931bca8c7233a608e05d9fb9eb12ed89ae7628ab46122d67e377"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "e48763ca2ff55093dbec5c1e857f8317d2bde846087539243d6d197dfd06ad3f"
     },
     {
       "path": "crates/kairo-platform/src/codex.rs",
@@ -416,7 +416,7 @@
     },
     {
       "path": "crates/kairo-platform/src/engine.rs",
-      "sha256": "2fa85702f8be6f36c551ca01d1b198b69e01adf8770ae1f23e1182b777eb8fd5",
+      "sha256": "d7462bfaa47db2452afe920b47fcf94b5ce68b879eb9e38f6d91854f730f990f",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -545,8 +545,8 @@
       "source_commit": null,
       "source_path": "docs/ACCEPTANCE_0.2.6.md",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "70491bb7a3ac441d2272f341863156db4f6631f02738a2e9fb88371540d83073"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "60b9b946e4a3346ae9416e46fa0a128dcfd3867e7f8ccced13c40a47eb85a2a0"
     },
     {
       "path": "docs/ADVANCED.en.md",
@@ -1469,7 +1469,7 @@
       "source_path": "tests/warmup_display.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "93a45bfbc2d63b5c6098dd80b7dbac936e5184e37377f001eca19aac150ca62b"
+      "sha256": "96f8f8cf9543c12a5c1313dc4b5e3ea00a152c1f6e312758ac26005d59bd55eb"
     },
     {
       "path": "tests/workflow_policy.py",

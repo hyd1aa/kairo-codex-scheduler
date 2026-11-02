@@ -383,6 +383,17 @@ mod tests {
         assert_eq!(m.calls, 1);
     }
     #[test]
+    fn zero_percent_partial_window_is_active_after_reinstall() {
+        let f = Fixture::new();
+        f.init(0., 7200).unwrap();
+        let mut m = mock(&f);
+        m.reset = f.now + 7200;
+        assert_eq!(run(&f, &mut m).unwrap(), "current_window_active");
+        assert_eq!(m.calls, 0);
+        let cursor: Cursor = f.store.read("cursor.json").unwrap();
+        assert_eq!(cursor.anchor.as_deref(), Some("2026-11-02/11:00"));
+    }
+    #[test]
     fn quota_exhaustion_external_activation_network_and_account_change_never_request() {
         for condition in 0..5 {
             let f = Fixture::new();

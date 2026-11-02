@@ -11,7 +11,7 @@ All identities, quota responses, requests and OAuth renewal responses in accepta
 | Complete old state | Pass: actual SHA256-verified v0.2.5 binary → new binary → rollback/repeat, five running/pause/recovery policies; state bytes retained. |
 | Partial old state | Pass: missing cursor rebuilt from surviving records; existing attempts and schedules retained. Corrupt records are blocked and preserved. This is not a promise to repair every malformed legacy file. |
 | Previously paused | Pass: explicit pause survives initialization, installation, update, uninstall/reinstall and rollback. |
-| Five-hour window active | Pass: slot skipped without a request; next configured opportunity selected. |
+| Five-hour window active | Pass: positive usage and zero-percent partial windows both skip without a request; the next configured opportunity follows reset_at. |
 | Five-hour window expired | Pass: one request at the next scheduled slot, followed by durable outcome. |
 | Five-hour quota exhausted | Pass: no request while the exhausted window remains active. |
 | Weekly quota exhausted | Pass: no request. |
