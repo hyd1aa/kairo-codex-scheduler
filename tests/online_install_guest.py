@@ -158,5 +158,15 @@ if modern:
  assert auth.read_text().find('synthetic-onboarding-placeholder')>=0
  assert not pathlib.Path('/home/kairo/.codex/auth.json').exists()
  assert not json.loads((state/'onboarding.json').read_text())['requested']
+if modern:
+ # A pre-existing unrelated kairo user's OAuth is not owned by this root install.
+ import pwd
+ subprocess.run(['useradd','--create-home','kairo'],check=True)
+ foreign=pathlib.Path('/home/kairo/.codex');foreign.mkdir(mode=0o700)
+ foreign_auth=foreign/'auth.json';foreign_auth.write_text('synthetic-unrelated-user-login')
+ owner=pwd.getpwnam('kairo');os.chown(foreign,owner.pw_uid,owner.pw_gid);os.chown(foreign_auth,owner.pw_uid,owner.pw_gid);foreign_auth.chmod(0o600)
+ call(['bash','/source/uninstall.sh','--purge-data','--confirm','DELETE-KAIRO-DATA'])
+ assert foreign_auth.read_text()=='synthetic-unrelated-user-login'
+ assert auth.is_file() and not state.exists()
 server.shutdown();key.unlink()
 print(f'{count} focused HTTPS/install/update/refusal/recovery/uninstall checks passed; container with mocked systemd, zero real model requests')

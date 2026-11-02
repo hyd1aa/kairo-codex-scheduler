@@ -30,7 +30,7 @@ jobs:
           try:
               assert base and set(base)!={'0'}
               paths=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
-              rust=any(p.startswith('crates/') or p in ['Cargo.toml','Cargo.lock','scripts/verify.sh','scripts/i18n-catalog.py'] for p in paths)
+              rust=any(p.startswith(('crates/','packaging/','tests/')) or p in ['Cargo.toml','Cargo.lock','scripts/verify.sh','scripts/i18n-catalog.py','install.sh','uninstall.sh'] for p in paths)
           except Exception:
               rust=True
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('rust='+str(rust).lower()+'\n')
