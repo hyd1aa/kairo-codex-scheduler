@@ -369,12 +369,18 @@ try:
  if purge:
   try:user=pwd.getpwnam('kairo')
   except KeyError:user=None
-  if user is not None and user.pw_dir!='/home/kairo':raise RuntimeError('Unexpected user home; refusing purge')
-  for path in map(pathlib.Path,retained[:3]):
+  if user is not None and user.pw_dir!='/home/kairo':user=None
+  # Only a dedicated service account whose state belongs to it may have its
+  # private login purged. A root/shared-user install must never touch another user.
+  data=pathlib.Path('/var/lib/kairo')
+  dedicated=user is not None and data.exists() and data.stat().st_uid==user.pw_uid
+  purge_paths=retained[:2]+([retained[2]] if dedicated else [])
+  for path in map(pathlib.Path,purge_paths):
    if path.is_symlink():raise RuntimeError('Refusing linked data path: '+str(path))
-  for path in map(pathlib.Path,retained[:3]):
+  for path in map(pathlib.Path,purge_paths):
    if path.exists():shutil.rmtree(path)
-  print('已明确清除Kairo状态、请求历史及/home/kairo/.codex / Explicitly purged Kairo state/history and dedicated Codex authentication. Shared CLI/dependencies and user/ownership marker retained.')
+  print('已明确清除Kairo状态及请求历史；共享用户登录予以保留 / Explicitly purged Kairo state/history; shared-user OAuth is preserved.')
+  if dedicated:print('已清除专用服务账号的Codex登录 / Dedicated service-account Codex login purged.')
  else:
   print('Kairo 已卸载，服务及其子进程已停止 / Kairo removed; service and managed children stopped.' if had_install else 'Kairo 未安装或已卸载 / Kairo is not installed or already removed.')
   print('保留 / Preserved: '+', '.join(retained))
