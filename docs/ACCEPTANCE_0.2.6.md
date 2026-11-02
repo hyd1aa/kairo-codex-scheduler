@@ -9,9 +9,9 @@ All identities, quota responses, requests and OAuth renewal responses in accepta
 | Fresh VPS | Pass: empty private data/guard directories initialize without a recovery timer. |
 | Reinstall without history | Pass: `reinstall_oauth_ready_scheduled_request_and_durable_receipt_without_quiet_wait`; readiness, one scheduled mock request and persisted acceptance/confirmation task. |
 | Complete old state | Pass: actual SHA256-verified v0.2.5 binary → new binary → rollback/repeat, five running/pause/recovery policies; state bytes retained. |
-| Partial old state | Pass: missing cursor rebuilt from surviving records; existing attempts and schedules retained. Corrupt records are blocked and preserved. This is not a promise to repair every malformed legacy file. |
+| Partial old state | Pass: actual upgrade handles missing cursor/deployment and restores valid state/config/runtime backups; existing attempts and schedules survive. A disposable installer test uses a real v0.2.5 manager that rejects a missing cursor, then upgrades through the verified new updater. Corrupt primary records remain blocked and preserved. This is not a promise to repair every malformed legacy file. |
 | Previously paused | Pass: explicit pause survives initialization, installation, update, uninstall/reinstall and rollback. |
-| Five-hour window active | Pass: slot skipped without a request; next configured opportunity selected. |
+| Five-hour window active | Pass: positive usage and zero-percent partial windows both skip without a request; the next configured opportunity follows reset_at. |
 | Five-hour window expired | Pass: one request at the next scheduled slot, followed by durable outcome. |
 | Five-hour quota exhausted | Pass: no request while the exhausted window remains active. |
 | Weekly quota exhausted | Pass: no request. |
@@ -24,6 +24,8 @@ All identities, quota responses, requests and OAuth renewal responses in accepta
 | Post-request countdown evidence | Pass: confirmation tests use stable reset and decreasing remaining time; bilingual UI never inherits an earlier success after a later failure. |
 | Rust CLI and bilingual terminal | Pass: CLI/process/transaction suite, bilingual PTY navigation, NO_COLOR, dumb terminal, small-screen, EOF, SIGINT and closed-pipe regressions. README menus are compared to the shipping binary. |
 | No new login/authorization on upgrade | Pass: v0.2.5 state/OAuth paths retained. Managed token renewal is delegated to official CLI account/read with refreshToken=true after HTTP401; the renewal protocol test permits only initialize/initialized/account/read. No thread/turn/reset API is called. |
+
+A one-time legacy cached-installer handoff is tested with an owned temporary filesystem and mocked systemd commands: exact old units are retired, helpers are refreshed, repeated calls are no-ops and custom units remain untouched.
 
 The installer additionally tests SHA256, TLS failure, malformed packages, wrong versions, interrupted downloads, state retention and uninstall. CI repeats current-binary installer acceptance and previous-release compatibility. Release candidates build each real architecture on its native runner.
 

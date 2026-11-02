@@ -178,31 +178,81 @@ pub fn validate(store: &Store) -> Result<()> {
         }
     }
 
-    if store.root.join("runtime.json").exists() {
-        runtime::runtime(store)?;
+    if let Some(r) = store.retained::<Runtime>("runtime.json")? {
+        r.validate()?;
     }
-    if store.root.join("state.json").exists() {
-        let state = store.state()?;
-        crate::confirmation::read(store, &state)?;
+    let state = crate::automatic::retained_state(store)?;
+    if let Some(state) = &state {
+        crate::confirmation::read(store, state)?;
+    } else if crate::recovery::present(&store.root.join("confirmations.json"))? {
+        bail!("request_history_incomplete / 缺少请求主记录及备份，保留确认记录等待检查");
     }
-    if store.root.join("deployment.json").exists() {
-        let d: Deployment = store.read("deployment.json")?;
-        let s = store.state()?;
-        let cursor: Cursor = store.read("cursor.json")?;
-        if d.schema != 1
-            || cursor.schema != 1
-            || d.account != s.account
-            || d.enabled && d.approved_at.is_none()
+    if let Some(cursor) = store.retained::<Cursor>("cursor.json")? {
+        if cursor.schema != 1
+            || cursor.observed < 0
+            || cursor.timezone.parse::<chrono_tz::Tz>().is_err()
         {
-            bail!("deployment_invalid / 部署授权记录无效")
+            bail!("cursor_invalid / 调度记录无效");
+        }
+    }
+    if let Some(d) = store.retained::<Deployment>("deployment.json")? {
+        if d.schema != 1
+            || d.account.is_empty()
+            || d.enabled && d.approved_at.is_none()
+            || state.as_ref().is_some_and(|s| s.account != d.account)
+        {
+            bail!("deployment_invalid / 账号或调度授权记录无效");
         }
     }
     Ok(())
 }
 pub fn migrate(store: &Store) -> Result<()> {
     validate(store)?;
-    if !store.root.join("runtime.json").exists() {
-        store.write("runtime.json", &Runtime::default())?;
+    for name in [
+        "config.json",
+        "state.json",
+        "cursor.json",
+        "deployment.json",
+        "runtime.json",
+    ] {
+        if !crate::recovery::present(&store.root.join(name))? {
+            if let Some(value) = store.retained::<Value>(name)? {
+                store.write(name, &value)?;
+            }
+        }
+    }
+    if !crate::recovery::present(&store.root.join("runtime.json"))? {
+        let r = if crate::recovery::present(&store.root.join(".runtime.json.previous"))? {
+            let r: Runtime = store.read(".runtime.json.previous")?;
+            r.validate()?;
+            r
+        } else {
+            use std::os::unix::fs::MetadataExt;
+            let owner = fs::metadata(&store.root)?.uid();
+            let mut r = Runtime::default();
+            if std::env::var_os("HOME").is_none()
+                || fs::metadata(&r.home).map_or(true, |m| m.uid() != owner)
+            {
+                let user = unsafe { libc::getpwuid(owner) };
+                if user.is_null() {
+                    bail!("runtime_user_missing / 服务所属用户不存在");
+                }
+                r.home =
+                    PathBuf::from(unsafe { std::ffi::CStr::from_ptr((*user).pw_dir) }.to_str()?);
+                r.codex_home = r.home.join(".codex");
+                r.codex = [
+                    r.home.join(".local/bin/codex"),
+                    PathBuf::from("/usr/local/bin/codex"),
+                    PathBuf::from("/usr/bin/codex"),
+                ]
+                .into_iter()
+                .find(|p| p.is_file())
+                .unwrap_or_else(|| PathBuf::from("/usr/local/bin/codex"));
+            }
+            r.validate()?;
+            r
+        };
+        store.write("runtime.json", &r)?;
     }
     Ok(())
 }

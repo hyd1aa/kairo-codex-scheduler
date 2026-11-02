@@ -176,7 +176,7 @@ PYVERSION
  if [[ $old_hash != "$digest" ]]; then
   if systemctl is-active --quiet kairo.service; then was_active=1; systemctl stop kairo.service; fi
   changed=1
-  /opt/kairo/manager/kairo --data-dir /var/lib/kairo update apply "$binary" --sha256 "$digest" --prefix /opt/kairo
+  "$binary" --data-dir /var/lib/kairo update apply "$binary" --sha256 "$digest" --prefix /opt/kairo
  fi
 else
  [[ $action != update ]] || fail 'Kairo 尚未安装' 'Kairo is not installed'

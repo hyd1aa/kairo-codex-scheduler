@@ -43,6 +43,9 @@ with tempfile.TemporaryDirectory(prefix='kairo-evidence-') as temp:
  state['attempts']=[];state['last_clock']=0;write('state.json',state);(data/'recovery.json').unlink()
  out=menu();assert '尚未进行过预热' in out
  direct('lang','en-US');out=menu();assert 'No warmup performed yet' in out and 'Next warmup opportunity' in out
+ # Zero usage can still have a running partial five-hour window.
+ write('quota-cache.json',dict(account=account,at=int(time.time()),five_hour=dict(used=0.,remaining=7200,reset_at=int(time.time())+7200),weekly=dict(used=0.,reset_at=int(time.time())+604800)))
+ direct('lang','zh-CN');out=menu();assert '当前窗口有效，等待下次预热机会' in out and '剩余100.0%' in out
  # Known weekly exhaustion and expired OAuth must be explicit on the home page.
  write('quota-cache.json',dict(account=account,at=int(time.time()),five_hour=dict(used=0.,reset_at=int(time.time())+18000),weekly=dict(used=100.,reset_at=int(time.time())+3600)))
  direct('lang','zh-CN');out=menu();assert '每周额度已用尽，等待重置' in out and '剩余0.0%' in out

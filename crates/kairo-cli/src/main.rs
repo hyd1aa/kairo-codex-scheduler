@@ -478,7 +478,11 @@ fn possible_prewarm(
         .ok()?
         .timestamp();
     let used = quota["five_hour"]["used"].as_f64()?;
-    if used > 0.0 {
+    if used > 0.0
+        || quota["five_hour"]["remaining"]
+            .as_i64()
+            .is_some_and(|r| (0..kairo_core::WINDOW - 60).contains(&r))
+    {
         at = at.max(
             quota["five_hour"]["reset_at"]
                 .as_i64()?
@@ -559,11 +563,15 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             let prefix = up::safe_prefix(&prefix)?;
             {
                 let s = configured(cli)?;
-                if !s.root.join("config.json").exists() {
-                    let c = Config {
-                        language: cli.lang.clone().unwrap_or("zh-CN".into()),
-                        ..Default::default()
-                    };
+                if fs::symlink_metadata(s.root.join("config.json"))
+                    .is_err_and(|e| e.kind() == io::ErrorKind::NotFound)
+                {
+                    let c = s
+                        .retained::<Config>("config.json")?
+                        .unwrap_or_else(|| Config {
+                            language: cli.lang.clone().unwrap_or("zh-CN".into()),
+                            ..Default::default()
+                        });
                     c.validate()?;
                     s.write("config.json", &c)?;
                 }
@@ -1607,6 +1615,30 @@ mod tests {
         assert_eq!(
             possible_prewarm(&next, &next_day, &config, cutoff, None, tz).as_deref(),
             Some("2026-10-21T06:00:30+08:00")
+        );
+    }
+    #[test]
+    fn zero_percent_partial_window_waits_for_reset_then_next_slot() {
+        let config = Config::default();
+        let tz = chrono_tz::Asia::Shanghai;
+        let next = json!("2026-11-02T16:00:30+08:00");
+        let reset = chrono::DateTime::parse_from_rfc3339("2026-11-02T18:00:00+08:00")
+            .unwrap()
+            .timestamp();
+        let quota = json!({"server_denied":false,"weekly":{"used":0.},"five_hour":{"used":0.,"remaining":7200,"reset_at":reset}});
+        assert_eq!(
+            possible_prewarm(&next, &quota, &config, 0, None, tz).as_deref(),
+            Some("2026-11-02T21:00:30+08:00")
+        );
+        let mut boundary = quota.clone();
+        boundary["five_hour"]["reset_at"] = json!(chrono::DateTime::parse_from_rfc3339(
+            "2026-11-02T21:00:00+08:00"
+        )
+        .unwrap()
+        .timestamp());
+        assert_eq!(
+            possible_prewarm(&next, &boundary, &config, 0, None, tz).as_deref(),
+            Some("2026-11-02T21:00:30+08:00")
         );
     }
     #[test]

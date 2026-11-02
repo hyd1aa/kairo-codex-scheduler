@@ -182,7 +182,9 @@ exit 99''')
     p=subprocess.run([str(repo/'packaging/install.sh'),binary,checksum,str(nohome)],env=nohome_env,capture_output=True,text=True,timeout=45)
     assert p.returncode==0,(p.stdout,p.stderr)
     runtime=json.loads((nohome/'var/lib/kairo/runtime.json').read_text())
-    assert runtime['home']=='/' and runtime['codex_home']=='/.codex',runtime
+    import pwd
+    owner_home=pwd.getpwuid((nohome/'var/lib/kairo').stat().st_uid).pw_dir
+    assert runtime['home']==owner_home and runtime['codex_home']==owner_home+'/.codex',runtime
     checks+=1
     shell('install.sh',binary,checksum,prefix);assert (prefix/'bin/kairo').exists()
     installed=subprocess.run([str(prefix/'bin/kairo'),'--json','status'],env=env,capture_output=True,text=True,timeout=15);assert installed.returncode==0 and json.loads(installed.stdout)['config']['anchors']

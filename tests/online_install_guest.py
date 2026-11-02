@@ -135,6 +135,22 @@ if old.exists():
  old_hash=hashlib.sha256(binary.read_bytes()).hexdigest();pathlib.Path('/tmp/service-active').touch();pathlib.Path('/tmp/fail-start').touch()
  call(entry,False);assert hashlib.sha256(binary.read_bytes()).hexdigest()==old_hash
  pathlib.Path('/tmp/fail-start').unlink();call(entry);assert hashlib.sha256(binary.read_bytes()).hexdigest()==original
+if modern and old.exists():
+ # Simulate an actual v0.2.5 manager with one missing scheduler record.
+ account=hashlib.sha256(b'synthetic-onboarding-account').hexdigest()
+ records={'state.json':dict(schema=1,account=account,last_clock=0,attempts=[],positive_until=0,pending=None),
+          'deployment.json':dict(schema=1,account=account,enabled=False,approved_at=None),
+          'cursor.json':dict(schema=1,timezone='Etc/UTC',observed=0,due=None,anchor=None,cutoff=0,finished=[])}
+ for name,value in records.items():
+  p=state/name;p.write_text(json.dumps(value));p.chmod(0o600)
+ call(['kairo','update','apply',str(old),'--sha256',hashlib.sha256(old.read_bytes()).hexdigest(),'--prefix','/opt/kairo'])
+ manager=pathlib.Path('/opt/kairo/manager/kairo');manager.write_bytes(old.read_bytes());manager.chmod(0o755)
+ (state/'cursor.json').unlink();(state/'.cursor.json.previous').unlink(missing_ok=True)
+ call([str(manager),'--data-dir',str(state),'validate'],False)
+ call(entry)
+ assert hashlib.sha256(binary.read_bytes()).hexdigest()==original
+ assert json.loads((state/'state.json').read_text())['account']==account
+ assert not json.loads((state/'onboarding.json').read_text())['requested']
 # Optional actual official binary is used only for --version, never login/models.
 if pathlib.Path('/official-codex.tar.gz').exists():
  codex.unlink();call(entry);assert codex.read_bytes()[:4]==b'\x7fELF'
@@ -165,6 +181,16 @@ if modern:
  foreign=pathlib.Path('/home/kairo/.codex');foreign.mkdir(mode=0o700)
  foreign_auth=foreign/'auth.json';foreign_auth.write_text('synthetic-unrelated-user-login')
  owner=pwd.getpwnam('kairo');os.chown(foreign,owner.pw_uid,owner.pw_gid);os.chown(foreign_auth,owner.pw_uid,owner.pw_gid);foreign_auth.chmod(0o600)
+ # Missing runtime on a non-root installation must resolve that user's home,
+ # not adopt the root upgrader's OAuth directory.
+ owned=pathlib.Path(tempfile.mkdtemp(prefix='kairo-owned-runtime-'))
+ call([str(binary),'--data-dir',str(owned),'init'])
+ (owned/'runtime.json').unlink();(owned/'.runtime.json.previous').unlink(missing_ok=True)
+ for p in [owned,*owned.iterdir()]:os.chown(p,owner.pw_uid,owner.pw_gid)
+ call([str(binary),'--data-dir',str(owned),'migrate'])
+ runtime=json.loads((owned/'runtime.json').read_text())
+ assert runtime['home']==owner.pw_dir and runtime['codex_home']==owner.pw_dir+'/.codex'
+ assert (owned/'runtime.json').stat().st_uid==owner.pw_uid
  call(['bash','/source/uninstall.sh','--purge-data','--confirm','DELETE-KAIRO-DATA'])
  assert foreign_auth.read_text()=='synthetic-unrelated-user-login'
  assert auth.is_file() and not state.exists()

@@ -224,10 +224,11 @@ fn add_check(records: &mut Vec<Record>, v: &Value, state: &State) {
     };
     let kind = match event {
         "deferred" | "current_window_active"
-            if state
-                .observations
-                .iter()
-                .any(|o| o.at == at && o.quota.used > 0. && o.quota.reset_at > at) =>
+            if state.observations.iter().any(|o| {
+                o.at == at
+                    && (o.quota.used > 0. || o.quota.remaining < kairo_core::WINDOW - 60)
+                    && o.quota.reset_at > at
+            }) =>
         {
             Kind::Skipped
         }

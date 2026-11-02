@@ -39,3 +39,26 @@ with tempfile.TemporaryDirectory(prefix='kairo-upgrade-policy-') as temp:
   call(old,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix));preserved()
   call(new,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix));preserved()
 print(f'20 v{previous_version} upgrade/rollback/repeat checks passed across running, paused and recovery policies; byte-identical history, identity, schedules and wait progress; zero model/service calls')
+
+# A verified new updater must admit missing records without relaxing corrupt-record checks.
+with tempfile.TemporaryDirectory(prefix='kairo-partial-upgrade-') as temp:
+ for missing in ['cursor.json','deployment.json','state.json','config.json','runtime.json']:
+  data=pathlib.Path(temp)/missing/'data';prefix=data.parent/'program';data.mkdir(parents=True,mode=0o700)
+  def run(binary,*args,ok=True):
+   p=subprocess.run([binary,'--data-dir',str(data),*args],env=env,capture_output=True,text=True,timeout=30)
+   assert (p.returncode==0)==ok,(missing,args,p.stdout,p.stderr)
+  run(old,'init');run(old,'schedule','add','03:37')
+  for name,value in [('state.json',dict(schema=1,account='synthetic-partial',last_clock=1000,attempts=[],positive_until=0,pending=None)),('deployment.json',dict(schema=1,account='synthetic-partial',enabled=False,approved_at=None)),('cursor.json',dict(schema=1,timezone='Etc/UTC',observed=1000,due=None,anchor=None,cutoff=0,finished=[]))]:
+   path=data/name;path.write_text(json.dumps(value));path.chmod(0o600)
+  run(old,'install','--binary',old,'--sha256',digest(old),'--prefix',str(prefix))
+  original=(data/missing).read_bytes();backup=data/('.'+missing+'.previous');backup.write_bytes(original);backup.chmod(0o600)
+  (data/missing).unlink()
+  run(new,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix))
+  assert '03:37' in json.loads((data/'config.json').read_text())['anchors']
+  if missing in ['state.json','config.json','runtime.json']:assert json.loads((data/missing).read_text())==json.loads(original)
+  assert backup.read_bytes()==original
+  # Present corruption is never treated as missing or replaced by a backup.
+  (data/'state.json').write_text('{invalid');bad=(data/'state.json').read_bytes()
+  run(new,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix),ok=False)
+  assert (data/'state.json').read_bytes()==bad
+print('5 actual partial-state upgrades preserve schedules/backups; corrupt originals remain blocked and unchanged')

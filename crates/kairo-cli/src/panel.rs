@@ -1638,11 +1638,16 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
         .read::<Value>("quota-cache.json")
         .ok()
         .filter(|v| id.as_ref().is_some_and(|a| v["account"] == a.fingerprint));
-    let reset = cache
+    let observed_reset = cache
         .as_ref()
-        .filter(|v| v["five_hour"]["used"].as_f64().is_some_and(|u| u > 0.))
-        .and_then(|v| v["five_hour"]["reset_at"].as_i64())
-        .unwrap_or(now);
+        .filter(|v| {
+            v["five_hour"]["used"].as_f64().is_some_and(|u| u > 0.)
+                || v["five_hour"]["remaining"]
+                    .as_i64()
+                    .is_some_and(|r| (0..kairo_core::WINDOW - 60).contains(&r))
+        })
+        .and_then(|v| v["five_hour"]["reset_at"].as_i64());
+    let reset = observed_reset.unwrap_or(now);
     if reset > now {
         println!(
             "{}",
@@ -1688,19 +1693,17 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
         .map_or(now, |at| {
             at.saturating_add(kairo_core::WINDOW + config.buffer_seconds)
         });
-    let eligible = reset
-        .saturating_add(if reset > now {
-            config.buffer_seconds
-        } else {
-            0
-        })
+    let eligible = observed_reset
+        .map(|at| at.saturating_add(config.buffer_seconds))
+        .unwrap_or(now)
         .max(weekly_reset)
         .max(recent)
         .max(now);
     let next = plan(
         &config,
         timezone()?,
-        chrono::DateTime::from_timestamp(eligible, 0).context("clock_invalid")?,
+        chrono::DateTime::from_timestamp(if eligible > now { eligible - 1 } else { now }, 0)
+            .context("clock_invalid")?,
         72,
     )?
     .first()

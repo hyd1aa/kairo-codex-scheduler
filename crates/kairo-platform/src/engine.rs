@@ -141,12 +141,14 @@ pub fn tick<A: Adapter>(
             state.pending = None;
             store.write("state.json", state)?;
             store.write("cursor.json", cursor)?;
-            return Ok(if f.used > 0. && f.reset_at > now {
-                "current_window_active"
-            } else {
-                "window_guard"
-            }
-            .into());
+            return Ok(
+                if (f.used > 0. || f.remaining < kairo_core::WINDOW - 60) && f.reset_at > now {
+                    "current_window_active"
+                } else {
+                    "window_guard"
+                }
+                .into(),
+            );
         }
         Decision::Block(reason) => reason.into(),
     };
