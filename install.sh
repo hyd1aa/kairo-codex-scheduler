@@ -393,7 +393,6 @@ for name in install.sh system-uninstall.sh; do
  install -m 755 "$source" "/opt/kairo/installer/.$name.new"
  mv -f "/opt/kairo/installer/.$name.new" "/opt/kairo/installer/$name"
 done
-if ((was_active)); then systemctl start kairo.service; fi
 # New lifecycle requires the corresponding Rust daemon, never retrofit old binaries.
 if python3 - "$version" <<'PYLIFECYCLE'
 import sys
@@ -402,25 +401,30 @@ PYLIFECYCLE
 then
 # The daemon owns login detection, baseline initialization and scheduling.
 # Remove only the exact legacy observation override; custom units fail closed.
+restart_mode=0
 mode=/etc/systemd/system/kairo.service.d/20-mode.conf
 if [[ -e $mode || -L $mode ]]; then
  [[ -f $mode && ! -L $mode ]] || fail '服务配置不安全' 'Unsafe service configuration'
  expected=$'[Service]\nExecStart=\nExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon --observe'
  [[ $(cat "$mode") == "$expected" ]] || fail '保留自定义服务配置，请人工检查' 'Custom service configuration needs inspection'
  rm -- "$mode"
+ restart_mode=1
 fi
 # Retire the old root onboarding timer. Account and request records stay intact.
 for unit in kairo-onboarding.timer kairo-onboarding.service; do
  if [[ -e /etc/systemd/system/$unit ]]; then
   [[ -f /etc/systemd/system/$unit && ! -L /etc/systemd/system/$unit ]] || fail '初始化任务文件不安全' 'Unsafe legacy initialization unit'
+  cmp -s "$root/packaging/$unit" "/etc/systemd/system/$unit" || fail '保留自定义初始化任务，请人工检查' 'Custom initialization unit needs inspection'
   systemctl disable --now "$unit"
   rm -- "/etc/systemd/system/$unit"
  fi
 done
 systemctl daemon-reload
 systemctl enable --now kairo.service
+if ((restart_mode)); then systemctl restart kairo.service; fi
 msg '安装即授权：额度与安全条件允许时自动预热。官方 OAuth 由本人完成；服务会自动检测登录。' 'Installation authorizes automatic warmup within quota and safety limits. Complete official OAuth personally; login is detected automatically.'
-
+else
+ if ((was_active)); then systemctl start kairo.service; fi
 fi
 
 completed=1

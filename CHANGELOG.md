@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.6
+
+- Automatically verify OAuth/quota and establish a local baseline after installation; remove the fixed unknown-history quiet wait from normal startup.
+- Retire the onboarding timer and repeated production/exclusivity confirmation flow; preserve explicit pauses and request protection.
+- Use the installing user's official login directly for new installations; delegate managed token renewal to the official CLI.
+- Skip active windows until a later configured slot and simplify the bilingual home menu.
+- Test login order, reinstall, v0.2.5 upgrade/rollback and installer mode retirement entirely with mocked requests.
+
+
 ## 0.2.5
 
 - Show verified warmup and countdown history in the ordinary dashboard.

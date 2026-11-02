@@ -88,6 +88,11 @@ call(entry);call(['kairo','schedule','add','03:37']);before=(state/'config.json'
 call(['kairo','update','online'])
 assert (state/'config.json').read_bytes()==before
 if automatic:assert not json.loads((state/'onboarding.json').read_text())['requested']
+if modern:
+ mode=pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf');mode.parent.mkdir(exist_ok=True)
+ mode.write_text('[Service]\nExecStart=\nExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon --observe\n')
+ call(entry);assert not mode.exists()
+ assert 'restart kairo.service' in pathlib.Path('/tmp/systemctl-calls').read_text()
 # Fixed corrupted download rejected before stopping a previously active service.
 pathlib.Path('/tmp/service-active').touch();archive=assets/f'kairo-{version}-x86_64-unknown-linux-gnu.tar.gz';clean=archive.read_bytes();archive.write_bytes(clean+b'changed')
 call(entry,False);assert pathlib.Path('/tmp/service-active').exists() and hashlib.sha256(binary.read_bytes()).hexdigest()==original;archive.write_bytes(clean)
