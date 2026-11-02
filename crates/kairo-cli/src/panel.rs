@@ -1574,6 +1574,9 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
         .and_then(|r| kairo_platform::identity(&r.codex_home.join("auth.json")))
         .ok();
     let status = store.read::<Value>("status.json").unwrap_or_default();
+    let expired = status["error"]
+        .as_str()
+        .is_some_and(|e| e.contains("HTTP 401") || e.contains("HTTP 403"));
     let deployment = store.read::<rt::Deployment>("deployment.json").ok();
     let intent = store
         .read::<kairo_platform::onboarding::Intent>("onboarding.json")
@@ -1588,7 +1591,7 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
         .is_some_and(|(i, d)| i.fingerprint != d.account);
     let label = if paused {
         t(en, "● 已暂停", "● Paused")
-    } else if id.is_none() {
+    } else if id.is_none() || expired {
         t(en, "需要登录 Codex", "Log in to Codex")
     } else if changed || status["event"] == "blocked" {
         t(en, "安全条件阻止运行", "Blocked by safety checks")
@@ -1603,7 +1606,7 @@ fn simple_summary(cli: &Cli, en: bool) -> Result<()> {
     println!(
         "{}：{}",
         t(en, "账号", "Account"),
-        if id.is_some() {
+        if id.is_some() && !expired {
             t(en, "已登录", "Logged in")
         } else {
             t(en, "需要登录 Codex", "Log in to Codex")

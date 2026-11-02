@@ -395,11 +395,7 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
     };
     let mut cursor: Cursor = store.read("cursor.json")?;
     if startup {
-        let anchor = cursor.anchor.clone();
-        cursor.resume(&c, tz, now)?;
-        s.pending = cursor
-            .due
-            .filter(|_| s.pending.is_some() && cursor.anchor == anchor);
+        resume_schedule(&c, &mut cursor, &mut s, tz, now)?;
         store.write("state.json", &s)?;
         store.write("cursor.json", &cursor)?;
     }
@@ -442,6 +438,23 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
     Ok(
         json!({"event":outcome,"at":now,"timezone":tz.to_string(),"next_check":cursor.due,"execution":if adapter.enabled(){"live"}else{"observation_only"}}),
     )
+}
+fn resume_schedule(
+    c: &Config,
+    cursor: &mut Cursor,
+    state: &mut State,
+    tz: chrono_tz::Tz,
+    now: i64,
+) -> Result<()> {
+    if state.pending.is_some() {
+        // v0.2.5 may have persisted a reset-time retry outside configured slots.
+        // Preserve finished slots and requests, but plan the next configured time.
+        cursor.due = None;
+        cursor.anchor = None;
+        state.pending = None;
+        cursor.arm(c, tz, now)?;
+    }
+    cursor.resume(c, tz, now)
 }
 fn save_natural_receipt(
     store: &Store,
@@ -863,5 +876,31 @@ mod authority_tests {
         drop(first);
         drop(execution_lease(&root, &account).unwrap());
         fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod automatic_upgrade_tests {
+    use super::*;
+    #[test]
+    fn old_reset_time_retry_is_replaced_with_a_configured_slot() {
+        let now = "2026-11-02T12:00:00Z"
+            .parse::<chrono::DateTime<chrono::Utc>>()
+            .unwrap()
+            .timestamp();
+        let c = Config::default();
+        let mut cursor = Cursor::new(now - 3600, chrono_tz::UTC);
+        cursor.anchor = Some("2026-11-02/11:00".into());
+        cursor.due = Some(now + 3600);
+        cursor.cutoff = now + 43200;
+        let mut state = State {
+            schema: 1,
+            account: "synthetic".into(),
+            pending: cursor.due,
+            ..Default::default()
+        };
+        resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).unwrap();
+        assert_eq!(cursor.anchor.as_deref(), Some("2026-11-02/16:00"));
+        assert!(state.pending.is_none());
     }
 }
