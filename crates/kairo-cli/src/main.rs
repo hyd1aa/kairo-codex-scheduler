@@ -467,7 +467,7 @@ fn possible_prewarm(
     next: &Value,
     quota: &Value,
     config: &Config,
-    cutoff: i64,
+    _cutoff: i64,
     last_attempt: Option<i64>,
     tz: chrono_tz::Tz,
 ) -> Option<String> {
@@ -488,7 +488,7 @@ fn possible_prewarm(
     if let Some(last) = last_attempt {
         at = at.max(last.checked_add(kairo_core::WINDOW + config.buffer_seconds)?);
     }
-    if cutoff > 0 && at >= cutoff {
+    if at > 0 {
         let start = chrono::DateTime::from_timestamp(at.checked_sub(1)?, 0)?;
         at = plan(config, tz, start, 72)
             .ok()?
@@ -516,12 +516,10 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             return emit(cli, v);
         }
         Cmd::Enable {
-            approve_production_cutover,
+            approve_production_cutover: _,
         } => {
-            return recovery_output(
-                cli,
-                kairo_platform::activation::enable(&cli.data_dir, approve_production_cutover)?,
-            )
+            let store = configured(cli)?;
+            return emit(cli, kairo_platform::onboarding::request(&store, false)?);
         }
         Cmd::Recover {
             action: RecoveryAction::Wizard,
@@ -1603,7 +1601,7 @@ mod tests {
         let quota = json!({"server_denied":false,"weekly":{"used":3.0},"five_hour":{"used":21.0,"reset_at":chrono::DateTime::parse_from_rfc3339("2026-10-20T17:41:00+08:00").unwrap().timestamp()}});
         assert_eq!(
             possible_prewarm(&next, &quota, &config, cutoff, None, tz).as_deref(),
-            Some("2026-10-20T17:41:30+08:00")
+            Some("2026-10-20T21:00:30+08:00")
         );
         let next_day = json!({"server_denied":false,"weekly":{"used":3.0},"five_hour":{"used":21.0,"reset_at":chrono::DateTime::parse_from_rfc3339("2026-10-21T02:00:00+08:00").unwrap().timestamp()}});
         assert_eq!(

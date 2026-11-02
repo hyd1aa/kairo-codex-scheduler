@@ -116,7 +116,7 @@ with tarfile.open(stage/asset) as archive:
    with p.open('xb') as f:f.write(archive.extractfile(m).read())
    p.chmod(0o755 if m.mode & 0o111 else 0o644)
 required_files=['install.sh','packaging/system-first-install.sh','packaging/system-install.sh','packaging/install.sh','packaging/system-uninstall.sh','packaging/kairo.service']
-if tuple(map(int,version.split('.'))) >= (0,2,4):required_files+=['packaging/kairo-onboarding.service','packaging/kairo-onboarding.timer']
+if (0,2,4) <= tuple(map(int,version.split('.'))) < (0,2,6):required_files+=['packaging/kairo-onboarding.service','packaging/kairo-onboarding.timer']
 for required in required_files:
  assert (stage/root/required).is_file(), 'Incomplete installation package: '+required
 binary=stage/root/'bin'/f'kairo-{target}'
@@ -134,8 +134,12 @@ chmod 700 /var/lib/kairo-installer
 [[ ! -L /var/lib/kairo-installer/online.lock ]] || exit 1
 exec 9>/var/lib/kairo-installer/online.lock
 flock -n 9 || fail '另一个安装或更新正在运行' 'Another installation or update is running'
+# Detect the selected service user's existing native CLI before downloading one.
+cli_user=${SUDO_USER:-$(id -un)}
+if [[ -f /var/lib/kairo/runtime.json && ! -L /var/lib/kairo ]]; then cli_user=$(stat -c %U /var/lib/kairo); fi
+cli_home=$(getent passwd "$cli_user" | cut -d: -f6)
 # Install the official native CLI only if absent; never authenticate or overwrite an existing CLI.
-if (( !skip_codex )) && [[ ! -x /usr/local/bin/codex && ! -x /usr/bin/codex && ! -x /home/kairo/.local/bin/codex ]]; then
+if (( !skip_codex )) && [[ ! -x "$cli_home/.local/bin/codex" ]] && [[ ! -x /usr/local/bin/codex && ! -x /usr/bin/codex && ! -x /home/kairo/.local/bin/codex ]]; then
  codex_version=0.164.0
  case $target in
   x86_64*) codex_arch=x86_64; codex_sha=90dd0b03b28afcb7fa733a4f73b413db2916a47347efd43fb669cc1c774ee8e4;;
@@ -275,7 +279,12 @@ try:
   if not stat.S_ISREG(s.st_mode) or s.st_uid!=0:raise RuntimeError('Unknown unit ownership/type')
   text=unit.read_text()
   # Fixed managed service identity; never stop an unrelated replacement service.
-  required=['User=kairo','Group='+grp.getgrgid(pwd.getpwnam('kairo').pw_gid).gr_name,'Environment=HOME=/home/kairo','ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon','KillMode=control-group']
+  user_line=next((line[5:] for line in text.splitlines() if line.startswith('User=')),None)
+  if not user_line:raise RuntimeError('Missing service user')
+  service_user=pwd.getpwnam(user_line)
+  data=pathlib.Path('/var/lib/kairo')
+  if data.exists() and data.stat().st_uid!=service_user.pw_uid:raise RuntimeError('Service/state owner mismatch')
+  required=['User='+service_user.pw_name,'Group='+grp.getgrgid(service_user.pw_gid).gr_name,'Environment=HOME='+service_user.pw_dir,'ExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon','KillMode=control-group']
   if any(line not in text.splitlines() for line in required):raise RuntimeError('kairo.service differs from managed service identity; refusing removal')
  if exists(drop) and drop.is_symlink():raise RuntimeError('Unsafe service drop-in directory')
  for name in ['kairo-onboarding.timer','kairo-onboarding.service']:
@@ -358,8 +367,9 @@ try:
  left=residuals()
  if left:raise RuntimeError('保留未知残留，未完全卸载 / Unknown residuals preserved: '+', '.join(left))
  if purge:
-  user=pwd.getpwnam('kairo')
-  if user.pw_dir!='/home/kairo':raise RuntimeError('Unexpected user home; refusing purge')
+  try:user=pwd.getpwnam('kairo')
+  except KeyError:user=None
+  if user is not None and user.pw_dir!='/home/kairo':raise RuntimeError('Unexpected user home; refusing purge')
   for path in map(pathlib.Path,retained[:3]):
    if path.is_symlink():raise RuntimeError('Refusing linked data path: '+str(path))
   for path in map(pathlib.Path,retained[:3]):
@@ -387,101 +397,42 @@ for name in install.sh system-uninstall.sh; do
  install -m 755 "$source" "/opt/kairo/installer/.$name.new"
  mv -f "/opt/kairo/installer/.$name.new" "/opt/kairo/installer/$name"
 done
-if ((was_active)); then systemctl start kairo.service; fi
-# Installing authorizes automatic warmup once all safety gates pass. Existing
-# installations retain their intent, pause, deployment and observation override.
-if /opt/kairo/current/bin/kairo onboard --help >/dev/null 2>&1; then
- for unit in kairo-onboarding.service kairo-onboarding.timer; do
-  target="/etc/systemd/system/$unit"
-  source="$root/packaging/$unit"
-  [[ -f $source && ! -L $target ]] || fail '初始化定时任务文件不安全' 'Unsafe initialization timer file'
-  if [[ -e $target ]]; then
-   cmp -s "$source" "$target" || fail '保留已有自定义初始化任务，请人工检查' 'Preserving custom initialization task; manual review required'
-  else
-   install -o root -g root -m 644 "$source" "$target"
-  fi
- done
- systemctl daemon-reload
- if (( fresh_install )); then
-  msg '安装即授权：安全条件满足后自动预热；可随时在菜单04暂停。' 'Installation authorizes automatic warmup once safe; pause any time in menu04.'
-  # Import only the invoking administrator's private Codex login, never a browser
-  # session. Strict owner/mode/no-follow checks; no token in argv/stdout/logs.
-  python3 - <<'PYOAUTH'
-import os,pwd,json,stat
-try:
- target=pwd.getpwnam('kairo')
- user=pwd.getpwuid(int(os.environ.get('SUDO_UID','0')))
- def directory(path,owner):
-  fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
-  m=os.fstat(fd)
-  if m.st_uid!=owner or m.st_mode & 0o022:os.close(fd);raise ValueError('unsafe directory')
-  return fd
- home=directory('/home/kairo',target.pw_uid)
- try:os.mkdir('.codex',0o700,dir_fd=home)
- except FileExistsError:pass
- dest=os.open('.codex',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=home)
- m=os.fstat(dest)
- if m.st_uid==0:os.fchown(dest,target.pw_uid,target.pw_gid)
- elif m.st_uid!=target.pw_uid:raise ValueError('wrong target owner')
- if m.st_mode & 0o077:raise ValueError('target must be private')
- try:os.stat('auth.json',dir_fd=dest,follow_symlinks=False)
- except FileNotFoundError:
-  source_home=directory(user.pw_dir,user.pw_uid)
-  source=os.open('.codex',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=source_home)
-  sm=os.fstat(source)
-  if sm.st_uid!=user.pw_uid or sm.st_mode & 0o022:raise ValueError('source must be private')
-  f=os.open('auth.json',os.O_RDONLY|os.O_NOFOLLOW,dir_fd=source)
-  m=os.fstat(f)
-  if not stat.S_ISREG(m.st_mode) or m.st_uid!=user.pw_uid or m.st_nlink!=1 or m.st_mode & 0o077:raise ValueError('unsafe source')
-  data=os.read(f,1048577)
-  if len(data)>1048576:raise ValueError('oversize')
-  v=json.loads(data)
-  assert not v.get('OPENAI_API_KEY') and v['tokens']['account_id'] and v['tokens']['access_token']
-  out=os.open('auth.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=dest)
-  os.fchown(out,target.pw_uid,target.pw_gid)
-  with os.fdopen(out,'wb') as w:w.write(data);w.flush();os.fsync(w.fileno())
-  os.fsync(dest)
-  print('已安全复用管理员 Codex CLI 登录 / Reused administrator Codex CLI login securely')
-except Exception:
- print('未导入管理员凭据；可在账号菜单完成官方登录 / No administrator credential imported; use the account menu for official login')
-PYOAUTH
-  new_auto_intent=0
-  if [[ ! -e /var/lib/kairo/onboarding.json && ! -L /var/lib/kairo/onboarding.json && ! -e /var/lib/kairo/deployment.json && ! -L /var/lib/kairo/deployment.json ]]; then
-   /opt/kairo/current/bin/kairo onboard --request
-   new_auto_intent=1
-  fi
-  systemctl enable --now kairo.service
+# New lifecycle requires the corresponding Rust daemon, never retrofit old binaries.
+if python3 - "$version" <<'PYLIFECYCLE'
+import sys
+raise SystemExit(0 if tuple(map(int,sys.argv[1].split('.'))) >= (0,2,6) else 1)
+PYLIFECYCLE
+then
+# The daemon owns login detection, baseline initialization and scheduling.
+# Remove only the exact legacy observation override; custom units fail closed.
+restart_mode=0
+mode=/etc/systemd/system/kairo.service.d/20-mode.conf
+if [[ -e $mode || -L $mode ]]; then
+ [[ -f $mode && ! -L $mode ]] || fail '服务配置不安全' 'Unsafe service configuration'
+ expected=$'[Service]\nExecStart=\nExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon --observe'
+ [[ $(cat "$mode") == "$expected" ]] || fail '保留自定义服务配置，请人工检查' 'Custom service configuration needs inspection'
+ rm -- "$mode"
+ restart_mode=1
+fi
+# Retire the old root onboarding timer. Account and request records stay intact.
+for unit in kairo-onboarding.timer kairo-onboarding.service; do
+ if [[ -e /etc/systemd/system/$unit ]]; then
+  [[ -f /etc/systemd/system/$unit && ! -L /etc/systemd/system/$unit ]] || fail '初始化任务文件不安全' 'Unsafe legacy initialization unit'
+  cmp -s "$root/packaging/$unit" "/etc/systemd/system/$unit" || fail '保留自定义初始化任务，请人工检查' 'Custom initialization unit needs inspection'
+  systemctl disable --now "$unit"
+  rm -- "/etc/systemd/system/$unit"
  fi
- systemctl enable --now kairo-onboarding.timer
- if (( fresh_install && new_auto_intent )) && { exec 8<>/dev/tty; } 2>/dev/null && [[ -t 8 ]]; then
-  login_needed=0
-  if ! /usr/sbin/runuser -u kairo -- test -r /home/kairo/.codex/auth.json; then
-   login_needed=1
-  elif ! /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo --lang en-US --json auth verify >"$stage/oauth-check.json" 2>/dev/null; then
-   # Transport failures must not discard a valid login or force reauthentication.
-   needs_reauth=$(python3 - "$stage/oauth-check.json" <<'PYAUTHCHECK'
-import json,sys
-try:code=json.load(open(sys.argv[1]))['error']['code']
-except Exception:code=''
-print('yes' if code.startswith(('quota_http_401','quota_http_403','oauth_','chatgpt_oauth')) or code in ('io_error','json_invalid','private_permissions_required') else 'no')
-PYAUTHCHECK
-   )
-   if [[ $needs_reauth == yes ]]; then login_needed=1; fi
-  fi
-  if (( login_needed )); then
-   msg '请完成官方 Codex OAuth 登录。' 'Complete official Codex OAuth login.'
-   /usr/sbin/runuser -u kairo -- /opt/kairo/current/bin/kairo auth login <&8 >&8 2>&1 || :
-  fi
-  msg '其他机器使用同账号无法自动检测。已停止其他调度器，且恢复等待期间不手动请求？[yes/N]' 'Other machines cannot be checked. Other schedulers stopped, and no manual requests during recovery? [yes/N]'
-  answer=; read -r answer <&8 || :
-  if [[ $answer == yes ]]; then /opt/kairo/current/bin/kairo onboard --request --confirm-exclusive-account || msg '请先完成登录，再在菜单04确认。' 'Complete login, then confirm once in menu04.'; fi
- fi
- systemctl start --no-block kairo-onboarding.service
+done
+systemctl daemon-reload
+systemctl enable --now kairo.service
+if ((restart_mode)); then systemctl restart kairo.service; fi
+msg '安装即授权：额度与安全条件允许时自动预热。官方 OAuth 由本人完成；服务会自动检测登录。' 'Installation authorizes automatic warmup within quota and safety limits. Complete official OAuth personally; login is detected automatically.'
+else
+ if ((was_active)); then systemctl start kairo.service; fi
 fi
 
 completed=1
-msg 'Kairo 已就绪。输入 sudo kairo：03 登录，04 启动/暂停。安全恢复自动复查；升级保留已有运行及暂停状态。' 'Kairo is ready. Run sudo kairo: 03 login, 04 start/pause. Safe recovery rechecks automatically; upgrades preserve running/paused state.'
-msg '无交互安装不会等待认证；需要登录或一次账号独占确认时，进入 sudo kairo 菜单。' 'Noninteractive installation never waits for authentication. Use sudo kairo for login or a one-time exclusive-account confirmation.' 
+msg 'Kairo 已就绪。运行 sudo kairo 查看状态；尚未登录时，请以服务所属用户完成 codex login。无需绑定、恢复或启用。' 'Kairo is ready. Run sudo kairo for status; if needed, run codex login as the service user. No binding, recovery or enable step is needed.'
 
 )
 # Child commands cannot consume shell source or interactive answers from the pipe.

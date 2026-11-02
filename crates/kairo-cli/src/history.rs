@@ -73,7 +73,8 @@ impl Record {
             "quota_invalid_or_weekly_exhausted"=>("额度数据无效或每周额度耗尽。","Quota data is invalid or weekly allowance is exhausted."),
             "state_or_clock"|"inconsistent_reset_history"=>("状态、时钟或窗口信息无法安全验证。","State, clock or window information could not be safely verified."),
             "missed_not_replayed"|"cutoff"|"daily_cutoff"=>("本次计划已过期或到达截止时间，未补发请求。","The scheduled check expired or reached its cutoff; no catch-up request was sent."),
-            "deferred"=>("仍在等待已有保护期限或安全窗口，未发送请求。","Waiting for an existing protection deadline or safe window; no request sent."),
+            "current_window_active"=>("当前窗口有效，跳过本次预热，等待下次预设机会。","Current window active; this slot was skipped. Waiting for the next configured opportunity."),
+            "window_guard"|"deferred"=>("仍在等待已有保护期限或安全窗口，未发送请求。","Waiting for an existing protection deadline or safe window; no request sent."),
             "eligible_observation_only"=>("当前处于只读观察，未发送模型请求。","Read-only observation; no model request sent."),
             "timeout"|"check_limit_reached"=>("请求成功，但既有只读确认未取得倒计时证据。","The request succeeded, but read-only checks did not verify its countdown."),
             "confirmation_unreadable"=>("请求记录存在，但确认记录无法验证；不能宣称预热成功。","A request exists, but confirmation records cannot be verified; warmup success is unproven."),
@@ -222,7 +223,7 @@ fn add_check(records: &mut Vec<Record>, v: &Value, state: &State) {
         return;
     };
     let kind = match event {
-        "deferred"
+        "deferred" | "current_window_active"
             if state
                 .observations
                 .iter()
@@ -231,6 +232,8 @@ fn add_check(records: &mut Vec<Record>, v: &Value, state: &State) {
             Kind::Skipped
         }
         "deferred"
+        | "current_window_active"
+        | "window_guard"
         | "attempt_guard"
         | "server_denied"
         | "state_or_clock"

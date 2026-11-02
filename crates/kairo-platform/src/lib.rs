@@ -539,3 +539,7 @@ mod administration_tests {
 }
 
 pub mod onboarding;
+
+pub mod automatic;
+
+pub mod codex_auth;

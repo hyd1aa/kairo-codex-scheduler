@@ -42,25 +42,16 @@ if ! binary_version=$(timeout 10 "$binary" --version 2>/dev/null) || ! printf '%
  exit 1
 fi
 systemctl daemon-reload || { msg 'systemd 无法重新加载；未创建用户' 'systemd cannot reload; no user was created' >&2; exit 1; }
-marker_dir=/var/lib/kairo-installer
-marker=$marker_dir/managed-user
-if getent passwd kairo >/dev/null; then
- [ -f "$marker" ] && [ ! -L "$marker" ] && [ "$(stat -c %u "$marker")" = 0 ] || { msg '已有非本安装器管理的 kairo 用户' 'Existing kairo user is not managed by this installer' >&2; exit 1; }
- [ "$(getent passwd kairo | cut -d: -f6)" = /home/kairo ] || { msg 'kairo 用户目录与预期不符' 'Kairo user home differs from the expected path' >&2; exit 1; }
-else
- [ ! -e /opt/kairo ] && [ ! -L /usr/local/bin/kairo ] && [ ! -e /etc/systemd/system/kairo.service ] || { msg '已有 Kairo 安装残留；拒绝创建用户' 'Existing Kairo installation detected; refusing user creation' >&2; exit 1; }
- command -v useradd >/dev/null 2>&1 || { msg '缺少 useradd' 'useradd is required' >&2; exit 1; }
- mkdir -p "$marker_dir"
- chmod 700 "$marker_dir"
- # Persist ownership intent before useradd: SIGKILL after account creation must
- # remain distinguishable from a foreign pre-existing user on the next run.
- printf 'schema=1\n' > "$marker"
- chown root:root "$marker"
- chmod 600 "$marker"
- sync -f "$marker"
- useradd --system --create-home --home-dir /home/kairo --shell /bin/false kairo
+# Use the invoking user's official login directly; never copy OAuth credentials.
+account_user=${SUDO_USER:-$(id -un)}
+if [ -f /var/lib/kairo/runtime.json ] && [ ! -L /var/lib/kairo ]; then
+ account_user=$(stat -c %U /var/lib/kairo)
 fi
+getent passwd "$account_user" >/dev/null || exit 1
+mkdir -p /var/lib/kairo-installer
+chmod 700 /var/lib/kairo-installer
+printf 'schema=1\n' > /var/lib/kairo-installer/managed-user
+chmod 600 /var/lib/kairo-installer/managed-user
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-"$script_dir/system-install.sh" "$binary" "$checksum" kairo
-msg 'Kairo 已安装；服务保持停用及只读观察。请由管理员为 kairo 用户完成人工 OAuth 授权，再检查状态。' 'Kairo is installed; its service remains disabled and observation-only. Complete human OAuth authorization for the kairo user, then check status.'
-msg '检查：kairo status；授权：sudo -u kairo kairo auth login' 'Check: kairo status; authorize: sudo -u kairo kairo auth login'
+"$script_dir/system-install.sh" "$binary" "$checksum" "$account_user"
+msg '安装即授权 Kairo 在额度和安全条件允许时自动预热。未登录时，请以安装用户完成官方 Codex 登录，服务会自动检测。' 'Installation authorizes automatic warmup within quota and safety limits. Complete official Codex login as the installing user; the service detects it automatically.'

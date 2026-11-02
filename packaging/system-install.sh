@@ -75,11 +75,6 @@ mkdir -p "$staging/etc/systemd/system" "$staging/var/lib/kairo-account-guards"
 if [ ! -e "$unit" ] && [ ! -L "$unit" ]; then new_unit=1; fi
 cp "$expected_unit" "$unit"
 chmod 644 "$staging/etc/systemd/system/kairo.service"
-mkdir -p "$staging/etc/systemd/system/kairo.service.d"
-if [ "$new_unit" -eq 1 ] && [ ! -f "$staging/etc/systemd/system/kairo.service.d/20-mode.conf" ]; then
- new_dropin=1
- printf '[Service]\nExecStart=\nExecStart=%s/current/bin/kairo --data-dir /var/lib/kairo daemon --observe\n' "$prefix" > "$staging/etc/systemd/system/kairo.service.d/20-mode.conf"
-fi
 mkdir -p "$staging/usr/local/bin"
 if [ ! -L "$link" ]; then new_link=1; ln -s "$prefix/current/bin/kairo" "$link"; fi
 if [ -z "$staging" ]; then
@@ -88,10 +83,12 @@ if [ -z "$staging" ]; then
  codex_binary=/usr/local/bin/codex
  for candidate in "$account_home/.local/bin/codex" /usr/local/bin/codex /usr/bin/codex /opt/codex-window-scheduler/bin/codex; do if [ -x "$candidate" ]; then codex_binary=$candidate; break; fi; done
  if [ "$had_runtime" -eq 0 ]; then
+  /usr/sbin/runuser -u "$account_user" -- mkdir -p "$account_home/.codex"
   /opt/kairo/bin/kairo --data-dir /var/lib/kairo runtime --home "$account_home" --codex-home "$account_home/.codex" --codex "$codex_binary" >/dev/null
  fi
  chown -R "$account_user:$account_group" /var/lib/kairo /var/lib/kairo-account-guards
  chmod 700 /var/lib/kairo /var/lib/kairo-account-guards
  systemctl daemon-reload
+ systemctl enable --now kairo.service
 fi
-msg '服务模板已安装；未启用、未启动、未接管生产' 'Service provisioned; not enabled, not started, no production cutover'
+msg 'Kairo 已安装，登录后自动待命' 'Kairo installed; automatically ready after login'

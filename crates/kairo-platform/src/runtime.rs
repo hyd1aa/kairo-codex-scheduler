@@ -92,10 +92,28 @@ pub fn verified_usage(id: &crate::Identity, v: &Value, now: i64) -> Result<(Quot
     }
     parse_usage(v, now)
 }
+pub(crate) fn quota_with_renewal(
+    store: &Store,
+    r: &Runtime,
+    expected: &crate::Identity,
+) -> Result<Value> {
+    match quota(expected) {
+        Ok(v) => Ok(v),
+        Err(e) if e.to_string().contains("HTTP 401") => {
+            crate::codex_auth::renew(store, r)?;
+            let id = identity(&r.codex_home.join("auth.json"))?;
+            if id.fingerprint != expected.fingerprint {
+                bail!("account_changed / 续期后账号变化，已暂停");
+            }
+            quota(&id)
+        }
+        Err(e) => Err(e),
+    }
+}
 pub fn verify(store: &Store) -> Result<Value> {
     let r = runtime(store)?;
     let id = identity(&r.codex_home.join("auth.json"))?;
-    let v = quota(&id)?;
+    let v = quota_with_renewal(store, &r, &id)?;
     let (f, w, d) = verified_usage(&id, &v, Utc::now().timestamp())?;
     Ok(
         json!({"account_fingerprint":id.fingerprint,"identity_server_verified":true,"five_hour":f,"weekly":w,"server_denied":d}),
@@ -310,7 +328,7 @@ impl Adapter for Live<'_> {
         if id.fingerprint != self.d.account {
             bail!("account_changed / 账号变化")
         };
-        let v = quota(&id)?;
+        let v = quota_with_renewal(self.store, &self.r, &id)?;
         verified_usage(&id, &v, Utc::now().timestamp())
     }
     fn enabled(&self) -> bool {
@@ -377,11 +395,7 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
     };
     let mut cursor: Cursor = store.read("cursor.json")?;
     if startup {
-        let anchor = cursor.anchor.clone();
-        cursor.resume(&c, tz, now)?;
-        s.pending = cursor
-            .due
-            .filter(|_| s.pending.is_some() && cursor.anchor == anchor);
+        resume_schedule(&c, &mut cursor, &mut s, tz, now)?;
         store.write("state.json", &s)?;
         store.write("cursor.json", &cursor)?;
     }
@@ -424,6 +438,23 @@ pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Val
     Ok(
         json!({"event":outcome,"at":now,"timezone":tz.to_string(),"next_check":cursor.due,"execution":if adapter.enabled(){"live"}else{"observation_only"}}),
     )
+}
+fn resume_schedule(
+    c: &Config,
+    cursor: &mut Cursor,
+    state: &mut State,
+    tz: chrono_tz::Tz,
+    now: i64,
+) -> Result<()> {
+    if state.pending.is_some() {
+        // v0.2.5 may have persisted a reset-time retry outside configured slots.
+        // Preserve finished slots and requests, but plan the next configured time.
+        cursor.due = None;
+        cursor.anchor = None;
+        state.pending = None;
+        cursor.arm(c, tz, now)?;
+    }
+    cursor.resume(c, tz, now)
 }
 fn save_natural_receipt(
     store: &Store,
@@ -529,6 +560,14 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
     loop {
         let store = Store::open(root)?;
         let result = (|| -> Result<Value> {
+            if !observe_only {
+                let ready = crate::automatic::ensure(&store)?;
+                if ready["status"] != "ready" {
+                    return Ok(
+                        json!({"event":ready["status"],"at":Utc::now().timestamp(),"execution":"waiting"}),
+                    );
+                }
+            }
             if !observe_only
                 && !crate::onboarding::execution_paused(&store)?
                 && store.root.join("deployment.json").exists()
@@ -585,7 +624,11 @@ pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
             std::io::stdout().flush()?;
             previous = signature;
         }
-        let interval = runtime(&store).map(|r| r.interval_seconds).unwrap_or(1);
+        let interval = if failed {
+            60
+        } else {
+            runtime(&store).map(|r| r.interval_seconds).unwrap_or(1)
+        };
         drop(store);
         startup = failed;
         if once {
@@ -833,5 +876,31 @@ mod authority_tests {
         drop(first);
         drop(execution_lease(&root, &account).unwrap());
         fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod automatic_upgrade_tests {
+    use super::*;
+    #[test]
+    fn old_reset_time_retry_is_replaced_with_a_configured_slot() {
+        let now = "2026-11-02T12:00:00Z"
+            .parse::<chrono::DateTime<chrono::Utc>>()
+            .unwrap()
+            .timestamp();
+        let c = Config::default();
+        let mut cursor = Cursor::new(now - 3600, chrono_tz::UTC);
+        cursor.anchor = Some("2026-11-02/11:00".into());
+        cursor.due = Some(now + 3600);
+        cursor.cutoff = now + 43200;
+        let mut state = State {
+            schema: 1,
+            account: "synthetic".into(),
+            pending: cursor.due,
+            ..Default::default()
+        };
+        resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).unwrap();
+        assert_eq!(cursor.anchor.as_deref(), Some("2026-11-02/16:00"));
+        assert!(state.pending.is_none());
     }
 }

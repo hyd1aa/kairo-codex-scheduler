@@ -133,15 +133,20 @@ pub fn tick<A: Adapter>(
                 state.positive_until = state.positive_until.max(f.reset_at);
                 store.write("state.json", state)?;
             }
-            if at < cursor.cutoff && at > now {
-                state.pending = Some(at);
-                store.write("state.json", state)?;
-                cursor.due = Some(at);
-                cursor.observed = now;
-                store.write("cursor.json", cursor)?;
-                return Ok("deferred".into());
+            // A live window skips this slot. Retry only at a configured time,
+            // never at an invented reset+buffer activation time.
+            cursor.finish();
+            cursor.arm(c, tz, at.max(now + 1) - 1)?;
+            cursor.observed = now;
+            state.pending = None;
+            store.write("state.json", state)?;
+            store.write("cursor.json", cursor)?;
+            return Ok(if f.used > 0. && f.reset_at > now {
+                "current_window_active"
+            } else {
+                "window_guard"
             }
-            "cutoff".into()
+            .into());
         }
         Decision::Block(reason) => reason.into(),
     };
@@ -315,27 +320,20 @@ mod regression {
         };
         assert_eq!(
             tick(&store, &c, &mut cursor, &mut state, tz, start, &mut adapter).unwrap(),
-            "deferred"
+            "current_window_active"
         );
-        assert_eq!(cursor.due, Some(1792387044));
+        let next = cursor.due.unwrap();
+        assert!(next > 1792387044);
+        assert_eq!(cursor.anchor.as_deref(), Some("2026-10-19/16:00"));
         assert_eq!(adapter.calls, 0);
-        adapter.now = 1792387044;
+        adapter.now = next;
         adapter.active = false;
         assert_eq!(
-            tick(
-                &store,
-                &c,
-                &mut cursor,
-                &mut state,
-                tz,
-                1792387044,
-                &mut adapter
-            )
-            .unwrap(),
+            tick(&store, &c, &mut cursor, &mut state, tz, next, &mut adapter).unwrap(),
             "rolled_zero_usage:request_ok_window_unconfirmed"
         );
         assert_eq!(adapter.calls, 1);
-        assert_eq!(state.attempts[0].at, 1792387044);
+        assert_eq!(state.attempts[0].at, next);
         assert!(state.pending.is_none());
         tick(
             &store,
@@ -343,7 +341,7 @@ mod regression {
             &mut cursor,
             &mut state,
             tz,
-            1792387049,
+            next + 5,
             &mut adapter,
         )
         .unwrap();
@@ -494,12 +492,12 @@ mod dense_tests {
                 &mut adapter
             )
             .unwrap(),
-            "deferred"
+            "current_window_active"
         );
         assert_eq!(adapter.reads, 1);
         assert!(cursor.finished.contains("2026-10-19/12:00"));
-        assert_eq!(cursor.anchor.as_deref(), Some("2026-10-19/11:00"));
-        assert_eq!(state.pending, Some(due + 3630));
+        assert_eq!(cursor.anchor.as_deref(), Some("2026-10-19/14:00"));
+        assert_eq!(state.pending, None);
         drop(store);
         std::fs::remove_dir_all(root).unwrap();
     }
