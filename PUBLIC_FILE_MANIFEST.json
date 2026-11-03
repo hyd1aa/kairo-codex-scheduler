@@ -70,7 +70,7 @@
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "009e9a63f191f00d2634a4e3d62395327486eaac8bfadb50b71f4160df99bb1c",
+      "sha256": "3e860b06662ed5f04d8c807699cd2e7e53baef3f26b8ac2fadf54f4f28a7f7e4",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -567,8 +567,8 @@
       "source_commit": null,
       "source_path": "docs/ACCEPTANCE_0.2.7.md",
       "source_sha256": null,
-      "transformation": "New development after the recorded source snapshot",
-      "sha256": "989e52c982afd6ebd787b0db86ec713afd3a8c01e87bbdfb4283da3053b4b832"
+      "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
+      "sha256": "9c5778ca0365f396ea3b615d554f441be5c980951b99e4f6a5fd139c76a6eaf4"
     },
     {
       "path": "docs/ADVANCED.en.md",

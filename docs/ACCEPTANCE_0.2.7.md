@@ -12,6 +12,6 @@ Scope: Rust CLI presentation and interactive navigation only, plus patch-version
 | Terminal compatibility | 24-column ioctl PTY, ANSI screen clearing, NO_COLOR, dumb terminal and noninteractive subcommand behavior checked. |
 | Evidence display | Real binary with synthetic records verifies confirmed/pending/failed/unknown/unconfirmed results, account conflict/expired login, cache age and remaining quotas. No active-window filler on home. |
 | Automation compatibility | Existing JSON status, schedule and all CLI/process/transaction tests retained. |
-| Background regression | Existing scheduling, guards, update/rollback and installer suites retained; fmt, Clippy and Rust workspace tests required. |
+| Background regression | Actual v0.2.6 → v0.2.7 upgrade/rollback/repeat preserves state bytes, including paused installations. Existing scheduling, guards, update/rollback and installer suites retained; fmt, Clippy and Rust workspace tests required. |
 
 Run `KAIRO_OFFLINE=1 CARGO_BUILD_JOBS=1 sh scripts/verify.sh`. Installation acceptance runs only in disposable containers with mocked systemd. No real OAuth, model requests or production services are used. Actual SSH clients and real-provider behavior are not claimed by PTY tests.
