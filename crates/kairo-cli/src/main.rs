@@ -1099,38 +1099,22 @@ fn input(prompt: &str) -> Result<String> {
     Ok(s.trim().into())
 }
 fn submenu(en: bool, zh: &[&str], english: &[&str]) -> Result<String> {
-    loop {
-        let choice = numbered(en, zh, english, t(en, "返回", "Back"))?;
-        let normalized = choice.trim_start_matches('0');
-        if normalized.is_empty()
-            || normalized
-                .parse::<usize>()
-                .is_ok_and(|n| n > 0 && n <= zh.len())
-        {
-            panel::action_page(en);
-            return Ok(choice);
-        }
-        println!(
-            "{}",
-            color(
-                t(
-                    en,
-                    "菜单选项无效；请重新输入",
-                    "Invalid selection; try again"
-                ),
-                31
-            )
-        );
-    }
+    let choice = numbered(en, zh, english, t(en, "返回", "Back"))?;
+    panel::action_page(en);
+    Ok(choice)
 }
 fn numbered(en: bool, zh: &[&str], english: &[&str], exit: &str) -> Result<String> {
     for (i, s) in (if en { english } else { zh }).iter().enumerate() {
-        println!("{:02}. {}", i + 1, s)
+        println!("{}. {}", i + 1, s)
     }
-    println!("00. {exit}");
+    println!("\n0. {exit}");
     loop {
-        let choice = input(t(en, "请输入选项 > ", "Select > "))?;
-        if !choice.is_empty() {
+        let choice = input(&if en {
+            format!("Select [0-{}]: ", zh.len())
+        } else {
+            format!("请选择 [0-{}]：", zh.len())
+        })?;
+        if choice.len() == 1 && choice.parse::<usize>().is_ok_and(|n| n <= zh.len()) {
             return Ok(choice);
         }
         println!(
@@ -1163,40 +1147,37 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
             let a = submenu(
                 en,
                 &[
-                    "查看全部激活时间",
-                    "新增时间",
+                    "添加时间",
                     "修改时间",
                     "删除时间",
+                    "恢复默认",
                     "下次实际检查",
                     "未来24小时预览",
-                    "恢复默认时间",
                 ],
                 &[
-                    "List all times",
                     "Add time",
                     "Edit time",
                     "Remove time",
+                    "Restore defaults",
                     "Next actual check",
                     "Preview next 24 hours",
-                    "Restore default times",
                 ],
             )?;
             Cmd::Schedule {
                 action: match a.trim_start_matches('0') {
-                    "1" => Schedule::List,
-                    "2" => Schedule::Add {
+                    "1" => Schedule::Add {
                         time: input("HH:MM > ")?,
                     },
-                    "3" => Schedule::Edit {
+                    "2" => Schedule::Edit {
                         old: input(t(en, "原时间 > ", "Old time > "))?,
                         new: input(t(en, "新时间 > ", "New time > "))?,
                     },
-                    "4" => Schedule::Remove {
+                    "3" => Schedule::Remove {
                         time: input("HH:MM > ")?,
                     },
+                    "4" => Schedule::Reset,
                     "5" => Schedule::Next,
                     "6" => Schedule::Preview,
-                    "7" => Schedule::Reset,
                     _ => return Ok(None),
                 },
             }
@@ -1403,14 +1384,11 @@ fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
         },
         "11" => Cmd::HelpInfo,
         "12" => {
-            println!("{}", t(en, "将停止并禁用 kairo.service，删除安装器管理的 /opt/kairo 程序、unit 和全局 kairo 命令。保留 /var/lib/kairo、账号保护记录、/home/kairo/.codex、Codex CLI 及其他项目。", "Stops/disables kairo.service; removes installer-managed /opt/kairo programs, unit and global kairo command. Retains /var/lib/kairo, account guards, /home/kairo/.codex, Codex CLI and other projects."));
-            if input(t(en, "确认继续？输入 yes > ", "Continue? Type yes > "))? != "yes" {
-                return Ok(None);
-            }
+            println!("{}", t(en, "将移除 Kairo 程序和服务。\n默认保留 OAuth、用户配置及状态数据。\n不会删除已有的 Codex CLI。", "Removes Kairo programs and services.\nPreserves OAuth, user configuration and state data.\nKeeps your existing Codex CLI."));
             if input(t(
                 en,
-                "输入 uninstall 确认卸载（保留状态） > ",
-                "Type uninstall to remove (preserves state) > ",
+                "输入 uninstall 确认卸载；Enter 取消 > ",
+                "Type uninstall to confirm; Enter cancels > ",
             ))? != "uninstall"
             {
                 return Ok(None);

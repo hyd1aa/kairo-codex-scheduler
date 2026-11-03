@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory(prefix='kairo-evidence-') as temp:
   p=subprocess.run([binary,'--data-dir',str(data),*args],env=env,text=True,capture_output=True,timeout=15)
   assert (p.returncode==0)==ok,(args,p.stdout,p.stderr);return p
  def write(name,v):p=data/name;p.write_text(json.dumps(v));p.chmod(0o600)
- def menu(text='00\n'):
+ def menu(text='0\n'):
   global count
   master,slave=pty.openpty();p=subprocess.Popen([binary,'--data-dir',str(data)],stdin=slave,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env,text=True)
   os.close(slave);os.write(master,text.encode());out,err=p.communicate(timeout=20);os.close(master);assert p.returncode==0,(out,err)
@@ -28,27 +28,33 @@ with tempfile.TemporaryDirectory(prefix='kairo-evidence-') as temp:
  write('recovery.json',dict(approved=True,not_before=done-10000))
  write('quota-cache.json',dict(account=account,at=int(time.time())-600,five_hour=dict(used=0.,reset_at=done+18000),weekly=dict(used=40.,reset_at=done+604800)))
  out=menu();assert '✓ 成功' in out and shown_request in out and '归因不确定' not in out
- assert '剩余100.0%' in out and '剩余60.0%' in out and '旧缓存' in out and '下次预热机会' in out
+ assert '100.0% / 60.0%' in out and '旧缓存' in out and '下次预热机会' in out
  assert '预计复查' not in out and '安全恢复复查' not in out and '2026-' not in out
- out=menu('01\n02\n\n03\n\n04\n00\n');assert '仅列出已保存记录' in out and 'request_ok_window_unconfirmed' not in out and 'countdown_confirmed_time_correlated' not in out
+ out=menu('1\n2\n\n3\n\n0\n0\n');assert '仅列出已保存记录' in out and 'request_ok_window_unconfirmed' not in out and 'countdown_confirmed_time_correlated' not in out
  # A newer failure never inherits the older confirmation.
  failed={**attempt,'anchor':'synthetic-failure','at':done+200,'completed_at':done+202,'before':{**before,'reset_at':done+200+18000},'outcome':'request_failed'}
  state['last_clock']=done+202;state['attempts'].append(failed);write('state.json',state)
  out=menu();assert '✗ 请求失败' in out and '结果：✓' not in out
  write('status.json',dict(event='attempt_guard',at=done+250))
- out=menu('01\n03\n\n00\n00\n');assert '模型请求未成功' in out
+ out=menu('1\n3\n\n0\n0\n');assert '模型请求未成功' in out
  (data/'status.json').unlink()
  state['attempts']=[attempt];write('state.json',state);(data/'confirmations.json').unlink()
  out=menu();assert '请求成功，等待倒计时确认' in out and '结果：✓' not in out
+ for outcome,label in [('attempt_persisted_unknown','请求结果未知'),('request_ok_window_unconfirmed','请求成功，等待倒计时确认')]:
+  state['attempts']=[{**attempt,'outcome':outcome}];write('state.json',state)
+  out=menu();assert label in out and '✓ 成功' not in out
+ write('deployment.json',dict(schema=1,account='another-synthetic-account',enabled=True,approved_at=done))
+ out=menu();assert '账号已切换' in out
+ (data/'deployment.json').unlink()
  state['attempts']=[];state['last_clock']=0;write('state.json',state);(data/'recovery.json').unlink()
  out=menu();assert '尚未进行过预热' in out
  direct('lang','en-US');out=menu();assert 'No warmup performed yet' in out and 'Next warmup opportunity' in out
  # Zero usage can still have a running partial five-hour window.
  write('quota-cache.json',dict(account=account,at=int(time.time()),five_hour=dict(used=0.,remaining=7200,reset_at=int(time.time())+7200),weekly=dict(used=0.,reset_at=int(time.time())+604800)))
- direct('lang','zh-CN');out=menu();assert '当前窗口有效，等待下次预热机会' in out and '剩余100.0%' in out
+ direct('lang','zh-CN');out=menu();assert '当前窗口有效，等待下次预热机会' not in out and '100.0% / 100.0%' in out
  # Known weekly exhaustion and expired OAuth must be explicit on the home page.
  write('quota-cache.json',dict(account=account,at=int(time.time()),five_hour=dict(used=0.,reset_at=int(time.time())+18000),weekly=dict(used=100.,reset_at=int(time.time())+3600)))
- direct('lang','zh-CN');out=menu();assert '每周额度已用尽，等待重置' in out and '剩余0.0%' in out
+ direct('lang','zh-CN');out=menu();assert '每周额度已用尽，等待重置' in out and '100.0% / 0.0%' in out
  write('status.json',dict(event='blocked',error='Quota HTTP 401 Unauthorized',at=int(time.time())))
  out=menu();assert '需要登录 Codex' in out and '登录已失效' in out and 'Quota HTTP' not in out
  (data/'status.json').unlink()

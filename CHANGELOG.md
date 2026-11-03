@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.7
+
+- Compact bilingual Rust CLI: home actions 1–7, one exit at 0, consistent single-digit submenu navigation.
+- Move language and one-confirmation uninstall to home; preserve advanced functionality and JSON CLI.
+- Combine evidence-backed warmup result and quota rows, retaining cache labels and account warnings.
+- Scheduler, OAuth, quota, ledger, systemd and safety behavior unchanged.
+
 ## 0.2.6
 
 - Automatically verify OAuth/quota and establish a local baseline after installation; remove the fixed unknown-history quiet wait from normal startup.
