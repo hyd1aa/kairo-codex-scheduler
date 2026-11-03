@@ -1240,7 +1240,7 @@
     },
     {
       "path": "scripts/verify.sh",
-      "sha256": "6f9f6d3e29c4242e7049ead93c2f38e18b84b1bb809908032b9db4bdadd3b78a",
+      "sha256": "4e898aeab31d40b78b535793d320be66917bacfadcea08fd7a2f34f7cbb4a400",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1319,7 +1319,7 @@
     },
     {
       "path": "tests/menu_readme.py",
-      "sha256": "de67729b5bfa759e86a00f9123b313f3c5f0d6fac98cdc426716ae75de8071a2",
+      "sha256": "81df53590f77212de957da42c640bc1b10c53390b44ee9d4af6890c4d035bbcf",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Independently authored Kairo maintenance script or focused test under project MIT",

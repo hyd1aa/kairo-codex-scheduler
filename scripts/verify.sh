@@ -11,6 +11,8 @@ KAIRO_OFFLINE=1 python3 tests/acceptance.py target/release/kairo
 KAIRO_OFFLINE=1 python3 tests/panel_navigation.py target/release/kairo
 KAIRO_OFFLINE=1 python3 tests/warmup_display.py target/release/kairo
 KAIRO_OFFLINE=1 python3 tests/online_cli.py target/release/kairo
+KAIRO_OFFLINE=1 python3 tests/menu_readme.py target/release/kairo
+python3 tests/readme_links.py
 python3 scripts/check-secrets.py
 python3 tests/release_secrets.py
 for script in packaging/*.sh; do sh -n "$script"; done

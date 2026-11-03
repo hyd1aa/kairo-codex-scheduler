@@ -11,9 +11,9 @@ with tempfile.TemporaryDirectory() as data:
  direct('runtime','--home',data,'--codex-home',data,'--codex','/nonexistent-kairo-mock')
  for language,file in [('zh-CN','README.md'),('en-US','README.en.md')]:
   direct('lang',language);readme=(repo/file).read_text()
-  output=menu('00\n');actual=re.findall(r'^(\d{2})\. (.+)$',output,re.M)
-  assert [n for n,_ in actual]==[f'{n:02}' for n in range(1,7)]+['00']
+  output=menu('0\n');actual=re.findall(r'^(\d)\. (.+)$',output,re.M)
+  assert [n for n,_ in actual]==[str(n) for n in range(1,8)]+['0']
   for number,name in actual:assert f'| {number} | {name} |' in readme,(file,number,name)
-  output=menu('02\n00\n00\n');sub=re.findall(r'^(\d{2})\. (.+)$',output,re.M)
-  # Find the seven actual activation submenu rows, independent of repeated main menus.
-print('Both six-entry README menus match shipping CLI')
+  output=menu('2\n0\n0\n');sub=re.findall(r'^(\d)\. (.+)$',output,re.M)
+  assert [n for n,_ in sub][8:15]==[str(n) for n in range(1,7)]+['0']
+print('Both seven-action README menus and schedule navigation match shipping CLI')
