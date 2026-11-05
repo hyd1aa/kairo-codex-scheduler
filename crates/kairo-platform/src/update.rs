@@ -142,18 +142,7 @@ fn directory(path: &Path) -> Result<()> {
     Ok(())
 }
 fn lease(data: &Path) -> Result<File> {
-    directory(data)?;
-    let f = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .mode(0o600)
-        .custom_flags(libc::O_NOFOLLOW)
-        .open(data.join("daemon.lock"))?;
-    f.try_lock_exclusive()
-        .context("stop_kairo_before_update / 升级前请停止 Kairo 服务")?;
-    Ok(f)
+    crate::runtime::daemon_lease(data).context("stop_kairo_before_update / 升级前请停止 Kairo 服务")
 }
 fn install_lease(prefix: &Path) -> Result<File> {
     directory(prefix)?;

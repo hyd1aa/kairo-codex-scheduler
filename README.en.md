@@ -1,26 +1,32 @@
 # Kairo
 
-A lightweight Rust tool that warms up Codex five-hour quota windows at configured times. [中文](README.md)
+A lightweight Rust tool that calls the official Codex CLI once at each scheduled time. [中文](README.md)
 
-Install → detect official Codex login → stand by automatically → check quota and warm up when eligible.
+**Kairo schedules Codex calls. It does not guarantee that a call starts a new five-hour window or succeeds. Official quotas and rate limits still apply.**
 
-## Install
+## One-command installation
 
 ```sh
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/install.sh | sudo bash'
 ```
 
-Downloads the latest stable GitHub release, verifies SHA256 and provisions a native binary with systemd boot startup. **Installing authorizes automatic warmup within quota and safety limits. Pause at any time in menu 3.** Users complete official OAuth and MFA themselves.
+Downloads the latest stable release, checks SHA256 and provisions systemd boot startup. **Installation authorizes scheduled official Codex calls; pause at any time.** Users complete official OAuth and MFA themselves.
 
-New installations use the installing user's official Codex directory (SUDO_USER under sudo), without copying or editing official credentials. Login before installation is detected and verified. Login after installation is detected automatically; no restart, binding or enable command is needed. Run `codex login` as the installing user, or use menu 4. Upgrades preserve the existing service user and OAuth directory.
+Existing login is reused as the installing user. If installed first, run `codex login` as that user or use menu 4. Later login works without binding, restart or enable commands. Kairo never copies, prints or uploads OAuth tokens or edits Codex user configuration.
 
-## Scheduling
+## Scheduled calls
 
-Missing local history does not trigger a fixed five-hour wait. Kairo verifies credential ownership, server account identity and both quota windows, then establishes a local baseline. Unverifiable quotas, changed accounts and explicit local scheduler conflicts stop requests with a reason.
+Defaults are 06:00, 11:00, 16:00 and 21:00 in the system timezone. Existing custom times survive upgrades, including 06:00, 11:02, 16:04 and 21:06. The default delay is 30 seconds: actual calls occur at 06:00:30, 11:02:30, 16:04:30 and 21:06:30. Menus and previews show the delay and seconds explicitly.
 
-Default local times are 06:00, 11:00, 16:00 and 21:00. Add, edit or remove them in menu 2. If a window remains active at16:00, that slot is skipped and a later configured opportunity is selected. No implicit reset-time request is sent and skipping is never reported as successful activation. Each real request rechecks quota and persists its reservation first. Failed requests retain evidence and apply a safe backoff. Missed slots are not replayed in a burst after downtime.
+Each slot is independent. Active windows, reset_at, other devices and cached quota never gate execution. When unpaused, the official CLI is logged in and available, the local slot is unprocessed and no Kairo invocation overlaps, Kairo starts one `codex exec`.
 
-The server can describe an idle window with zero usage and a fresh full duration. Warmup requires valid quota evidence and local duplicate guards. Kairo does not reset, accelerate or bypass official limits. Server quota cannot prove complete request history on other machines or identify every concurrent scheduler. Cross-machine absolute deduplication is not guaranteed.
+Calls use an empty private working directory, read-only sandbox, ephemeral session, ignored user configuration/rules and disabled shell/search tools. OpenAI provider request and stream retries are explicitly set to zero. The fixed instruction asks for only “Kairo ping”, with no tools or file edits. Kairo performs no additional model validation or window confirmation. Success requires exit code zero, a nonempty assistant reply and a valid `turn.completed` usage event, with no failure or tool execution event.
+
+`daemon.lock` excludes duplicate daemons and `call.lock` excludes overlapping invocations. The slot reservation and monotonic watermark are atomically persisted and fsynced in `schedule.json` before model process startup. Failure, crash or unknown outcomes never retry that slot. Processes have bounded lifetimes and parent-death cleanup. An overlapping call causes a recorded skip until the next slot.
+
+Restart and upgrade schedule future slots only; downtime does not cause catch-up bursts. Network failures, expired login, rate limits and exhausted quota are recorded until the next slot. Explicit pause survives restart, upgrade and login until an explicit start.
+
+Quota is optional read-only information. Cache time and stale markers remain visible; quota query failure never blocks calls. Neither quota nor CLI login status guarantees the next request will succeed. Cross-machine deduplication is not promised. Local at-most-once startup depends on intact durable local records and filesystem guarantees; erased data cannot preserve past evidence. A fresh installation starts with future slots.
 
 ## Menu
 
@@ -30,36 +36,33 @@ sudo kairo
 
 | Number | Menu |
 | --- | --- |
-| 1 | Status and quota |
-| 2 | Warmup schedule |
+| 1 | Call history and quota |
+| 2 | Call schedule |
 | 3 | Start / pause |
-| 4 | Codex account |
+| 4 | Codex login and account |
 | 5 | Updates / advanced settings |
 | 6 | 中文 / English |
 | 7 | Uninstall Kairo |
 | 0 | Exit |
 
-The compact home screen shows automatic warmup status, the last request time and result, the next opportunity, remaining five-hour/weekly quota and its cache time. Healthy login takes no extra row; missing or expired login and account changes remain visible. Values come from saved evidence; unavailable values stay empty and stale quota is labelled.
-
-Enter a number and press Enter. Every submenu uses `0` to return; only `0` at home exits. Press Enter after an action to return to the current menu. Invalid input retries in place. Language changes refresh immediately and persist. Schedule settings show current times and retain add/edit/remove/reset, next-check and preview actions. Menu 5 retains updates, logs, diagnostics, service controls and account maintenance. Menu 7 requires one explicit confirmation and reuses the existing uninstaller, preserving OAuth, configuration, state and the existing Codex CLI by default.
-
-Supports Chinese, English, SSH, tmux, narrow terminals and `NO_COLOR`. Noninteractive callers keep using the existing subcommands and `--json`.
-
-Success requires an actual successful request and subsequent countdown evidence. Until then the result remains pending or unconfirmed. Advanced diagnostics retain evidence and attribution limitations.
+Enter a single digit and press Enter. `0` returns; only home `0` exits. Press Enter after actions to return. Supports Chinese, English, NO_COLOR, SSH, tmux and narrow terminals. Noninteractive callers use subcommands or `--json`.
 
 ## Upgrade and compatibility
 
 ```sh
-kairo status
-kairo --json status
 sudo kairo update online
+sudo kairo --version
+sudo kairo status
+kairo --json status
 ```
 
-Upgrades preserve schedules, OAuth paths, request/confirmation history, account guards and explicit pauses. Partial state is reconstructed from surviving valid records and verified server quota. Corrupt or mismatched records block execution and remain intact. Old recovery records remain as migration evidence; their fixed timer leaves the normal execution path. `onboard` and `enable` remain compatible start commands without production approval or exclusivity confirmation.
+Upgrades retain OAuth paths, times, delay, language, explicit pause and processed slots. Legacy deployment, window, account-guard and recovery records no longer authorize calls. Old call history is imported for display without rewriting originals. No deployment approval, FRESH, RECOVER, ENABLE or five-hour waiting is required.
 
-If v0.2.5's cached updater rejects missing records before loading the new binary, rerun the install command above to use the verified new updater. No recovery command or new OAuth is needed. Only absent primary records can use valid backups; corrupt originals are never silently replaced.
+`enable` and `activate` are resume aliases. `onboard --request` resumes; `onboard` reads readiness. Legacy `recover status/check/begin/wizard` report no recovery needed and do not change pause. Raw legacy import commands are retired; normal upgrades read the original data directory directly. The old idle-window field remains for compatibility and is ignored; `prewarm --buffer` still sets the call delay.
 
-Uninstall preserves state by default:
+Binary rollback never rewinds new call records; rolling back to old code restores old behavior. Failed upgrade transactions also retain local slot records.
+
+Uninstall preserves OAuth, configuration and state, including the existing Codex CLI:
 
 ```sh
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-codex-scheduler/main/uninstall.sh | sudo bash'
@@ -71,10 +74,6 @@ bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/hyd1aa/kairo-c
 KAIRO_OFFLINE=1 CARGO_BUILD_JOBS=1 sh scripts/verify.sh
 ```
 
-Tests use synthetic identities, mocked official quotas and mocked requests, never real model quota. Installation acceptance belongs in disposable containers or guests, never production instances or credentials.
+Tests use synthetic state and explicitly marked mock CLIs. Offline mode rejects real Codex execution. Disposable installation containers mock systemd; no production service, real OAuth or model requests are used.
 
-[MIT License](LICENSE) · [Source provenance](SOURCE_ORIGIN.json)
-
-[Full mocked acceptance results](docs/ACCEPTANCE_0.2.6.md)
-
-[v0.2.7 menu acceptance](docs/ACCEPTANCE_0.2.7.md)
+[Acceptance](docs/ACCEPTANCE_0.2.8.md) · [Release notes](docs/RELEASE_NOTES_0.2.8.md) · [MIT License](LICENSE) · [Source origin](SOURCE_ORIGIN.json)

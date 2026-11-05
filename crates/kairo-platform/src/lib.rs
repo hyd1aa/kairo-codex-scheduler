@@ -1,6 +1,6 @@
 use anyhow::{bail, Context, Result};
 use fs2::FileExt;
-use kairo_core::{Config, Quota, State};
+use kairo_core::{Config, Quota};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{
@@ -121,7 +121,7 @@ impl Store {
     pub fn retained<T: DeserializeOwned>(&self, name: &str) -> Result<Option<T>> {
         validate_name(name)?;
         for candidate in [name.to_string(), format!(".{name}.previous")] {
-            if crate::recovery::present(&self.root.join(&candidate))? {
+            if present(&self.root.join(&candidate))? {
                 return self.read(&candidate).map(Some);
             }
         }
@@ -133,13 +133,6 @@ impl Store {
             .ok_or_else(|| anyhow::anyhow!("config_missing / 配置缺失"))?;
         c.validate()?;
         Ok(c)
-    }
-    pub fn state(&self) -> Result<State> {
-        let s: State = self
-            .read("state.json")
-            .context("State missing/corrupt: execution blocked / 状态丢失或损坏，执行已阻止")?;
-        s.validate()?;
-        Ok(s)
     }
 }
 fn validate_name(name: &str) -> Result<()> {
@@ -357,31 +350,20 @@ pub fn quota(id: &Identity) -> Result<Value> {
     }
     Ok(serde_json::from_slice(&bytes)?)
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn store_roundtrip() {
-        let p = std::env::temp_dir().join(format!("kairo-test-{}", std::process::id()));
-        let s = Store::open(&p).unwrap();
-        s.write("config.json", &Config::default()).unwrap();
-        assert_eq!(s.config().unwrap().anchors.len(), 4);
-        assert!(s.state().is_err());
-        s.write("config.json", &Config::default()).unwrap();
-        assert!(p.join(".config.json.previous").exists());
-        drop(s);
-        fs::remove_dir_all(p).unwrap();
-    }
-    #[test]
-    fn malformed_quota() {
-        assert!(parse_usage(&serde_json::json!({}), 0).is_err());
+pub fn present(path: &Path) -> Result<bool> {
+    match fs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e.into()),
     }
 }
-
-pub mod engine;
-
 pub mod codex;
-pub mod confirmation;
+pub mod guardian;
+pub mod management;
+pub mod process;
+pub mod runtime;
+pub mod update;
+
 #[cfg(test)]
 mod usage_tests {
     use super::*;
@@ -422,17 +404,6 @@ mod usage_tests {
     }
 }
 
-pub mod activation;
-pub mod recovery;
-pub mod runtime;
-
-pub mod update;
-
-pub mod management;
-
-pub mod replay;
-
-pub mod process;
 #[cfg(test)]
 mod storage_security_tests {
     use super::*;
@@ -513,10 +484,6 @@ mod hardlink_tests {
     }
 }
 
-pub mod legacy;
-
-pub mod guardian;
-
 #[cfg(test)]
 mod administration_tests {
     use super::*;
@@ -528,6 +495,12 @@ mod administration_tests {
             let name = std::ffi::CString::new(root.as_os_str().as_encoded_bytes()).unwrap();
             assert_eq!(unsafe { libc::chown(name.as_ptr(), 65534, 65534) }, 0);
         }
+        let lease = crate::runtime::daemon_lease(&root).unwrap();
+        assert_eq!(
+            lease.metadata().unwrap().uid(),
+            fs::metadata(&root).unwrap().uid()
+        );
+        drop(lease);
         let child = Store::open(&root.join("account")).unwrap();
         assert_eq!(
             fs::metadata(&child.root).unwrap().uid(),
@@ -549,11 +522,3 @@ mod administration_tests {
         fs::remove_dir_all(root).unwrap();
     }
 }
-
-pub mod onboarding;
-
-pub mod automatic;
-
-pub mod codex_auth;
-
-mod legacy_service;

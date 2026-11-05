@@ -1,18 +1,12 @@
-use crate::{
-    codex::{AccountGate, AccountJournal, CodexExecutor},
-    confirmation,
-    engine::{self, Adapter},
-    identity, parse_usage, quota, timezone, Store,
-};
+//! Local timed calls. Quota, account history and window resets never authorize execution.
+use crate::{present, Store};
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use fs2::FileExt;
-use kairo_core::{Config, Cursor, Decision, Quota, State};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     fs,
-    io::Write,
     os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
@@ -70,14 +64,7 @@ impl Runtime {
         Ok(())
     }
 }
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Deployment {
-    pub schema: u32,
-    pub account: String,
-    pub enabled: bool,
-    pub approved_at: Option<i64>,
-}
+
 pub fn runtime(store: &Store) -> Result<Runtime> {
     let r: Runtime = store
         .retained("runtime.json")?
@@ -85,457 +72,102 @@ pub fn runtime(store: &Store) -> Result<Runtime> {
     r.validate()?;
     Ok(r)
 }
-pub fn verified_usage(id: &crate::Identity, v: &Value, now: i64) -> Result<(Quota, Quota, bool)> {
-    let account = v["account_id"]
-        .as_str()
-        .context("server_identity_missing / 服务端未返回账号身份")?;
-    if account != id.account_id {
-        bail!("server_identity_mismatch / 服务端账号身份不匹配")
-    }
-    parse_usage(v, now)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Call {
+    pub slot: String,
+    pub due: i64,
+    pub started_at: Option<i64>,
+    pub completed_at: Option<i64>,
+    pub result: String,
+    pub reason: String,
+    pub exit_code: Option<i32>,
 }
-pub(crate) fn quota_with_renewal(
-    store: &Store,
-    r: &Runtime,
-    expected: &crate::Identity,
-) -> Result<Value> {
-    match quota(expected) {
-        Ok(v) => Ok(v),
-        Err(e) if e.to_string().contains("HTTP 401") => {
-            crate::codex_auth::renew(store, r)?;
-            let id = identity(&r.codex_home.join("auth.json"))?;
-            if id.fingerprint != expected.fingerprint {
-                bail!("account_changed / 续期后账号变化，已暂停");
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScheduleState {
+    pub schema: u32,
+    pub paused: bool,
+    /// Monotonic local watermark also protects slots evicted from the display history.
+    pub watermark: i64,
+    pub calls: Vec<Call>,
+}
+impl ScheduleState {
+    pub fn load(store: &Store) -> Result<Self> {
+        if let Some(s) = store.retained::<Self>("schedule.json")? {
+            if s.schema != 1
+                || s.watermark < 0
+                || s.calls.len() > 1024
+                || s.calls.iter().any(|c| c.due < 0 || c.due > s.watermark)
+            {
+                bail!("schedule_invalid / 本机调用记录无效");
             }
-            quota(&id)
+            return Ok(s);
         }
-        Err(e) => Err(e),
-    }
-}
-pub fn verify(store: &Store) -> Result<Value> {
-    let r = runtime(store)?;
-    let id = identity(&r.codex_home.join("auth.json"))?;
-    let v = quota_with_renewal(store, &r, &id)?;
-    let (f, w, d) = verified_usage(&id, &v, Utc::now().timestamp())?;
-    Ok(
-        json!({"account_fingerprint":id.fingerprint,"identity_server_verified":true,"five_hour":f,"weekly":w,"server_denied":d}),
-    )
-}
-pub fn bind(store: &Store, acknowledge_fresh: bool) -> Result<Value> {
-    if !acknowledge_fresh {
-        bail!("fresh_account_ack_required / 首次绑定须确认无近期请求；已有服务应使用迁移导入")
-    }
-    if [
-        "deployment.json",
-        "state.json",
-        "cursor.json",
-        "recovery.json",
-        "account-origin.json",
-    ]
-    .iter()
-    .any(|n| crate::recovery::present(&store.root.join(n)).unwrap_or(true))
-    {
-        bail!("already_bound / 已绑定或状态需要人工复核")
-    }
-    ensure_legacy_inactive()?;
-    let r = runtime(store)?;
-    let id = identity(&r.codex_home.join("auth.json"))?;
-    let v = quota(&id)?;
-    let now = Utc::now().timestamp();
-    verified_usage(&id, &v, now)?;
-    let root = guard_root();
-    let path = root.join(&id.fingerprint);
-    if path.exists() {
-        bail!("account_guard_exists / 账号安全门禁已存在；不得重建状态")
-    }
-    let gate = Store::open(&path)?;
-    gate.write(
-        "account.json",
-        &AccountJournal {
-            schema: 1,
-            account: id.fingerprint.clone(),
-            last_attempt: now,
-            anchors: Default::default(),
-        },
-    )?;
-    let state = State {
-        schema: 1,
-        account: id.fingerprint.clone(),
-        last_clock: now,
-        ..Default::default()
-    };
-    store.write("state.json", &state)?;
-    store.write(
-        "deployment.json",
-        &Deployment {
-            schema: 1,
-            account: id.fingerprint.clone(),
-            enabled: false,
-            approved_at: None,
-        },
-    )?;
-    let mut cursor = Cursor::new(now, timezone()?);
-    cursor.arm(&store.config()?, timezone()?, now)?;
-    store.write("cursor.json", &cursor)?;
-    store.write(
-        "account-origin.json",
-        &json!({"account":id.fingerprint,"origin":"administrator_declared_fresh","at":now}),
-    )?;
-    Ok(
-        json!({"bound":true,"account_fingerprint":id.fingerprint,"execution":"observation_only","quarantine_until":now+18300}),
-    )
-}
-pub fn guard_root() -> PathBuf {
-    PathBuf::from("/var/lib/kairo-account-guards")
-}
-pub fn ensure_legacy_inactive() -> Result<()> {
-    let o = crate::process::output(
-        std::process::Command::new("systemctl").args([
-            "show",
-            "codex-window-scheduler.service",
-            "--property=ActiveState",
-            "--value",
-        ]),
-        10,
-        4096,
-    )
-    .context("legacy_status_unknown / 无法检查旧服务状态")?;
-    let status = String::from_utf8_lossy(&o.stdout);
-    if !o.status.success() || !["inactive", "failed"].contains(&status.trim()) {
-        bail!("legacy_active_or_unknown / 旧服务仍运行或状态未知，禁止接管")
-    }
-    // A stopped unit does not rule out a manually started legacy process.
-    for entry in fs::read_dir("/proc")?.flatten() {
-        if entry
-            .file_name()
-            .to_string_lossy()
-            .bytes()
-            .all(|b| b.is_ascii_digit())
-        {
-            if let Ok(cmd) = fs::read(entry.path().join("cmdline")) {
-                if cmd
-                    .split(|b| *b == 0)
-                    .any(|arg| arg == b"/opt/codex-window-scheduler/scheduler.py")
+        // Legacy files are evidence, not execution prerequisites. Never rewrite them.
+        let old = |name: &str| {
+            store
+                .retained::<Value>(name)
+                .ok()
+                .flatten()
+                .unwrap_or(Value::Null)
+        };
+        let intent = old("onboarding.json");
+        let deployment = old("deployment.json");
+        let paused = intent["requested"] == false
+            || (deployment["enabled"] == false && deployment["approved_at"].is_number());
+        let mut calls = Vec::new();
+        if let Some(attempts) = old("state.json")["attempts"].as_array() {
+            for a in attempts.iter().rev().take(100).rev() {
+                if let Some(at) = a["at"]
+                    .as_i64()
+                    .filter(|at| *at >= 0 && *at <= Utc::now().timestamp())
                 {
-                    bail!("legacy_process_active / 旧调度进程仍运行")
+                    calls.push(Call {
+                        slot: a["anchor"].as_str().unwrap_or("legacy").into(),
+                        due: at,
+                        started_at: Some(at),
+                        completed_at: a["completed_at"].as_i64(),
+                        result: match a["outcome"].as_str() {
+                            Some(
+                                "request_ok_window_unconfirmed" | "five_hour_window_confirmed",
+                            ) => "legacy_success",
+                            Some("request_failed") => "failed",
+                            _ => "unknown",
+                        }
+                        .into(),
+                        reason: "legacy_history".into(),
+                        exit_code: None,
+                    });
                 }
             }
         }
-    }
-    Ok(())
-}
-pub fn activate(store: &Store, account: &str, ack: bool) -> Result<()> {
-    if !ack {
-        bail!("cutover_approval_required / 需要明确生产切换批准")
-    };
-    for name in ["deployment.json", "state.json", "cursor.json"] {
-        if !store.root.join(name).try_exists()? {
-            bail!("account_recovery_required / 缺少账号绑定或调度历史；旧账号请运行 recover begin --acknowledge-unknown-history，新账号请使用首次绑定向导");
-        }
-    }
-    crate::management::validate(store)?;
-    ensure_legacy_inactive()?;
-    let verified = verify(store)?;
-    let mut d: Deployment = store.read("deployment.json")?;
-    let s = store.state()?;
-    if d.schema != 1
-        || d.account != account
-        || s.account != account
-        || verified["account_fingerprint"] != account
-    {
-        bail!("account_mismatch / 账号不匹配")
-    };
-    let gate = AccountGate::open_existing(&guard_root(), account)?;
-    gate.check_local(&store.root)?;
-    d.enabled = true;
-    d.approved_at = Some(Utc::now().timestamp());
-    store.write("deployment.json", &d)?;
-    crate::onboarding::resume_manual(store)
-}
-pub fn pause(store: &Store) -> Result<()> {
-    let mut d: Deployment = store.read("deployment.json")?;
-    d.enabled = false;
-    store.write("deployment.json", &d)
-}
-static STOP: AtomicBool = AtomicBool::new(false);
-static RELOAD: AtomicBool = AtomicBool::new(false);
-extern "C" fn reload(_: i32) {
-    RELOAD.store(true, Ordering::Relaxed);
-}
-extern "C" fn stop(_: i32) {
-    STOP.store(true, Ordering::Relaxed);
-}
-pub fn stopping() -> bool {
-    STOP.load(Ordering::Relaxed)
-}
-pub fn install_signals() {
-    STOP.store(false, Ordering::Relaxed);
-    unsafe {
-        libc::signal(libc::SIGTERM, stop as *const () as usize);
-        libc::signal(libc::SIGINT, stop as *const () as usize);
-        libc::signal(libc::SIGHUP, reload as *const () as usize);
-    }
-}
-/// Observation has no executor, account reservation gate, or live deployment capability.
-struct Observer {
-    r: Runtime,
-    account: String,
-}
-impl Adapter for Observer {
-    fn enabled(&self) -> bool {
-        false
-    }
-    fn account(&mut self) -> Result<String> {
-        Ok(identity(&self.r.codex_home.join("auth.json"))?.fingerprint)
-    }
-    fn usage(&mut self) -> Result<(Quota, Quota, bool)> {
-        let id = identity(&self.r.codex_home.join("auth.json"))?;
-        if id.fingerprint != self.account {
-            bail!("account_changed / 账号变化")
-        }
-        verified_usage(&id, &quota(&id)?, Utc::now().timestamp())
-    }
-    fn request(&mut self) -> Result<bool> {
-        bail!("observer_cannot_execute / 观察适配器没有模型执行能力")
-    }
-}
-struct Live<'a> {
-    store: &'a Store,
-    r: Runtime,
-    c: Config,
-    d: Deployment,
-    now: i64,
-    anchor: String,
-    cutoff: i64,
-    gate: Option<AccountGate>,
-}
-impl Adapter for Live<'_> {
-    fn clock(&self) -> Option<i64> {
-        Some(Utc::now().timestamp())
-    }
-    fn account_guard_until(&self) -> Option<i64> {
-        self.gate
-            .as_ref()
-            .map(|g| g.not_before(self.c.buffer_seconds))
-    }
-
-    fn account(&mut self) -> Result<String> {
-        Ok(identity(&self.r.codex_home.join("auth.json"))?.fingerprint)
-    }
-    fn usage(&mut self) -> Result<(Quota, Quota, bool)> {
-        if stopping() {
-            bail!("shutdown_requested / 已收到退出信号，禁止新请求")
-        }
-        let id = identity(&self.r.codex_home.join("auth.json"))?;
-        if id.fingerprint != self.d.account {
-            bail!("account_changed / 账号变化")
-        };
-        let v = quota_with_renewal(self.store, &self.r, &id)?;
-        verified_usage(&id, &v, Utc::now().timestamp())
-    }
-    fn enabled(&self) -> bool {
-        self.d.enabled
-    }
-    fn request(&mut self) -> Result<bool> {
-        if stopping() {
-            bail!("shutdown_requested / 已收到退出信号，禁止新请求")
-        }
-        use std::os::unix::fs::MetadataExt;
-        if fs::metadata(&self.r.home)?.uid() != unsafe { libc::geteuid() }
-            || fs::metadata(&self.store.root)?.uid() != unsafe { libc::geteuid() }
-        {
-            bail!("runtime_user_mismatch / 模型执行用户与 OAuth 用户不一致")
-        }
-        ensure_legacy_inactive()?;
-        let (f, w, denied) = self.usage()?;
-        let mut s = self.store.state()?;
-        s.attempts.pop();
-        let now = Utc::now().timestamp();
-        if !matches!(
-            kairo_core::decide(&self.c, &s, &self.anchor, now, self.cutoff, &f, &w, denied),
-            Decision::Request(_)
-        ) {
-            bail!("final_gate_denied / 调用前最终门禁拒绝")
-        }
-        let work_root = self.store.root.join("work");
-        fs::create_dir_all(&work_root)?;
-        let work = work_root.join(format!("attempt-{}", self.now));
-        fs::create_dir(&work)?;
-        let exec = CodexExecutor::new(self.r.codex.clone(), self.r.home.clone(), work)?
-            .with_codex_home(self.r.codex_home.clone())
-            .with_cutoff(self.cutoff);
-        let result = exec.execute(
-            self.gate
-                .as_mut()
-                .context("account_guard_missing / 账号门禁缺失")?,
-            &self.anchor,
-            self.now,
-            self.c.buffer_seconds,
-            self.store,
-        );
-        let _ = fs::remove_dir_all(work_root.join(format!("attempt-{}", self.now)));
-        result
-    }
-}
-pub fn iteration(store: &Store, startup: bool, observe_only: bool) -> Result<Value> {
-    let c = store.config()?;
-    let r = runtime(store)?;
-    let tz = timezone()?;
-    let now = Utc::now().timestamp();
-    if observe_only || !store.root.join("deployment.json").exists() {
-        return shadow_iteration(store, &c, r, tz, now, startup);
-    }
-    let d: Deployment = store
-        .read("deployment.json")
-        .context("account_binding_required / 请先验证并绑定账号")?;
-    if d.schema != 1 || d.account.is_empty() || d.enabled && d.approved_at.is_none() {
-        bail!("deployment_invalid / 部署授权记录无效")
-    }
-    let mut s = store.state()?;
-    if s.account != d.account {
-        bail!("account_mismatch / 账号不匹配")
-    };
-    let mut cursor: Cursor = store.read("cursor.json")?;
-    if startup {
-        resume_schedule(&c, &mut cursor, &mut s, tz, now)?;
-        store.write("state.json", &s)?;
-        store.write("cursor.json", &cursor)?;
-    }
-    validate_cursor(&cursor, &c, tz)?;
-    if !d.enabled || crate::onboarding::execution_paused(store)? {
-        let mut observer = Observer {
-            r,
-            account: d.account,
-        };
-        let event = engine::tick(store, &c, &mut cursor, &mut s, tz, now, &mut observer)?;
-        return Ok(
-            json!({"event":event,"at":now,"timezone":tz.to_string(),"next_check":cursor.due,"execution":"observation_only"}),
-        );
-    }
-    let gate = if d.enabled {
-        ensure_legacy_inactive()?;
-        let gate = AccountGate::open_existing(&guard_root(), &d.account)?;
-        gate.check_local(&store.root)?;
-        Some(gate)
-    } else {
-        None
-    };
-    if d.enabled && now >= s.last_clock {
-        confirmation::run_due(store, &s, &r.codex_home, now)?;
-    }
-    let mut adapter = Live {
-        store,
-        r,
-        c: c.clone(),
-        d,
-        now,
-        anchor: cursor.anchor.clone().unwrap_or_default(),
-        cutoff: cursor.cutoff,
-        gate,
-    };
-    let outcome = engine::tick(store, &c, &mut cursor, &mut s, tz, now, &mut adapter)?;
-    confirmation::sync(store, &s)?;
-    save_natural_receipt(store, &s, adapter.d.approved_at, &outcome, now, cursor.due)?;
-
-    Ok(
-        json!({"event":outcome,"at":now,"timezone":tz.to_string(),"next_check":cursor.due,"execution":if adapter.enabled(){"live"}else{"observation_only"}}),
-    )
-}
-fn resume_schedule(
-    c: &Config,
-    cursor: &mut Cursor,
-    state: &mut State,
-    tz: chrono_tz::Tz,
-    now: i64,
-) -> Result<()> {
-    if now < cursor.observed || now < state.last_clock {
-        bail!("state_or_clock / 时钟回拨，保留原记录并停止请求");
-    }
-    use chrono::TimeZone;
-    let deferred = cursor
-        .anchor
-        .as_deref()
-        .and_then(|a| chrono::NaiveDateTime::parse_from_str(a, "%Y-%m-%d/%H:%M").ok())
-        .zip(cursor.timezone.parse::<chrono_tz::Tz>().ok())
-        .and_then(|(local, zone)| zone.from_local_datetime(&local).earliest())
-        .map(|at| {
-            at.timestamp().saturating_add(
-                cursor
-                    .config_signature
-                    .rsplit_once(':')
-                    .and_then(|(_, b)| b.parse::<i64>().ok())
-                    .unwrap_or(c.buffer_seconds),
-            )
+        calls.sort_by_key(|c| c.due);
+        Ok(Self {
+            schema: 1,
+            paused,
+            watermark: Utc::now()
+                .timestamp()
+                .max(calls.iter().map(|c| c.due).max().unwrap_or(0)),
+            calls,
         })
-        .zip(cursor.due)
-        .is_some_and(|(scheduled, due)| due != scheduled);
-    if state.pending.is_some() || deferred {
-        // v0.2.5 may have persisted a reset-time retry outside configured slots.
-        // Preserve finished slots and requests, but plan the next configured time.
-        cursor.due = None;
-        cursor.anchor = None;
-        state.pending = None;
-        cursor.arm(c, tz, now)?;
     }
-    cursor.resume(c, tz, now)
+    pub fn save(&self, store: &Store) -> Result<()> {
+        store.write("schedule.json", self)
+    }
 }
-fn save_natural_receipt(
-    store: &Store,
-    state: &State,
-    approved_at: Option<i64>,
-    outcome: &str,
-    now: i64,
-    next: Option<i64>,
-) -> Result<()> {
-    if let Some(a) = state
-        .attempts
-        .iter()
-        .find(|a| a.at >= approved_at.unwrap_or(i64::MAX))
-    {
-        let old = store.read::<Value>("natural-acceptance.json").ok();
-        let mut result = json!({"status":"first_natural_request_recorded","anchor":a.anchor,"at":a.at,"completed_at":a.completed_at,"outcome":a.outcome,"request_ok":matches!(a.outcome.as_str(),"request_ok_window_unconfirmed"|"five_hour_window_confirmed"),"window_confirmed":a.outcome=="five_hour_window_confirmed","forced_model_requests":0});
-        for key in ["first_natural_check", "latest_natural_check"] {
-            if let Some(check) = old.as_ref().and_then(|v| v.get(key)) {
-                result[key] = check.clone();
-            }
-        }
-        if old.as_ref() != Some(&result) {
-            store.write("natural-acceptance.json", &result)?;
-            eprintln!(
-                "{}",
-                json!({"event":"first_natural_request_acceptance","result":result})
-            );
-        }
-    }
-    if natural_check_event(outcome) {
-        let old = store.read::<Value>("natural-acceptance.json").ok();
-        let mut result = old.unwrap_or_else(
-            || json!({"status":"awaiting_first_future_natural_request","forced_model_requests":0}),
-        );
-        let check = json!({"at":now,"event":outcome,"next_check":next});
-        if result.get("first_natural_check").is_none() {
-            result["first_natural_check"] = check.clone();
-        }
-        result["latest_natural_check"] = check;
-        store.write("natural-acceptance.json", &result)?;
-        if outcome == "server_denied" {
-            eprintln!(
-                "{}",
-                json!({"event":"natural_check_safety_warning","reason":"server_denied","at":now})
-            );
-        }
-    }
-
-    Ok(())
+pub fn pause(store: &Store, paused: bool) -> Result<Value> {
+    let mut s = ScheduleState::load(store)?;
+    s.paused = paused;
+    s.save(store)?;
+    Ok(json!({"paused":paused,"enabled":!paused,"requested":!paused}))
 }
-fn natural_check_event(event: &str) -> bool {
-    !matches!(
-        event,
-        "waiting" | "armed" | "config_replanned" | "timezone_replanned"
-    )
+pub fn verify(store: &Store) -> Result<Value> {
+    let r = runtime(store)?;
+    Ok(json!({"oauth_present":crate::codex::logged_in(store,&r)?,"quota_optional":true}))
 }
 pub fn daemon_lease(root: &Path) -> Result<fs::File> {
-    fs::create_dir_all(root)?;
+    drop(Store::open(root)?);
     let lock = fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -544,393 +176,189 @@ pub fn daemon_lease(root: &Path) -> Result<fs::File> {
         .mode(0o600)
         .custom_flags(libc::O_NOFOLLOW)
         .open(root.join("daemon.lock"))?;
+    crate::single_owner(&lock)?;
+    crate::preserve_owner(&lock, root)?;
     lock.try_lock_exclusive()
         .context("daemon_already_running / 守护进程已运行或正在升级")?;
     Ok(lock)
 }
-fn execution_lease(root: &Path, account: &str) -> Result<fs::File> {
-    let gate = Store::open(&root.join(account))?;
-    authority_lease(&gate)
+
+static STOP: AtomicBool = AtomicBool::new(false);
+extern "C" fn signal(_: libc::c_int) {
+    STOP.store(true, Ordering::Relaxed);
 }
-pub(crate) fn authority_lease(gate: &Store) -> Result<fs::File> {
-    let f = fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .mode(0o600)
-        .custom_flags(libc::O_NOFOLLOW)
-        .open(gate.root.join("execution.lock"))?;
-    crate::preserve_owner(&f, &gate.root)?;
-    f.try_lock_exclusive()
-        .context("account_execution_owned / 此账号已有其他调度实例持有执行权")?;
-    Ok(f)
+pub fn stopping() -> bool {
+    STOP.load(Ordering::Relaxed)
 }
-pub fn daemon(root: &Path, once: bool, observe_only: bool) -> Result<()> {
-    if root.join(".upgrade-lock").exists() {
-        let prefix: PathBuf = {
-            let store = Store::open(root)?;
-            store.read(".upgrade-lock")?
+fn signals() {
+    unsafe {
+        libc::signal(libc::SIGTERM, signal as *const () as usize);
+        libc::signal(libc::SIGINT, signal as *const () as usize);
+        libc::signal(libc::SIGHUP, libc::SIG_IGN);
+    }
+}
+
+/// Invoked by the live loop and by offline fixtures using the same scheduler and fake CLI.
+/// Reserve before any help/auth/exec process. Failure never retries this slot.
+pub fn tick(root: &Path, after: i64, now: i64, tz: chrono_tz::Tz, observe: bool) -> Result<()> {
+    let store = Store::open(root)?;
+    let config = store.config()?;
+    let mut state = ScheduleState::load(&store)?;
+    if !present(&root.join("schedule.json"))? {
+        state.save(&store)?;
+    }
+    let floor = after.max(state.watermark);
+    if now <= floor {
+        return Ok(());
+    }
+    let start = chrono::DateTime::from_timestamp(floor, 0).context("clock_invalid")?;
+    for due in kairo_core::plan(&config, tz, start, 72)?
+        .into_iter()
+        .map(|d| d.timestamp())
+        .take_while(|due| *due <= now)
+    {
+        let local = chrono::DateTime::from_timestamp(due - config.buffer_seconds, 0)
+            .context("clock_invalid")?
+            .with_timezone(&tz);
+        let slot = local.format("%Y-%m-%d/%H:%M").to_string();
+        state.watermark = due;
+        if state.calls.iter().any(|c| c.slot == slot) {
+            state.save(&store)?;
+            continue;
+        }
+        let reason = if state.paused {
+            "paused"
+        } else if observe {
+            "observation_only"
+        } else if now - due > 60 {
+            "missed_not_replayed"
+        } else {
+            "reserved"
         };
-        crate::update::recover(&prefix, root)?;
+        if state.calls.len() >= 1024 {
+            state.calls.remove(0);
+        }
+        let index = state.calls.len();
+        state.calls.push(Call {
+            slot,
+            due,
+            started_at: None,
+            completed_at: None,
+            result: if reason == "reserved" {
+                "unknown"
+            } else {
+                "skipped"
+            }
+            .into(),
+            reason: reason.into(),
+            exit_code: None,
+        });
+        state.save(&store)?;
+        if reason == "reserved" {
+            let r = runtime(&store)?;
+            // Holding the store lock through spawn makes pause/reservation/start atomic.
+            match crate::codex::start(&store, &r) {
+                Ok(running) => {
+                    state.calls[index].started_at = Some(now);
+                    state.calls[index].reason = "started".into();
+                    state.save(&store)?;
+                    drop(store);
+                    let result = running.finish();
+                    let store = Store::open(root)?;
+                    let mut current = ScheduleState::load(&store)?;
+                    if let Some(call) = current.calls.iter_mut().find(|c| c.due == due) {
+                        call.completed_at = Some(Utc::now().timestamp());
+                        call.result = if result.success { "success" } else { "failed" }.into();
+                        call.reason = result.reason;
+                        call.exit_code = result.exit_code;
+                    }
+                    if current.calls.len() > 1024 {
+                        current.calls.drain(..current.calls.len() - 1024);
+                    }
+                    current.save(&store)?;
+                    // Only one eligible call per tick; overdue slots are never replayed in a burst.
+                    return Ok(());
+                }
+                Err(error) => {
+                    state.calls[index].result = "skipped".into();
+                    state.calls[index].reason = crate::codex::safe_reason(&error.to_string());
+                }
+            }
+        }
+        if state.calls.len() > 1024 {
+            state.calls.drain(..state.calls.len() - 1024);
+        }
+        state.save(&store)?;
+    }
+    Ok(())
+}
+pub fn daemon(root: &Path, once: bool, observe: bool) -> Result<()> {
+    let _lease = daemon_lease(root)?;
+    signals();
+    let mut after = Utc::now().timestamp();
+    {
+        let store = Store::open(root)?;
+        crate::management::migrate(&store)?;
+        let mut state = ScheduleState::load(&store)?;
+        state.watermark = state.watermark.max(after);
+        state.save(&store)?;
+    }
+    loop {
+        let now = Utc::now().timestamp();
+        if let Err(error) = tick(root, after, now, crate::timezone()?, observe) {
+            eprintln!(
+                "{}",
+                json!({"event":"scheduler_error","error":crate::codex::safe_reason(&error.to_string())})
+            );
+        }
+        after = after.max(now);
+        if once || stopping() {
+            break;
+        }
+        thread::sleep(Duration::from_secs(1));
+    }
+    Ok(())
+}
+pub fn replay(root: &Path, path: &Path, poll_ms: u64, hold: bool) -> Result<()> {
+    if std::env::var_os("KAIRO_OFFLINE").as_deref() != Some(std::ffi::OsStr::new("1")) {
+        bail!("offline_fixture_required");
     }
     let _lease = daemon_lease(root)?;
-    install_signals();
-    let mut startup = true;
-    let mut previous = String::new();
-    let mut authority = None;
-    let mut authority_account = String::new();
-    loop {
+    signals();
+    let v: Value = serde_json::from_slice(&fs::read(path)?)?;
+    let start = v["start"].as_i64().context("fixture_start_required")?;
+    let ticks = v["ticks"].as_array().context("fixture_ticks_required")?;
+    let mut after = start;
+    {
         let store = Store::open(root)?;
-        let result = (|| -> Result<Value> {
-            if !observe_only {
-                let ready = crate::automatic::ensure(&store)?;
-                if ready["status"] != "ready" {
-                    return Ok(
-                        json!({"event":ready["status"],"at":Utc::now().timestamp(),"execution":"waiting"}),
-                    );
-                }
-            }
-            if !observe_only
-                && !crate::onboarding::execution_paused(&store)?
-                && store.root.join("deployment.json").exists()
-            {
-                let d: Deployment = store.read("deployment.json")?;
-                if d.enabled {
-                    if d.schema != 1
-                        || d.account.len() != 64
-                        || !d.account.bytes().all(|b| b.is_ascii_hexdigit())
-                    {
-                        bail!("deployment_invalid / 部署授权记录无效")
-                    }
-                    if authority.is_none() {
-                        let f = execution_lease(&guard_root(), &d.account)?;
-                        authority = Some(f);
-                        authority_account = d.account.clone();
-                    }
-                    if authority_account != d.account {
-                        bail!("account_changed / 账号变化")
-                    }
-                } else {
-                    authority = None;
-                    authority_account.clear();
-                }
-            }
-            if crate::onboarding::execution_paused(&store)? {
-                authority = None;
-                authority_account.clear();
-            }
-            iteration(&store, startup, observe_only)
-        })();
-        let failed = result.is_err();
-        let mut value = match result {
-            Ok(v) => v,
-            Err(e) => {
-                let message = e.to_string();
-                let code = if message.contains(" / ") {
-                    message.split(" / ").next().unwrap_or("runtime_error")
-                } else if e.chain().any(|x| x.is::<std::io::Error>()) {
-                    "io_error"
-                } else if e.chain().any(|x| x.is::<serde_json::Error>()) {
-                    "json_invalid"
-                } else {
-                    "runtime_error"
-                };
-                json!({"event":"blocked","at":Utc::now().timestamp(),"error":code})
-            }
-        };
-        let signature = format!("{}:{}", value["event"], value["error"]);
-        value["daemon_pid"] = json!(std::process::id());
-        store.write("status.json", &value)?;
-        if signature != previous || once {
-            println!("{}", value);
-            std::io::stdout().flush()?;
-            previous = signature;
+        crate::management::migrate(&store)?;
+        if !present(&root.join("schedule.json"))? {
+            unreachable!();
         }
-        let interval = if failed {
-            60
-        } else {
-            runtime(&store).map(|r| r.interval_seconds).unwrap_or(1)
-        };
-        drop(store);
-        startup = failed;
-        if once {
-            if failed {
-                bail!("daemon_blocked / 守护进程安全阻止执行")
-            }
-            return Ok(());
+        let mut state = ScheduleState::load(&store)?;
+        // Fixture-only initial clock; never accepted by the production daemon.
+        if v["initialize"] == true && state.calls.is_empty() {
+            state.watermark = start;
+            state.save(&store)?;
         }
+    }
+    for value in ticks {
+        let now = value["now"].as_i64().context("fixture_time_required")?;
+        tick(
+            root,
+            after,
+            now,
+            value["timezone"].as_str().unwrap_or("Etc/UTC").parse()?,
+            false,
+        )?;
+        after = after.max(now);
         if stopping() {
             break;
         }
-        for _ in 0..interval * 10 {
-            if stopping() || RELOAD.swap(false, Ordering::Relaxed) {
-                break;
-            }
-            thread::sleep(Duration::from_millis(100));
-        }
+        thread::sleep(Duration::from_millis(poll_ms.min(60000)));
+    }
+    while hold && !stopping() {
+        thread::sleep(Duration::from_millis(20));
     }
     Ok(())
-}
-fn shadow_iteration(
-    root: &Store,
-    c: &Config,
-    r: Runtime,
-    tz: chrono_tz::Tz,
-    now: i64,
-    startup: bool,
-) -> Result<Value> {
-    let id = identity(&r.codex_home.join("auth.json"))?;
-    let shadow = Store::open(&root.root.join("shadow").join(&id.fingerprint))?;
-    if !shadow.root.join("initialized.json").exists() {
-        if shadow.root.join("state.json").exists() {
-            bail!("shadow_incomplete / 只读观察状态初始化未完成")
-        };
-        shadow.write(
-            "state.json",
-            &State {
-                schema: 1,
-                account: id.fingerprint.clone(),
-                ..Default::default()
-            },
-        )?;
-        let mut cursor = Cursor::new(now, tz);
-        cursor.arm(c, tz, now)?;
-        shadow.write("cursor.json", &cursor)?;
-        shadow.write("initialized.json", &true)?;
-    }
-    let mut state = shadow.state()?;
-    let mut cursor: Cursor = shadow.read("cursor.json")?;
-    if startup {
-        cursor.resume(c, tz, now)?;
-    }
-    validate_cursor(&cursor, c, tz)?;
-    let mut adapter = Observer {
-        r,
-        account: id.fingerprint,
-    };
-    if startup {
-        let (five, weekly, denied) = adapter.usage()?;
-        state.weekly = Some(weekly);
-        state.server_denied = denied;
-        state.last_clock = state.last_clock.max(now);
-        kairo_core::observe(&mut state, now, five);
-        shadow.write("state.json", &state)?;
-    }
-    let event = engine::tick(&shadow, c, &mut cursor, &mut state, tz, now, &mut adapter)?;
-    Ok(
-        json!({"event":event,"at":now,"timezone":tz.to_string(),"next_check":cursor.due,"execution":"observation_only"}),
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    fn payload() -> Value {
-        let q = |d| json!({"limit_window_seconds":d,"used_percent":0,"reset_at":100000+d,"reset_after_seconds":d});
-        json!({"account_id":"synthetic-account","rate_limit":{"allowed":true,"limit_reached":false,"primary_window":q(18000),"secondary_window":q(604800)}})
-    }
-    fn id() -> crate::Identity {
-        crate::Identity {
-            fingerprint: "synthetic".into(),
-            token: "synthetic".into(),
-            account_id: "synthetic-account".into(),
-        }
-    }
-    #[test]
-    fn latest_check_is_saved_after_a_request_and_not_lost_on_waiting_ticks() {
-        let root = std::env::temp_dir().join(format!("kairo-receipt-{}", std::process::id()));
-        let store = Store::open(&root).unwrap();
-        let state = State {
-            schema: 1,
-            account: "synthetic-receipt".into(),
-            attempts: vec![kairo_core::Attempt {
-                anchor: "synthetic".into(),
-                at: 100,
-                completed_at: Some(102),
-                before: Quota {
-                    duration: 18000,
-                    used: 0.,
-                    reset_at: 18100,
-                    remaining: 18000,
-                },
-                after: None,
-                outcome: "request_ok_window_unconfirmed".into(),
-            }],
-            ..Default::default()
-        };
-        save_natural_receipt(
-            &store,
-            &state,
-            Some(90),
-            "idle:request_ok_window_unconfirmed",
-            102,
-            Some(200),
-        )
-        .unwrap();
-        save_natural_receipt(&store, &state, Some(90), "deferred", 200, Some(300)).unwrap();
-        save_natural_receipt(&store, &state, Some(90), "waiting", 201, Some(300)).unwrap();
-        let receipt: Value = store.read("natural-acceptance.json").unwrap();
-        assert_eq!(receipt["request_ok"], true);
-        assert_eq!(receipt["latest_natural_check"]["event"], "deferred");
-        assert_eq!(receipt["latest_natural_check"]["at"], 200);
-        drop(store);
-        fs::remove_dir_all(root).unwrap();
-    }
-    #[test]
-    fn authenticated_account_contract() {
-        assert!(verified_usage(&id(), &payload(), 100000).is_ok());
-        let mut p = payload();
-        p["account_id"] = "other".into();
-        assert!(verified_usage(&id(), &p, 100000).is_err());
-        p["account_id"] = Value::Null;
-        assert!(verified_usage(&id(), &p, 100000).is_err());
-        p["account_id"] = "".into();
-        assert!(verified_usage(&id(), &p, 100000).is_err());
-    }
-    #[test]
-    fn verified_identity_does_not_bypass_denial() {
-        let mut p = payload();
-        p["rate_limit"]["allowed"] = false.into();
-        assert!(verified_usage(&id(), &p, 100000).unwrap().2);
-    }
-    #[test]
-    fn activation_without_approval_stays_closed() {
-        let root = std::env::temp_dir().join(format!("kairo-activation-{}", std::process::id()));
-        let s = Store::open(&root).unwrap();
-        assert!(activate(&s, "synthetic", false).is_err());
-        assert!(!root.join("deployment.json").exists());
-        drop(s);
-        fs::remove_dir_all(root).unwrap();
-    }
-    #[test]
-    fn natural_check_receipt_only_for_due_decisions() {
-        for event in ["waiting", "armed", "config_replanned", "timezone_replanned"] {
-            assert!(!natural_check_event(event));
-        }
-        for event in ["server_denied", "deferred", "cutoff", "missed_not_replayed"] {
-            assert!(natural_check_event(event));
-        }
-    }
-}
-
-pub fn validate_cursor(cursor: &Cursor, c: &Config, tz: chrono_tz::Tz) -> Result<()> {
-    use chrono::{NaiveDateTime, TimeZone};
-    if cursor.schema != 1 || cursor.observed < 0 {
-        bail!("cursor_invalid / 调度游标无效")
-    }
-    if let Some(due) = cursor.due {
-        let key = cursor
-            .anchor
-            .as_deref()
-            .context("anchor_missing / 调度锚点缺失")?;
-        let local = NaiveDateTime::parse_from_str(key, "%Y-%m-%d/%H:%M")
-            .context("anchor_invalid / 调度锚点格式无效")?;
-        let anchor = tz
-            .from_local_datetime(&local)
-            .earliest()
-            .context("anchor_invalid / 调度锚点格式无效")?
-            .timestamp();
-        let midnight = local
-            .date()
-            .succ_opt()
-            .context("anchor_invalid / 调度锚点格式无效")?
-            .and_hms_opt(0, 0, 0)
-            .unwrap();
-        let cutoff = tz
-            .from_local_datetime(&midnight)
-            .earliest()
-            .context("anchor_invalid / 调度锚点格式无效")?
-            .timestamp();
-        if cursor.timezone == tz.to_string()
-            && cursor.config_signature == kairo_core::config_signature(c)
-            && (due < anchor + c.buffer_seconds
-                || due >= cutoff
-                || cursor.cutoff != cutoff
-                || !c.anchors.contains(&local.format("%H:%M").to_string()))
-        {
-            bail!("cursor_inconsistent / 调度游标与锚点或当日截止时间不一致")
-        }
-    }
-    Ok(())
-}
-#[cfg(test)]
-mod cursor_tests {
-    use super::*;
-    #[test]
-    fn live_cursor_rejects_corrupt_deadline() {
-        let now = 1792387044;
-        let c = Config::default();
-        let mut cursor = Cursor::new(now, chrono_tz::Asia::Shanghai);
-        cursor.arm(&c, chrono_tz::Asia::Shanghai, now).unwrap();
-        assert!(validate_cursor(&cursor, &c, chrono_tz::Asia::Shanghai).is_ok());
-        cursor.cutoff += 86400;
-        assert!(validate_cursor(&cursor, &c, chrono_tz::Asia::Shanghai).is_err());
-    }
-}
-
-#[cfg(test)]
-mod observer_capability_tests {
-    use super::*;
-    #[test]
-    fn observer_cannot_execute_even_if_request_is_called_directly() {
-        let mut o = Observer {
-            r: Runtime::default(),
-            account: "synthetic".into(),
-        };
-        assert!(!o.enabled());
-        assert!(o
-            .request()
-            .unwrap_err()
-            .to_string()
-            .contains("observer_cannot_execute"));
-    }
-}
-
-#[cfg(test)]
-mod authority_tests {
-    use super::*;
-    #[test]
-    fn only_one_daemon_can_own_an_account_across_data_directories() {
-        let root = std::env::temp_dir().join(format!("kairo-owner-{}", std::process::id()));
-        let account = "b".repeat(64);
-        let first = execution_lease(&root, &account).unwrap();
-        assert!(execution_lease(&root, &account).is_err());
-        drop(first);
-        drop(execution_lease(&root, &account).unwrap());
-        fs::remove_dir_all(root).unwrap();
-    }
-}
-
-#[cfg(test)]
-mod automatic_upgrade_tests {
-    use super::*;
-    #[test]
-    fn old_reset_time_retry_is_replaced_with_a_configured_slot() {
-        let now = "2026-11-02T12:00:00Z"
-            .parse::<chrono::DateTime<chrono::Utc>>()
-            .unwrap()
-            .timestamp();
-        let c = Config::default();
-        let mut cursor = Cursor::new(now - 3600, chrono_tz::UTC);
-        cursor.anchor = Some("2026-11-02/11:00".into());
-        cursor.due = Some(now + 3600);
-        cursor.cutoff = now + 43200;
-        let original = cursor.clone();
-        let mut state = State {
-            schema: 1,
-            account: "synthetic".into(),
-            pending: cursor.due,
-            ..Default::default()
-        };
-        resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).unwrap();
-        assert_eq!(cursor.anchor.as_deref(), Some("2026-11-02/16:00"));
-        assert!(state.pending.is_none());
-        cursor = original;
-        state.pending = None;
-        resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).unwrap();
-        assert_eq!(cursor.anchor.as_deref(), Some("2026-11-02/16:00"));
-        cursor.observed = now + 1;
-        assert!(resume_schedule(&c, &mut cursor, &mut state, chrono_tz::UTC, now).is_err());
-    }
 }
