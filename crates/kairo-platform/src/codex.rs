@@ -196,7 +196,7 @@ pub fn start(store: &Store, r: &Runtime) -> Result<Running> {
             return Err(e.into());
         }
     };
-    let watch = match crate::guardian::ParentWatch::new(child.id()) {
+    let watch = match crate::guardian::ParentWatch::with_lock(child.id(), lease.as_raw_fd()) {
         Ok(w) => w,
         Err(e) => {
             unsafe {

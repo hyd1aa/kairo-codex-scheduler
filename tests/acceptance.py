@@ -87,6 +87,18 @@ def orphan(f):
  else:raise AssertionError('orphan Codex process survived parent death')
  f.settings(mode='ok');f.replay([DUE,DUE+1],BASE,False);assert len(f.invocations())==1
 scenario('SSH-independent daemon, crash cleanup, lease exclusion and pre-spawn reservation',orphan)
+def responsive_pause(f):
+ f.settings(mode='sleep');p=subprocess.Popen([f.binary,'--data-dir',str(f.data),'daemon','--fixture',str(f.timeline([DUE]))],env=f.env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ try:
+  for _ in range(200):
+   if f.invocations():break
+   time.sleep(.02)
+  assert len(f.invocations())==1
+  before=time.monotonic();f.call('pause');assert time.monotonic()-before<3
+  assert f.call('status')['paused']
+ finally:p.terminate();p.wait(timeout=5)
+scenario('pause and status stay responsive while a Codex invocation runs',responsive_pause)
+
 def optional(f):
  f.call('quota',ok=False);success(f);assert f.call('status')['quota_optional']
 scenario('quota query failure is independent from scheduling',optional)

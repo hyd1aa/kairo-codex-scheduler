@@ -25,7 +25,7 @@ All model execution uses a marked synthetic Codex CLI with no network implementa
 | Bilingual menu | Real PTY navigation, 24-column width, NO_COLOR, non-TTY CLI, EOF and Ctrl+C. |
 | Old/new history | Old files remain byte-identical; imported display records coexist with new durable slots. |
 
-Additional tests cover file-lock exclusion, symlink/hardlink refusal, failed pre-exec persistence, process-group cleanup, quota-query independence and interrupted installer/update transactions. The existing SHA256, TLS, archive validation, secret and package checks remain.
+Additional tests verify pause/status responsiveness during a running call, inherited-lock cleanup and file-lock exclusion, symlink/hardlink refusal, failed pre-exec persistence, process-group cleanup, quota-query independence and interrupted installer/update transactions. The existing SHA256, TLS, archive validation, secret and package checks remain.
 
 Systemd installation acceptance uses disposable Docker containers and mocked systemctl; it cannot prove every real host boot or SSH client. Public official Codex 0.164.0 was SHA256-verified and checked only with `exec --help` under empty HOME/CODEX_HOME; this sent no model requests. Current flags and JSON completion evidence were checked against [official noninteractive documentation](https://learn.chatgpt.com/docs/non-interactive-mode), [CLI reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli) and [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
 

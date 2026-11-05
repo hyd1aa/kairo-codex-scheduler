@@ -12,10 +12,20 @@ pub struct ParentWatch {
 }
 impl ParentWatch {
     pub fn new(group: u32) -> Result<Self> {
+        Self::create(group, None)
+    }
+    pub fn with_lock(group: u32, fd: i32) -> Result<Self> {
+        Self::create(group, Some(fd))
+    }
+    fn create(group: u32, keep_lock: Option<i32>) -> Result<Self> {
         let mut pipe = [-1; 2];
         if unsafe { libc::pipe2(pipe.as_mut_ptr(), libc::O_CLOEXEC) } != 0 {
             return Err(std::io::Error::last_os_error().into());
         }
+        // Calculate bounds before fork; the child performs only async-signal-safe syscalls.
+        let low = pipe[0].min(keep_lock.unwrap_or(pipe[0])) as u32;
+        let high = pipe[0].max(keep_lock.unwrap_or(pipe[0])) as u32;
+        let max_fd = unsafe { libc::sysconf(libc::_SC_OPEN_MAX) }.max(1024) as u32;
         let pid = unsafe { libc::fork() };
         if pid < 0 {
             let error = std::io::Error::last_os_error();
@@ -27,7 +37,23 @@ impl ParentWatch {
         }
         if pid == 0 {
             unsafe {
-                libc::close(pipe[1]);
+                // Never retain the daemon's store lock, terminal or output pipes.
+                // Keep only the watchdog input and, for model calls, the invocation lock.
+                let mut ranges = [
+                    (0, low.saturating_sub(1)),
+                    (low + 1, high.saturating_sub(1)),
+                    (high + 1, u32::MAX),
+                ];
+                if low == 0 {
+                    ranges[0] = (1, 0);
+                }
+                for (first, last) in ranges {
+                    if first <= last && libc::syscall(libc::SYS_close_range, first, last, 0) != 0 {
+                        for fd in first..=last.min(max_fd) {
+                            libc::close(fd as i32);
+                        }
+                    }
+                }
                 let mut byte = 0u8;
                 loop {
                     let n = libc::read(pipe[0], (&mut byte as *mut u8).cast(), 1);
