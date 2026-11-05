@@ -1,13 +1,10 @@
-mod history;
 mod i18n;
 mod panel;
 use anyhow::{bail, Context, Result};
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use i18n::{color, t};
-use kairo_core::{plan, Config, Cursor, State};
-use kairo_platform::{
-    confirmation, management as mg, runtime as rt, timezone, update as up, Store,
-};
+use kairo_core::{plan, Config};
+use kairo_platform::{management as mg, runtime as rt, timezone, update as up, Store};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -21,7 +18,7 @@ use std::{
     disable_help_flag = true,
     disable_version_flag = true,
     disable_help_subcommand = true,
-    about = "Codex five-hour window scheduler / Codex 五小时窗口智能调度管理器"
+    about = "Scheduled Codex CLI calls / Codex CLI 定时调用工具"
 )]
 struct Cli {
     #[arg(
@@ -59,9 +56,7 @@ enum Cmd {
     Init,
     #[command(about = "Show runtime status / 查看运行状态")]
     Status,
-    #[command(
-        about = "Show natural-dispatch and delayed window confirmation / 查看自然调度和延迟窗口确认"
-    )]
+    #[command(about = "Show recorded calls and legacy evidence / 查看调用记录和旧版证据")]
     Acceptance,
     #[command(
         name = "runtime",
@@ -88,7 +83,7 @@ enum Cmd {
         #[arg(long, help = "Synthetic quota fixture / 合成额度测试文件")]
         fixture: Option<PathBuf>,
     },
-    #[command(about = "Manage daily activation times / 管理每日激活时间")]
+    #[command(about = "Manage daily call times / 管理每日调用时间")]
     Schedule {
         #[command(subcommand)]
         action: Schedule,
@@ -98,17 +93,13 @@ enum Cmd {
         #[arg(help = "zh-CN or en-US / zh-CN 或 en-US")]
         language: String,
     },
-    #[command(about = "Configure idle prewarm and safety buffer / 设置空闲预热及安全缓冲")]
+    #[command(
+        about = "Configure call delay; legacy idle switch is ignored / 设置调用延迟，旧空闲开关已忽略"
+    )]
     Prewarm {
-        #[arg(
-            long,
-            help = "Enable or disable idle-window prewarm / 开启或关闭空闲窗口预热"
-        )]
+        #[arg(long, help = "Legacy switch, ignored / 旧版兼容开关，已忽略")]
         idle: Option<bool>,
-        #[arg(
-            long,
-            help = "Reset buffer in seconds: 0..300 / 重置后缓冲秒数：0..300"
-        )]
+        #[arg(long, help = "Call delay in seconds: 0..300 / 调用延迟秒数：0..300")]
         buffer: Option<i64>,
         #[arg(long, help = "Restore defaults / 恢复默认参数")]
         reset: bool,
@@ -157,7 +148,7 @@ enum Cmd {
         home: Option<PathBuf>,
         #[arg(
             long,
-            help = "Acknowledge a fresh account with no recent requests / 确认首次绑定且没有近期调用"
+            help = "Legacy compatibility flag, ignored / 旧版兼容参数，已忽略"
         )]
         acknowledge_fresh: bool,
     },
@@ -191,10 +182,10 @@ enum Cmd {
         #[arg(long, required = true)]
         yes: bool,
     },
+    #[command(about = "Run scheduled Codex calls / 运行 Codex 定时调用")]
     #[command(
-        about = "Run the scheduler; observation until explicitly activated / 运行调度器，明确批准前仅观察"
+        about = "Show scheduling readiness; --request resumes / 查看待命状态；--request 启动"
     )]
-    #[command(about = "Continue automatic safe initialization / 自动接续安全初始化")]
     Onboard {
         #[arg(long)]
         request: bool,
@@ -233,9 +224,7 @@ enum Cmd {
     },
     #[command(about = "Validate state without requests / 无请求校验持久化状态")]
     Validate,
-    #[command(
-        about = "Atomically migrate compatible state or import a normalized transfer / 原子迁移兼容状态或导入标准化迁移包"
-    )]
+    #[command(about = "Migrate local settings and call history / 迁移本地配置和调用记录")]
     Migrate {
         #[arg(
             long,
@@ -270,32 +259,28 @@ enum Cmd {
         )]
         account: Option<String>,
     },
-    #[command(
-        about = "Enable live scheduling after separate production approval / 单独生产批准后启用真实调度"
-    )]
+    #[command(about = "Resume scheduling (legacy alias) / 启动定时调用（兼容命令）")]
     Activate {
         #[arg(long, help = "Verified account fingerprint / 已验证账号指纹")]
         account: String,
         #[arg(
             long,
-            help = "Explicit acknowledgment of approved production cutover / 明确确认已批准生产切换"
+            help = "Legacy compatibility flag, ignored / 旧版兼容参数，已忽略"
         )]
         approve_production_cutover: bool,
     },
     #[command(
-        about = "Recover existing accounts with unknown local history / 安全恢复本地历史丢失的已有账号"
+        about = "Legacy readiness aliases; no recovery wait / 旧待命检查兼容命令，无恢复等待"
     )]
     Recover {
         #[command(subcommand)]
         action: RecoveryAction,
     },
-    #[command(
-        about = "Authorize and verify managed production scheduling / 明确授权并验证 systemd 正式调度"
-    )]
+    #[command(about = "Resume scheduled calls / 启动定时调用")]
     Enable {
         #[arg(
             long,
-            help = "Explicit production approval; may allow future model requests / 明确生产授权，之后可能发生预热请求"
+            help = "Legacy compatibility flag, ignored / 旧版兼容参数，已忽略"
         )]
         approve_production_cutover: bool,
     },
@@ -304,32 +289,21 @@ enum Cmd {
 }
 #[derive(Subcommand)]
 enum RecoveryAction {
-    #[command(
-        about = "Inspect missing files and recovery stage without network requests / 无网络检查缺失文件与恢复阶段"
-    )]
+    #[command(about = "Legacy readiness status / 兼容待命状态查询")]
     Status,
-    #[command(
-        about = "Start conservative recovery after stopping other schedulers / 停用其他调度器后开始保守恢复"
-    )]
+    #[command(about = "Legacy readiness check; no wait / 兼容待命检查，无恢复等待")]
     Begin {
-        #[arg(
-            long,
-            help = "History is unknown and other automatic/manual requests have stopped / 确认历史未知，其他自动和手动请求已停止"
-        )]
+        #[arg(long)]
         acknowledge_unknown_history: bool,
     },
-    #[command(
-        about = "Revalidate identity and quota; extend waiting after activity / 重新校验身份与额度，发现活动延长等待"
-    )]
+    #[command(about = "Read readiness without changing pause / 查看待命，不改变暂停")]
     Check,
-    #[command(
-        about = "Interactive first-use and reinstall recovery wizard / 首次启用与重装恢复交互向导"
-    )]
+    #[command(about = "Legacy alias; no recovery wizard required / 兼容命令，不需要恢复向导")]
     Wizard,
 }
 #[derive(Subcommand)]
 enum Schedule {
-    #[command(about = "List activation times / 查看激活时间")]
+    #[command(about = "List call times / 查看调用时间")]
     List,
     #[command(about = "Add HH:MM / 新增 HH:MM 时间")]
     Add { time: String },
@@ -385,176 +359,62 @@ enum Update {
         prefix: PathBuf,
     },
 }
-fn emit(cli: &Cli, v: Value) -> Result<()> {
-    if panel::details() {
-        return panel::detail_output(cli, v);
-    } else if panel::active() {
-        panel::render(&v, cli.lang.as_deref() == Some("en-US"));
-    } else if cli.json {
-        println!("{}", serde_json::to_string_pretty(&v)?)
+fn emit(cli: &Cli, value: Value) -> Result<()> {
+    if panel::active() {
+        panel::render(&value, cli.lang.as_deref() == Some("en-US"));
     } else {
-        i18n::render(&v, cli.lang.as_deref() == Some("en-US"), 0)
+        println!("{}", serde_json::to_string_pretty(&value)?);
     }
     Ok(())
 }
-fn recovery_output(cli: &Cli, v: Value) -> Result<()> {
-    if cli.json {
-        emit(cli, v)
-    } else {
-        panel::render_recovery(&v, cli.lang.as_deref() == Some("en-US"));
-        Ok(())
-    }
-}
 fn configured(cli: &Cli) -> Result<Store> {
-    if cli.data_dir.join(".upgrade-lock").exists() {
-        bail!("update_in_progress / 程序升级中，请稍后重试或运行 update recover")
-    };
-    let store = Store::open(&cli.data_dir)?;
-    if cli.data_dir.join(".upgrade-lock").exists() {
-        bail!("update_in_progress / 程序升级中，请稍后重试或运行 update recover")
-    };
-    Ok(store)
+    Store::open(&cli.data_dir)
 }
-fn next_checks(store: &Store, c: &Config, hours: i64) -> Result<Value> {
+fn next_checks(_store: &Store, c: &Config, hours: i64) -> Result<Value> {
     let tz = timezone()?;
-    let now = chrono::Utc::now();
-    let mut times = plan(c, tz, now, hours)?;
-    if let Ok(cur) = store.read::<Cursor>("cursor.json") {
-        if cur.timezone == tz.to_string() && cur.config_signature == kairo_core::config_signature(c)
-        {
-            times.retain(|due| {
-                let key = (*due - chrono::Duration::seconds(c.buffer_seconds))
-                    .with_timezone(&tz)
-                    .format("%Y-%m-%d/%H:%M")
-                    .to_string();
-                !cur.finished.contains(&key)
-            });
-            if let Some(due) = cur.due {
-                if due > now.timestamp()
-                    && due < cur.cutoff
-                    && due <= now.timestamp() + hours * 3600
-                {
-                    if let Some(d) = chrono::DateTime::from_timestamp(due, 0) {
-                        times.push(d)
-                    }
-                }
-            }
-        }
-    }
-    times.sort();
-    times.dedup();
     Ok(
-        json!({"timezone":tz.to_string(),"checks":times.iter().map(|d|d.with_timezone(&tz).to_rfc3339()).collect::<Vec<_>>()}),
+        json!({"timezone":tz.to_string(),"buffer_seconds":c.buffer_seconds,"checks":plan(c,tz,chrono::Utc::now(),hours)?.into_iter().map(|d|d.with_timezone(&tz).to_rfc3339()).collect::<Vec<_>>()}),
     )
 }
-fn local_time(at: i64, tz: chrono_tz::Tz) -> Option<String> {
-    chrono::DateTime::from_timestamp(at, 0).map(|d| d.with_timezone(&tz).to_rfc3339())
+fn status(store: &Store) -> Result<Value> {
+    let c = store.config()?;
+    let s = rt::ScheduleState::load(store)?;
+    let r = rt::runtime(store)?;
+    let next = next_checks(store, &c, 72)?["checks"]
+        .as_array()
+        .and_then(|a| a.first())
+        .cloned();
+    let logged = kairo_platform::codex::logged_in(store, &r).unwrap_or(false);
+    let quota_cache = store
+        .read::<Value>("quota-cache.json")
+        .ok()
+        .filter(|cache| {
+            let account = kairo_platform::identity(&r.codex_home.join("auth.json")).ok();
+            account.is_some_and(|id| cache["account"] == id.fingerprint)
+                && cache["at"]
+                    .as_i64()
+                    .is_some_and(|at| at > 0 && at <= chrono::Utc::now().timestamp())
+        });
+    Ok(
+        json!({"version":env!("CARGO_PKG_VERSION"),"timezone":timezone()?.to_string(),"config":c,"enabled":!s.paused,"paused":s.paused,"oauth_present":logged,"next_call":next,"next_check":next,"last_call":s.calls.last(),"calls":s.calls,"quota_cache":quota_cache,"quota_optional":true,"state_valid":true,"scheduler_state_ready":true,"automatic_warmup_enabled":!s.paused,"prewarm_conditional":false}),
+    )
 }
-fn status_quota(store: &Store, tz: chrono_tz::Tz) -> Value {
-    match rt::verify(store) {
-        Ok(mut v) => {
-            for key in ["five_hour", "weekly"] {
-                if let Some(at) = v[key]["reset_at"].as_i64() {
-                    v[key]["reset_at_local"] = json!(local_time(at, tz));
-                }
-            }
-            v
-        }
-        Err(_) => json!({"error":"quota_or_identity_unavailable"}),
-    }
-}
-fn possible_prewarm(
-    next: &Value,
-    quota: &Value,
-    config: &Config,
-    _cutoff: i64,
-    last_attempt: Option<i64>,
-    tz: chrono_tz::Tz,
-) -> Option<String> {
-    if quota["server_denied"] != false || quota["weekly"]["used"].as_f64()? >= 100.0 {
-        return None;
-    }
-    let mut at = chrono::DateTime::parse_from_rfc3339(next.as_str()?)
-        .ok()?
-        .timestamp();
-    let used = quota["five_hour"]["used"].as_f64()?;
-    if used > 0.0
-        || quota["five_hour"]["remaining"]
-            .as_i64()
-            .is_some_and(|r| (0..kairo_core::WINDOW - 60).contains(&r))
-    {
-        at = at.max(
-            quota["five_hour"]["reset_at"]
-                .as_i64()?
-                .checked_add(config.buffer_seconds)?,
-        );
-    }
-    if let Some(last) = last_attempt {
-        at = at.max(last.checked_add(kairo_core::WINDOW + config.buffer_seconds)?);
-    }
-    if at > 0 {
-        let start = chrono::DateTime::from_timestamp(at.checked_sub(1)?, 0)?;
-        at = plan(config, tz, start, 72)
-            .ok()?
-            .into_iter()
-            .find(|d| d.timestamp() >= at)?
-            .timestamp();
-    }
-    local_time(at, tz)
+fn acceptance(store: &Store) -> Result<Value> {
+    let s = rt::ScheduleState::load(store)?;
+    let old = store
+        .read::<Value>("confirmations.json")
+        .unwrap_or_default();
+    let confirmed = old["tasks"].as_array().is_some_and(|tasks| {
+        tasks
+            .iter()
+            .any(|t| t["countdown_confirmed"] == true && t["request_success"] == true)
+    });
+    Ok(
+        json!({"last_call":s.calls.last(),"calls":s.calls,"request_success":s.calls.last().is_some_and(|c|matches!(c.result.as_str(),"success"|"legacy_success")),"countdown_confirmed":confirmed && s.calls.last().is_some_and(|c|c.result=="legacy_success"),"legacy_confirmation_read_only":true,"new_window_claimed":false}),
+    )
 }
 fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
     match cmd {
-        Cmd::Onboard {
-            request,
-            confirm_exclusive_account,
-        } => {
-            let v = if request {
-                if std::env::var_os("KAIRO_OFFLINE").as_deref() != Some(std::ffi::OsStr::new("1")) {
-                    kairo_platform::onboarding::prepare(&cli.data_dir)?;
-                }
-                let store = configured(cli)?;
-                kairo_platform::onboarding::request(&store, confirm_exclusive_account)?
-            } else {
-                kairo_platform::onboarding::tick(&cli.data_dir)?
-            };
-            return emit(cli, v);
-        }
-        Cmd::Enable {
-            approve_production_cutover: _,
-        } => {
-            let store = configured(cli)?;
-            return emit(cli, kairo_platform::onboarding::request(&store, false)?);
-        }
-        Cmd::Recover {
-            action: RecoveryAction::Wizard,
-        } => return panel::recovery_wizard(cli),
-        Cmd::Recover { action } => {
-            let store = configured(cli)?;
-            let v = match action {
-                RecoveryAction::Status => {
-                    kairo_platform::recovery::inspect(&store, &rt::guard_root())?
-                }
-                RecoveryAction::Begin {
-                    acknowledge_unknown_history,
-                } => kairo_platform::recovery::begin(&store, acknowledge_unknown_history)?,
-                RecoveryAction::Check => kairo_platform::recovery::check(&store)?,
-                RecoveryAction::Wizard => unreachable!(),
-            };
-            return recovery_output(cli, v);
-        }
-        Cmd::Daemon {
-            observe,
-            once,
-            fixture,
-            poll_ms,
-            hold,
-        } => {
-            return if let Some(f) = fixture {
-                kairo_platform::replay::run(&cli.data_dir, &f, poll_ms, hold)
-            } else {
-                rt::daemon(&cli.data_dir, once, observe)
-            }
-        }
         Cmd::Install {
             binary,
             sha256,
@@ -585,7 +445,7 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             )?;
             return emit(
                 cli,
-                json!({"installed":true,"prefix":prefix,"execution":"observation_only"}),
+                json!({"installed":true,"prefix":prefix,"execution":"scheduled"}),
             );
         }
         Cmd::SystemUninstall { yes } => {
@@ -637,67 +497,27 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             };
             return emit(cli, json!({"success":true}));
         }
-        Cmd::Doctor { repair: true } => {
-            let store = configured(cli)?;
-            mg::repair_defaults(&store)?;
-            return emit(cli, mg::doctor(&store, true)?);
-        }
-        Cmd::Migrate {
-            legacy: Some(ref path),
-            ref account,
-            ref legacy_account,
-            ref legacy_timezone,
-            dry_run: true,
-            ..
+
+        Cmd::Daemon {
+            observe,
+            once,
+            fixture,
+            poll_ms,
+            hold,
         } => {
-            let value: Value = serde_json::from_slice(&fs::read(path)?)?;
-            let transfer = kairo_platform::legacy::convert(
-                &value,
-                legacy_account
-                    .as_deref()
-                    .context("legacy_account_required / 需要原账号指纹")?,
-                account
-                    .as_deref()
-                    .context("account_required / 需要账号指纹")?,
-                legacy_timezone
-                    .as_deref()
-                    .context("legacy_timezone_required / 需要原调度器时区")?
-                    .parse()?,
-            )?;
-            return emit(cli, serde_json::to_value(transfer)?);
-        }
-        Cmd::HelpInfo => {
-            return emit(
-                cli,
-                json!({"help":t(cli.lang.as_deref()==Some("en-US"),"Kairo 管理每日激活时间及五小时额度窗口，不能增加额度。默认仅观察；每周额度、服务端拒绝、近期请求和调用前持久化保护不能关闭。启用调度前请完成授权、额度和请求历史安全检查。使用 --help 查看全部命令。","Kairo manages daily activation times and five-hour allowance windows; it cannot increase quota. Observation is the default. Weekly limits, server denial, recent-request guards and durable reservations cannot be disabled. Complete authorization, quota and request-history checks before enabling scheduling. Use --help for commands.")}),
-            )
-        }
-        Cmd::Migrate {
-            ref import,
-            ref legacy,
-            dry_run,
-            ..
-        } if import.is_none() && legacy.is_none() => {
-            let s = Store::open(&cli.data_dir)?;
-            if dry_run {
-                mg::validate(&s)?;
+            return if let Some(path) = fixture {
+                rt::replay(&cli.data_dir, &path, poll_ms, hold)
             } else {
-                mg::migrate(&s)?;
+                rt::daemon(&cli.data_dir, once, observe)
             }
-            return emit(cli, json!({"migrated":!dry_run,"validated":true}));
-        }
-        Cmd::Validate => {
-            let s = Store::open(&cli.data_dir)?;
-            mg::validate(&s)?;
-            return emit(cli, json!({"validated":true}));
         }
         _ => {}
     }
     let store = configured(cli)?;
     if matches!(cmd, Cmd::Init) {
-        if store.root.join("config.json").exists() {
-            bail!("already_initialized / 已初始化")
-        };
+        if kairo_platform::present(&store.root.join("config.json"))? {
+            bail!("already_initialized / 已初始化");
+        }
         let c = Config {
             language: cli.lang.clone().unwrap_or("zh-CN".into()),
             ..Default::default()
@@ -705,155 +525,13 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
         c.validate()?;
         store.write("config.json", &c)?;
         store.write("runtime.json", &rt::Runtime::default())?;
-        return emit(
-            cli,
-            json!({"initialized":true,"execution":"observation_only"}),
-        );
+        mg::migrate(&store)?;
+        return emit(cli, json!({"initialized":true,"execution":"scheduled"}));
     }
     let mut c = store.config()?;
     match cmd {
-        Cmd::Onboard { .. }
-        | Cmd::Recover { .. }
-        | Cmd::Enable { .. }
-        | Cmd::Init
-        | Cmd::SystemUninstall { .. }
-        | Cmd::Install { .. }
-        | Cmd::Uninstall { .. }
-        | Cmd::Update { .. }
-        | Cmd::HelpInfo
-        | Cmd::Daemon { .. }
-        | Cmd::Validate => unreachable!(),
-        Cmd::Status => {
-            let recovery = kairo_platform::recovery::inspect(&store, &rt::guard_root())?;
-            let service_mode = kairo_platform::activation::status(&store.root);
-            let automatic_warmup_enabled = recovery["production_authorized"] == true
-                && service_mode["daemon_live_confirmed"] == true;
-            let tz = timezone()?;
-            let mut checks = next_checks(&store, &c, 48)?;
-            let next = checks["checks"]
-                .as_array_mut()
-                .and_then(|a| a.first().cloned());
-            let state = store.state();
-            let acceptance = match state.as_ref() {
-                Ok(s) => Some(confirmation::summary(&store, s, tz)?),
-                Err(_) => None,
-            };
-            let mut deployment = store.read::<Value>("deployment.json").ok();
-            if let Some(ref mut d) = deployment {
-                if let Some(at) = d["approved_at"].as_i64() {
-                    d["approved_at_local"] = json!(local_time(at, tz));
-                }
-            }
-            let current_quota = if deployment.as_ref().is_some_and(|v| v["enabled"] == true) {
-                Some(status_quota(&store, tz))
-            } else {
-                None
-            };
-            let next_possible = current_quota.as_ref().and_then(|quota| {
-                possible_prewarm(
-                    next.as_ref()?,
-                    quota,
-                    &c,
-                    store
-                        .read::<Cursor>("cursor.json")
-                        .map_or(0, |cur| cur.cutoff),
-                    state
-                        .as_ref()
-                        .ok()
-                        .and_then(|s| s.attempts.last().map(|a| a.at)),
-                    tz,
-                )
-            });
-            let mut status_file = store.read::<Value>("status.json").ok();
-            if let Some(ref mut v) = status_file {
-                if let Some(at) = v["at"].as_i64() {
-                    v["at_local"] = json!(local_time(at, tz));
-                }
-                if let Some(at) = v["next_check"].as_i64() {
-                    v["next_check_local"] = json!(local_time(at, tz));
-                }
-            }
-            let recent_reason = status_file
-                .as_ref()
-                .and_then(|v| v["error"].as_str().or_else(|| v["event"].as_str()));
-            emit(
-                cli,
-                json!({"version":env!("CARGO_PKG_VERSION"),"timezone":tz.to_string(),"config":c,"next_check":next,"next_possible_prewarm":next_possible,"prewarm_conditional":true,"state_valid":recovery["scheduler_state_ready"],"state_file_valid":state.is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"recovery_status":recovery,"onboarding":store.read::<Value>("onboarding-status.json").ok(),"service_mode":service_mode,"automatic_warmup_enabled":automatic_warmup_enabled,"status_file":status_file,"recent_reason":recent_reason,"deployment":deployment,"acceptance":acceptance,"current_quota":current_quota}),
-            )
-        }
-        Cmd::Acceptance => {
-            let state = store.state()?;
-            confirmation::sync(&store, &state)?;
-            let tz = timezone()?;
-            let mut v = confirmation::summary(&store, &state, tz)?;
-            let mut natural = store.read::<Value>("natural-acceptance.json").ok();
-            if let Some(ref mut n) = natural {
-                for key in ["at", "completed_at"] {
-                    if let Some(at) = n[key].as_i64() {
-                        n[format!("{key}_local")] = json!(local_time(at, tz));
-                    }
-                }
-                if let Some(at) = n["first_natural_check"]["at"].as_i64() {
-                    n["first_natural_check"]["at_local"] = json!(local_time(at, tz));
-                }
-                if let Some(at) = n["first_natural_check"]["next_check"].as_i64() {
-                    n["first_natural_check"]["next_check_local"] = json!(local_time(at, tz));
-                }
-            }
-            v["natural_dispatch"] = json!(natural);
-            v["confirmation_details"] = confirmation::details(&store, &state, tz)?;
-            v["timezone"] = json!(tz.to_string());
-            emit(cli, v)
-        }
-        Cmd::Schedule { action } => {
-            match action {
-                Schedule::List => {
-                    return emit(
-                        cli,
-                        json!({"timezone":timezone()?.to_string(),"anchors":c.anchors,"max_anchors":48,"minimum_spacing_minutes":10,"buffer_seconds":c.buffer_seconds}),
-                    )
-                }
-                Schedule::Add { time } => {
-                    kairo_core::time(&time)?;
-                    c.anchors.push(time)
-                }
-                Schedule::Edit { old, new } => {
-                    kairo_core::time(&new)?;
-                    *c.anchors
-                        .iter_mut()
-                        .find(|s| **s == old)
-                        .context("time_missing / 时间不存在")? = new
-                }
-                Schedule::Remove { time } => {
-                    let i = c
-                        .anchors
-                        .iter()
-                        .position(|s| *s == time)
-                        .context("time_missing / 时间不存在")?;
-                    c.anchors.remove(i);
-                }
-                Schedule::Reset => c.anchors = Config::default().anchors,
-                Schedule::Next | Schedule::Preview => {
-                    let mut v = next_checks(
-                        &store,
-                        &c,
-                        if matches!(action, Schedule::Next) {
-                            48
-                        } else {
-                            24
-                        },
-                    )?;
-                    if matches!(action, Schedule::Next) {
-                        v["checks"].as_array_mut().unwrap().truncate(1)
-                    }
-                    return emit(cli, v);
-                }
-            }
-            c.validate()?;
-            c.anchors.sort();
-            store.write("config.json", &c)?;
-            emit(cli, json!({"anchors":c.anchors}))
-        }
+        Cmd::Status => emit(cli, status(&store)?),
+        Cmd::Acceptance => emit(cli, acceptance(&store)?),
         Cmd::RuntimeSettings {
             home,
             codex_home,
@@ -862,22 +540,54 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             let mut r = rt::runtime(&store)?;
             let changed = home.is_some() || codex_home.is_some() || codex.is_some();
             if let Some(v) = home {
-                r.home = v
+                r.home = v;
             }
             if let Some(v) = codex_home {
-                r.codex_home = v
+                r.codex_home = v;
             }
             if let Some(v) = codex {
-                r.codex = v
+                r.codex = v;
             }
             r.validate()?;
             if changed {
-                if store.root.join("deployment.json").exists() {
-                    rt::pause(&store)?
-                }
                 store.write("runtime.json", &r)?;
             }
-            emit(cli, json!({"runtime":r}))
+            emit(cli, serde_json::to_value(r)?)
+        }
+        Cmd::Schedule { action } => {
+            let mut changed = true;
+            match action {
+                Schedule::Add { time } => c.anchors.push(time),
+                Schedule::Edit { old, new } => {
+                    let at = c
+                        .anchors
+                        .iter()
+                        .position(|t| t == &old)
+                        .context("time_missing / 时间不存在")?;
+                    c.anchors[at] = new;
+                }
+                Schedule::Remove { time } => {
+                    let at = c
+                        .anchors
+                        .iter()
+                        .position(|t| t == &time)
+                        .context("time_missing / 时间不存在")?;
+                    c.anchors.remove(at);
+                }
+                Schedule::Reset => c.anchors = Config::default().anchors,
+                Schedule::Next => return emit(cli, next_checks(&store, &c, 72)?),
+                Schedule::Preview => return emit(cli, next_checks(&store, &c, 24)?),
+                Schedule::List => changed = false,
+            }
+            c.anchors.sort();
+            c.validate()?;
+            if changed {
+                store.write("config.json", &c)?;
+            }
+            emit(
+                cli,
+                json!({"anchors":c.anchors,"buffer_seconds":c.buffer_seconds}),
+            )
         }
         Cmd::Lang { language } => {
             c.language = language;
@@ -891,58 +601,95 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
             reset,
         } => {
             if reset {
-                c.idle_window_prewarm = true;
                 c.buffer_seconds = 30;
             }
-            if let Some(v) = idle {
-                c.idle_window_prewarm = v
+            if let Some(b) = buffer {
+                c.buffer_seconds = b;
             }
-            if let Some(v) = buffer {
-                c.buffer_seconds = v
+            if let Some(i) = idle {
+                c.idle_window_prewarm = i;
             }
             c.validate()?;
-            if idle.is_some() || buffer.is_some() || reset {
+            if reset || buffer.is_some() || idle.is_some() {
                 store.write("config.json", &c)?;
             }
             emit(
                 cli,
-                json!({"idle_window_prewarm":c.idle_window_prewarm,"buffer_seconds":c.buffer_seconds,"non_optional_guards":["weekly","server_denied","attempt_guard","durable_reservation"],"state":store.state().ok()}),
+                json!({"buffer_seconds":c.buffer_seconds,"idle_window_prewarm":c.idle_window_prewarm,"legacy_idle_setting_ignored":true,"quota_optional":true}),
             )
         }
         Cmd::Quota { fixture } => {
-            let r = rt::runtime(&store)?;
             let now = chrono::Utc::now().timestamp();
-            let (f, w, d) = if let Some(path) = fixture {
+            let (f, w, d, account) = if let Some(path) = fixture {
                 let v: Value = serde_json::from_slice(&fs::read(path)?)?;
-                kairo_platform::parse_usage(&v, now)?
+                let (f, w, d) = kairo_platform::parse_usage(&v, now)?;
+                (f, w, d, String::from("synthetic"))
             } else {
+                let r = rt::runtime(&store)?;
                 let id = kairo_platform::identity(&r.codex_home.join("auth.json"))?;
-                let usage = rt::verified_usage(&id, &kairo_platform::quota(&id)?, now)?;
-                store.write("quota-cache.json",&json!({"five_hour":usage.0,"weekly":usage.1,"server_denied":usage.2,"at":now,"account":id.fingerprint}))?;
-                usage
+                let v = kairo_platform::quota(&id)?;
+                if v["account_id"] != id.account_id {
+                    bail!("server_identity_mismatch / 额度账号不匹配");
+                }
+                let (f, w, d) = kairo_platform::parse_usage(&v, now)?;
+                (f, w, d, id.fingerprint)
             };
-            emit(cli, json!({"five_hour":f,"weekly":w,"server_denied":d}))
+            let value = json!({"five_hour":f,"weekly":w,"server_denied":d,"account":account,"at":now,"informational_only":true});
+            store.write("quota-cache.json", &value)?;
+            emit(cli, value)
         }
         Cmd::Auth {
             action,
             name,
             home,
-            acknowledge_fresh,
+            acknowledge_fresh: _,
         } => match action.as_str() {
             "login" => {
                 if cli.json || !io::stdin().is_terminal() {
-                    bail!("interactive_login_required / OAuth 登录需要交互终端，由用户完成人工认证")
-                };
+                    bail!("interactive_login_required / OAuth 登录需要交互终端");
+                }
                 mg::login(&store)?;
-                kairo_platform::onboarding::credentials_changed(&store)?;
                 emit(cli, json!({"success":true}))
             }
-            "bind" => emit(cli, rt::bind(&store, acknowledge_fresh)?),
+            "bind" => emit(cli, json!({"binding_required":false,"ready":true})),
             _ => emit(
                 cli,
                 mg::account_action(&store, &action, name.as_deref(), home.as_deref())?,
             ),
         },
+        Cmd::Pause => emit(cli, rt::pause(&store, true)?),
+        Cmd::Enable { .. } | Cmd::Activate { .. } => emit(cli, rt::pause(&store, false)?),
+        Cmd::Onboard { request, .. } => {
+            if request {
+                emit(cli, rt::pause(&store, false)?)
+            } else {
+                emit(cli, status(&store)?)
+            }
+        }
+        Cmd::Recover { .. } => emit(
+            cli,
+            json!({"recovery_required":false,"wait_seconds":0,"status":status(&store)?}),
+        ),
+        Cmd::Migrate {
+            import,
+            legacy,
+            dry_run,
+            ..
+        } => {
+            if import.is_some() || legacy.is_some() {
+                bail!("legacy_import_retired / 原始旧记录请保留在原目录，由迁移读取；不再导入额度授权");
+            }
+            if dry_run {
+                mg::validate(&store)?;
+            } else {
+                mg::migrate(&store)?;
+            }
+            emit(cli, json!({"migrated":!dry_run,"validated":true}))
+        }
+        Cmd::Validate => {
+            mg::validate(&store)?;
+            emit(cli, json!({"validated":true}))
+        }
         Cmd::Doctor { repair } => emit(cli, mg::doctor(&store, repair)?),
         Cmd::Service { action } => {
             drop(store);
@@ -950,9 +697,8 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
         }
         Cmd::Logs { lines } => {
             if !(1..=10000).contains(&lines) {
-                bail!("log_limit_invalid / 日志数量必须为1到10000")
-            };
-            drop(store);
+                bail!("log_limit_invalid / 日志数量无效");
+            }
             let o = std::process::Command::new("journalctl")
                 .args([
                     "--unit=kairo.service",
@@ -963,130 +709,26 @@ fn run(cli: &Cli, cmd: Cmd) -> Result<()> {
                 .arg(lines.to_string())
                 .output()?;
             if !o.status.success() {
-                bail!("logs_failed / 日志查询失败")
-            };
-            let values = String::from_utf8_lossy(&o.stdout)
+                bail!("logs_failed / 日志读取失败");
+            }
+            let logs = String::from_utf8_lossy(&o.stdout)
                 .lines()
-                .map(serde_json::from_str::<Value>)
-                .collect::<std::result::Result<Vec<_>, _>>()?;
-            let tz = timezone().ok();
-            let values = values
-                .into_iter()
-                .map(|v| {
-                    let message = v["MESSAGE"]
-                        .as_str()
-                        .and_then(|s| serde_json::from_str::<Value>(s).ok())
-                        .unwrap_or(v["MESSAGE"].clone());
-                    let timestamp = v["__REALTIME_TIMESTAMP"]
-                        .as_str()
-                        .and_then(|s| s.parse::<i64>().ok())
-                        .and_then(chrono::DateTime::from_timestamp_micros)
-                        .map(|t| {
-                            if let Some(tz) = tz {
-                                t.with_timezone(&tz).to_rfc3339()
-                            } else {
-                                t.to_rfc3339()
-                            }
-                        });
-                    json!({"timestamp":timestamp,"message":message})
-                })
+                .map(|line| serde_json::from_str::<Value>(line).unwrap_or(Value::Null))
                 .collect::<Vec<_>>();
-            emit(
-                cli,
-                json!({"timezone":tz.map(|t|t.to_string()).unwrap_or("timezone_unknown".into()),"logs":values}),
-            )
+            emit(cli, json!({"logs":logs}))
         }
+        Cmd::HelpInfo => emit(
+            cli,
+            json!({"help":t(cli.lang.as_deref()==Some("en-US"),"Kairo 在预设时间调用一次官方 Codex CLI。额度仅供参考，不保证请求成功或激活新窗口。","Kairo calls the official Codex CLI once at each scheduled time. Quota is informational; requests and new windows are not guaranteed.")}),
+        ),
         Cmd::Simulate { fixture } => {
             let v: Value = serde_json::from_slice(&fs::read(fixture)?)?;
-            let now = v["now"].as_i64().context("clock_missing / 缺少时间戳")?;
-            let (f, w, d) = kairo_platform::parse_usage(&v["usage"], now)?;
-            let mut s: State = serde_json::from_value(v["state"].clone())?;
-            let anchor = v["anchor"].as_str().unwrap_or("synthetic");
-            let decision = kairo_core::decide(
-                &c,
-                &s,
-                anchor,
-                now,
-                v["cutoff"].as_i64().unwrap_or(now + 3600),
-                &f,
-                &w,
-                d,
-            );
-            let reason = match &decision {
-                kairo_core::Decision::Request(r) => json!({"event":r,"eligible":true}),
-                kairo_core::Decision::Block(r) => json!({"event":r,"eligible":false}),
-                kairo_core::Decision::Defer(at) => {
-                    json!({"event":"deferred","next_check":at,"eligible":false})
-                }
-            };
-            if matches!(decision, kairo_core::Decision::Request(_)) {
-                kairo_core::reserve(&mut s, anchor, now, f.clone());
-                kairo_core::complete(&mut s, true, Some(f));
-            }
-            emit(cli, json!({"decision":reason,"state":s,"model_requests":0}))
+            emit(
+                cli,
+                json!({"checks":plan(&c,timezone()?,chrono::DateTime::from_timestamp(v["now"].as_i64().context("clock_missing")?,0).context("clock_invalid")?,24)?,"model_requests":0}),
+            )
         }
-        Cmd::Migrate {
-            import,
-            legacy,
-            account,
-            legacy_account,
-            legacy_timezone,
-            dry_run,
-        } => {
-            let _lease = rt::daemon_lease(&cli.data_dir)?;
-            let account = account.context("account_required / 需要账号指纹")?;
-            if let Some(path) = legacy {
-                let value: Value = serde_json::from_slice(&fs::read(path)?)?;
-                let transfer = kairo_platform::legacy::convert(
-                    &value,
-                    legacy_account
-                        .as_deref()
-                        .context("legacy_account_required / 需要原账号指纹")?,
-                    &account,
-                    legacy_timezone
-                        .as_deref()
-                        .context("legacy_timezone_required / 需要原调度器时区")?
-                        .parse()?,
-                )?;
-                mg::import_transfer(&store, transfer, &account)?;
-            } else if let Some(path) = import {
-                if dry_run {
-                    let transfer: mg::Transfer = serde_json::from_slice(&fs::read(path)?)?;
-                    transfer.state.validate()?;
-                    return emit(cli, serde_json::to_value(transfer)?);
-                }
-                mg::import(&store, &path, &account)?;
-            } else {
-                bail!("transfer_required / 需要状态迁移包")
-            }
-            emit(cli, json!({"migrated":true,"execution":"observation_only"}))
-        }
-        Cmd::Activate {
-            account,
-            approve_production_cutover,
-        } => {
-            if let Err(e) = rt::activate(&store, &account, approve_production_cutover) {
-                if e.chain().any(|e| {
-                    e.downcast_ref::<io::Error>()
-                        .is_some_and(|e| e.kind() == io::ErrorKind::NotFound)
-                }) && ["deployment.json", "state.json", "cursor.json"]
-                    .iter()
-                    .any(|name| !store.root.join(name).exists())
-                {
-                    return Err(e.context("activation_history_missing / 部署授权或调度历史文件缺失；OAuth 校验成功不代表已绑定或已授权。请运行 status、doctor 并人工核对历史；不要自动 FRESH、伪造状态或删除保护记录"));
-                }
-                return Err(e);
-            }
-            emit(cli, json!({"enabled":true}))
-        }
-        Cmd::Pause => {
-            kairo_platform::onboarding::pause(&store)?;
-            if store.root.join("deployment.json").try_exists()? {
-                rt::pause(&store)?;
-            }
-            kairo_platform::onboarding::pause_confirmed(&store)?;
-            emit(cli, json!({"paused":true}))
-        }
+        _ => unreachable!(),
     }
 }
 fn input(prompt: &str) -> Result<String> {
@@ -1097,306 +739,6 @@ fn input(prompt: &str) -> Result<String> {
         bail!(panel::EndOfInput);
     }
     Ok(s.trim().into())
-}
-fn submenu(en: bool, zh: &[&str], english: &[&str]) -> Result<String> {
-    let choice = numbered(en, zh, english, t(en, "返回", "Back"))?;
-    panel::action_page(en);
-    Ok(choice)
-}
-fn numbered(en: bool, zh: &[&str], english: &[&str], exit: &str) -> Result<String> {
-    for (i, s) in (if en { english } else { zh }).iter().enumerate() {
-        println!("{}. {}", i + 1, s)
-    }
-    println!("\n0. {exit}");
-    loop {
-        let choice = input(&if en {
-            format!("Select [0-{}]: ", zh.len())
-        } else {
-            format!("请选择 [0-{}]：", zh.len())
-        })?;
-        if choice.len() == 1 && choice.parse::<usize>().is_ok_and(|n| n <= zh.len()) {
-            return Ok(choice);
-        }
-        println!(
-            "{}",
-            color(
-                t(
-                    en,
-                    "菜单选项无效；请重新输入",
-                    "Invalid selection; try again"
-                ),
-                31
-            )
-        );
-    }
-}
-fn choose(en: bool, choice: &str) -> Result<Option<Cmd>> {
-    Ok(Some(match choice {
-        "00" => return Ok(None),
-        "01" => Cmd::Status,
-        "02" => Cmd::Quota { fixture: None },
-        "03" => {
-            println!(
-                "{}",
-                t(
-                    en,
-                    "最多48个时间，最小间隔10分钟（含跨午夜）",
-                    "Up to 48 times; minimum spacing 10 minutes including midnight"
-                )
-            );
-            let a = submenu(
-                en,
-                &[
-                    "添加时间",
-                    "修改时间",
-                    "删除时间",
-                    "恢复默认",
-                    "下次实际检查",
-                    "未来24小时预览",
-                ],
-                &[
-                    "Add time",
-                    "Edit time",
-                    "Remove time",
-                    "Restore defaults",
-                    "Next actual check",
-                    "Preview next 24 hours",
-                ],
-            )?;
-            Cmd::Schedule {
-                action: match a.trim_start_matches('0') {
-                    "1" => Schedule::Add {
-                        time: input("HH:MM > ")?,
-                    },
-                    "2" => Schedule::Edit {
-                        old: input(t(en, "原时间 > ", "Old time > "))?,
-                        new: input(t(en, "新时间 > ", "New time > "))?,
-                    },
-                    "3" => Schedule::Remove {
-                        time: input("HH:MM > ")?,
-                    },
-                    "4" => Schedule::Reset,
-                    "5" => Schedule::Next,
-                    "6" => Schedule::Preview,
-                    _ => return Ok(None),
-                },
-            }
-        }
-        "04" => {
-            let a = submenu(
-                en,
-                &["查看状态", "启动服务", "停止服务", "重启服务"],
-                &["Status", "Start service", "Stop service", "Restart service"],
-            )?;
-            Cmd::Service {
-                action: match a.trim_start_matches('0') {
-                    "1" => "status",
-                    "2" => "start",
-                    "3" => "stop",
-                    "4" => "restart",
-                    _ => return Ok(None),
-                }
-                .into(),
-            }
-        }
-        "05" => Cmd::Logs { lines: 20 },
-        "06" => {
-            let a = submenu(
-                en,
-                &[
-                    "查看本地账号状态",
-                    "服务端账号校验",
-                    "OAuth 登录（人工认证）",
-                    "查看账号配置",
-                    "新增账号配置",
-                    "切换账号配置",
-                    "删除账号配置",
-                    "首次账号绑定（需确认无旧服务）",
-                    "首次启用 / 旧账号重装恢复向导",
-                ],
-                &[
-                    "Local account status",
-                    "Verify server identity",
-                    "OAuth login (human authentication)",
-                    "List account profiles",
-                    "Add profile",
-                    "Select profile",
-                    "Remove profile",
-                    "Fresh account binding (legacy must be stopped)",
-                    "First-use / existing-account recovery wizard",
-                ],
-            )?;
-            if a.trim_start_matches('0') == "9" {
-                return Ok(Some(Cmd::Recover {
-                    action: RecoveryAction::Wizard,
-                }));
-            }
-            let action = match a.trim_start_matches('0') {
-                "1" => "status",
-                "2" => "verify",
-                "3" => "login",
-                "4" => "list",
-                "5" => "add",
-                "6" => "select",
-                "7" => "remove",
-                "8" => "bind",
-                _ => return Ok(None),
-            };
-            let name = if ["add", "select", "remove"].contains(&action) {
-                Some(input(t(en, "账号名称 > ", "Profile name > "))?)
-            } else {
-                None
-            };
-            let home = if action == "add" {
-                Some(PathBuf::from(input(t(
-                    en,
-                    "现有 Codex 认证目录 > ",
-                    "Existing Codex authentication directory > ",
-                ))?))
-            } else {
-                None
-            };
-            let acknowledge_fresh = if action == "bind" {
-                input(t(
-                    en,
-                    "仅限已批准的首次绑定且无近期请求，输入 FRESH > ",
-                    "Approved fresh binding with no recent requests only; enter FRESH > ",
-                ))? == "FRESH"
-            } else {
-                false
-            };
-            Cmd::Auth {
-                action: action.into(),
-                name,
-                home,
-                acknowledge_fresh,
-            }
-        }
-        "07" => {
-            let a = submenu(
-                en,
-                &["系统诊断", "安全修复默认配置（保留调用历史）"],
-                &[
-                    "Diagnostics",
-                    "Repair default configuration (retain attempt history)",
-                ],
-            )?;
-            Cmd::Doctor {
-                repair: match a.trim_start_matches('0') {
-                    "1" => false,
-                    "2" => true,
-                    _ => return Ok(None),
-                },
-            }
-        }
-        "08" => {
-            let a = submenu(
-                en,
-                &[
-                    "查看预热参数",
-                    "设置空闲窗口预热",
-                    "设置重置后缓冲秒数",
-                    "查看每周额度保护和服务端拒绝",
-                    "查看窗口生命周期",
-                    "无模型请求的未来计划预览",
-                    "恢复默认预热参数",
-                ],
-                &[
-                    "Show prewarm parameters",
-                    "Set idle-window prewarm",
-                    "Set reset safety buffer",
-                    "Weekly protection and server denial",
-                    "Window lifecycle",
-                    "Preview without model requests",
-                    "Restore prewarm defaults",
-                ],
-            )?;
-            match a.trim_start_matches('0') {
-                "1" | "4" | "5" => Cmd::Prewarm {
-                    idle: None,
-                    buffer: None,
-                    reset: false,
-                },
-                "2" => Cmd::Prewarm {
-                    idle: Some(input("true / false > ")?.parse()?),
-                    buffer: None,
-                    reset: false,
-                },
-                "3" => Cmd::Prewarm {
-                    idle: None,
-                    buffer: Some(input("0..300 > ")?.parse()?),
-                    reset: false,
-                },
-                "6" => Cmd::Schedule {
-                    action: Schedule::Preview,
-                },
-                "7" => Cmd::Prewarm {
-                    idle: None,
-                    buffer: None,
-                    reset: true,
-                },
-                _ => return Ok(None),
-            }
-        }
-        "09" => {
-            let a = submenu(
-                en,
-                &[
-                    "检查发布清单",
-                    "校验并升级本地程序",
-                    "下载并自动升级",
-                    "回滚程序（保留调用历史）",
-                    "恢复中断的升级事务",
-                    "查询 GitHub 最新稳定版（不升级）",
-                ],
-                &[
-                    "Check release manifest",
-                    "Verify and apply local update",
-                    "Download and automatically upgrade",
-                    "Roll back binary (retain history)",
-                    "Recover interrupted update",
-                    "Check GitHub latest stable (no upgrade)",
-                ],
-            )?;
-            let action = match a.trim_start_matches('0') {
-                "1" => Update::Check {
-                    manifest: input(t(en, "清单路径 > ", "Manifest path > "))?.into(),
-                },
-                "2" => Update::Apply {
-                    binary: input(t(en, "二进制路径 > ", "Binary path > "))?.into(),
-                    sha256: input("SHA256 > ")?,
-                    prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
-                },
-                "3" => Update::Online,
-                "4" => Update::Rollback {
-                    prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
-                },
-                "6" => Update::Latest,
-                "5" => Update::Recover {
-                    prefix: input(t(en, "安装目录 > ", "Installation prefix > "))?.into(),
-                },
-                _ => return Ok(None),
-            };
-            Cmd::Update { action }
-        }
-        "10" => Cmd::Lang {
-            language: if en { "zh-CN" } else { "en-US" }.into(),
-        },
-        "11" => Cmd::HelpInfo,
-        "12" => {
-            println!("{}", t(en, "将移除 Kairo 程序和服务。\n默认保留 OAuth、用户配置及状态数据。\n不会删除已有的 Codex CLI。", "Removes Kairo programs and services.\nPreserves OAuth, user configuration and state data.\nKeeps your existing Codex CLI."));
-            if input(t(
-                en,
-                "输入 uninstall 确认卸载；Enter 取消 > ",
-                "Type uninstall to confirm; Enter cancels > ",
-            ))? != "uninstall"
-            {
-                return Ok(None);
-            }
-            Cmd::SystemUninstall { yes: true }
-        }
-        _ => bail!("menu_choice_invalid / 菜单选项无效"),
-    }))
 }
 fn menu(cli: &mut Cli) -> Result<()> {
     panel::menu(cli)
@@ -1571,61 +913,5 @@ fn main() {
             eprintln!("{}", color(&message, 31))
         }
         std::process::exit(1)
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn prewarm_estimate_waits_for_live_reset_and_respects_day_cutoff() {
-        let config = Config::default();
-        let tz = chrono_tz::Asia::Shanghai;
-        let next = json!("2026-10-20T16:00:30+08:00");
-        let cutoff = chrono::DateTime::parse_from_rfc3339("2026-10-21T00:00:00+08:00")
-            .unwrap()
-            .timestamp();
-        let quota = json!({"server_denied":false,"weekly":{"used":3.0},"five_hour":{"used":21.0,"reset_at":chrono::DateTime::parse_from_rfc3339("2026-10-20T17:41:00+08:00").unwrap().timestamp()}});
-        assert_eq!(
-            possible_prewarm(&next, &quota, &config, cutoff, None, tz).as_deref(),
-            Some("2026-10-20T21:00:30+08:00")
-        );
-        let next_day = json!({"server_denied":false,"weekly":{"used":3.0},"five_hour":{"used":21.0,"reset_at":chrono::DateTime::parse_from_rfc3339("2026-10-21T02:00:00+08:00").unwrap().timestamp()}});
-        assert_eq!(
-            possible_prewarm(&next, &next_day, &config, cutoff, None, tz).as_deref(),
-            Some("2026-10-21T06:00:30+08:00")
-        );
-    }
-    #[test]
-    fn zero_percent_partial_window_waits_for_reset_then_next_slot() {
-        let config = Config::default();
-        let tz = chrono_tz::Asia::Shanghai;
-        let next = json!("2026-11-02T16:00:30+08:00");
-        let reset = chrono::DateTime::parse_from_rfc3339("2026-11-02T18:00:00+08:00")
-            .unwrap()
-            .timestamp();
-        let quota = json!({"server_denied":false,"weekly":{"used":0.},"five_hour":{"used":0.,"remaining":7200,"reset_at":reset}});
-        assert_eq!(
-            possible_prewarm(&next, &quota, &config, 0, None, tz).as_deref(),
-            Some("2026-11-02T21:00:30+08:00")
-        );
-        let mut boundary = quota.clone();
-        boundary["five_hour"]["reset_at"] = json!(chrono::DateTime::parse_from_rfc3339(
-            "2026-11-02T21:00:00+08:00"
-        )
-        .unwrap()
-        .timestamp());
-        assert_eq!(
-            possible_prewarm(&next, &boundary, &config, 0, None, tz).as_deref(),
-            Some("2026-11-02T21:00:30+08:00")
-        );
-    }
-    #[test]
-    fn prewarm_estimate_refuses_denial_and_weekly_exhaustion() {
-        let config = Config::default();
-        let next = json!("2026-10-20T16:00:30+08:00");
-        let quota = json!({"server_denied":true,"weekly":{"used":0.0},"five_hour":{"used":0.0}});
-        assert!(possible_prewarm(&next, &quota, &config, 0, None, chrono_tz::UTC).is_none());
-        let quota = json!({"server_denied":false,"weekly":{"used":100.0},"five_hour":{"used":0.0}});
-        assert!(possible_prewarm(&next, &quota, &config, 0, None, chrono_tz::UTC).is_none());
     }
 }

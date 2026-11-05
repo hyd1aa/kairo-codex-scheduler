@@ -1,10 +1,8 @@
 use crate::{
-    codex::AccountJournal,
-    runtime::{self, Deployment, Runtime},
+    runtime::{self, Runtime, ScheduleState},
     Store,
 };
 use anyhow::{bail, Context, Result};
-use kairo_core::{Cursor, State};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -32,13 +30,7 @@ pub fn account_action(
     home: Option<&Path>,
 ) -> Result<Value> {
     match action {
-        "status" => {
-            let r = runtime::runtime(store)?;
-            let id = crate::identity(&r.codex_home.join("auth.json"))?;
-            Ok(
-                json!({"account_fingerprint":id.fingerprint,"oauth_present":true,"identity_server_verified":false}),
-            )
-        }
+        "status" => runtime::verify(store),
         "verify" => runtime::verify(store),
         "list" => Ok(serde_json::to_value(profiles(store)?)?),
         "add" => {
@@ -72,13 +64,11 @@ pub fn account_action(
             let mut r = runtime::runtime(store)?;
             r.codex_home = home;
             r.validate()?;
-            if store.root.join("deployment.json").exists() {
-                runtime::pause(store)?
-            };
+
             store.write("runtime.json", &r)?;
             a.selected = Some(name.into());
             store.write("accounts.json", &a)?;
-            Ok(json!({"selected":name,"execution":"observation_only"}))
+            Ok(json!({"selected":name,"execution":"scheduled"}))
         }
         "remove" => {
             let name = name.context("profile_name_required / 需要账号名称")?;
@@ -113,9 +103,6 @@ pub(crate) fn account_command(store: &Store, binary: &Path) -> Result<Command> {
     Ok(command)
 }
 pub fn login(store: &Store) -> Result<()> {
-    if store.root.join("deployment.json").exists() {
-        runtime::pause(store)?
-    };
     let r = runtime::runtime(store)?;
     let mut command = account_command(store, &r.codex)?;
     let status = command
@@ -164,185 +151,60 @@ pub fn service(action: &str) -> Result<Value> {
     }
     Ok(json!({"service":"kairo.service","action":action,"status":status,"success":true}))
 }
+
 pub fn validate(store: &Store) -> Result<()> {
     store.config()?;
-    crate::onboarding::execution_paused(store)?;
-    if store.root.join("accounts.json").exists() {
-        let a = profiles(store)?;
-        if a.profiles.values().any(|p| !p.is_absolute())
-            || a.selected
-                .as_ref()
-                .is_some_and(|s| !a.profiles.contains_key(s))
-        {
-            bail!("profiles_invalid / 账号配置无效")
-        }
-    }
-
     if let Some(r) = store.retained::<Runtime>("runtime.json")? {
         r.validate()?;
     }
-    let state = crate::automatic::retained_state(store)?;
-    if let Some(state) = &state {
-        crate::confirmation::read(store, state)?;
-    } else if crate::recovery::present(&store.root.join("confirmations.json"))? {
-        bail!("request_history_incomplete / 缺少请求主记录及备份，保留确认记录等待检查");
-    }
-    if let Some(cursor) = store.retained::<Cursor>("cursor.json")? {
-        if cursor.schema != 1
-            || cursor.observed < 0
-            || cursor.timezone.parse::<chrono_tz::Tz>().is_err()
-        {
-            bail!("cursor_invalid / 调度记录无效");
-        }
-    }
-    if let Some(d) = store.retained::<Deployment>("deployment.json")? {
-        if d.schema != 1
-            || d.account.is_empty()
-            || d.enabled && d.approved_at.is_none()
-            || state.as_ref().is_some_and(|s| s.account != d.account)
-        {
-            bail!("deployment_invalid / 账号或调度授权记录无效");
-        }
+    if crate::present(&store.root.join("schedule.json"))? {
+        ScheduleState::load(store)?;
     }
     Ok(())
 }
 pub fn migrate(store: &Store) -> Result<()> {
     validate(store)?;
+    if !crate::present(&store.root.join("runtime.json"))? {
+        use std::os::unix::fs::MetadataExt;
+        let owner = fs::metadata(&store.root)?.uid();
+        let mut r = store
+            .retained::<Runtime>("runtime.json")?
+            .unwrap_or_default();
+        if fs::metadata(&r.home).map_or(true, |m| m.uid() != owner)
+            || std::env::var_os("HOME").is_none()
+        {
+            let u = unsafe { libc::getpwuid(owner) };
+            if u.is_null() {
+                bail!("runtime_user_missing");
+            }
+            r.home = PathBuf::from(unsafe { std::ffi::CStr::from_ptr((*u).pw_dir) }.to_str()?);
+            r.codex_home = r.home.join(".codex");
+            r.codex = [
+                r.home.join(".local/bin/codex"),
+                PathBuf::from("/usr/local/bin/codex"),
+                PathBuf::from("/usr/bin/codex"),
+            ]
+            .into_iter()
+            .find(|p| p.is_file())
+            .unwrap_or_else(|| PathBuf::from("/usr/local/bin/codex"));
+        }
+        store.write("runtime.json", &r)?;
+    }
     for name in [
         "config.json",
         "state.json",
         "cursor.json",
         "deployment.json",
-        "runtime.json",
     ] {
-        if !crate::recovery::present(&store.root.join(name))? {
-            if let Some(value) = store.retained::<Value>(name)? {
-                store.write(name, &value)?;
+        if !crate::present(&store.root.join(name))? {
+            if let Some(v) = store.retained::<Value>(name).ok().flatten() {
+                store.write(name, &v)?;
             }
         }
     }
-    if !crate::recovery::present(&store.root.join("runtime.json"))? {
-        let r = if crate::recovery::present(&store.root.join(".runtime.json.previous"))? {
-            let r: Runtime = store.read(".runtime.json.previous")?;
-            r.validate()?;
-            r
-        } else {
-            use std::os::unix::fs::MetadataExt;
-            let owner = fs::metadata(&store.root)?.uid();
-            let mut r = Runtime::default();
-            if std::env::var_os("HOME").is_none()
-                || fs::metadata(&r.home).map_or(true, |m| m.uid() != owner)
-            {
-                let user = unsafe { libc::getpwuid(owner) };
-                if user.is_null() {
-                    bail!("runtime_user_missing / 服务所属用户不存在");
-                }
-                r.home =
-                    PathBuf::from(unsafe { std::ffi::CStr::from_ptr((*user).pw_dir) }.to_str()?);
-                r.codex_home = r.home.join(".codex");
-                r.codex = [
-                    r.home.join(".local/bin/codex"),
-                    PathBuf::from("/usr/local/bin/codex"),
-                    PathBuf::from("/usr/bin/codex"),
-                ]
-                .into_iter()
-                .find(|p| p.is_file())
-                .unwrap_or_else(|| PathBuf::from("/usr/local/bin/codex"));
-            }
-            r.validate()?;
-            r
-        };
-        store.write("runtime.json", &r)?;
+    if !crate::present(&store.root.join("schedule.json"))? {
+        ScheduleState::load(store)?.save(store)?;
     }
-    Ok(())
-}
-#[derive(Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Transfer {
-    pub schema: u32,
-    pub source: String,
-    pub state: State,
-}
-pub fn import(store: &Store, bundle: &Path, account: &str) -> Result<()> {
-    runtime::ensure_legacy_inactive()?;
-    let transfer: Transfer = serde_json::from_slice(&fs::read(bundle)?)?;
-    import_transfer(store, transfer, account)
-}
-pub fn import_transfer(store: &Store, transfer: Transfer, account: &str) -> Result<()> {
-    runtime::ensure_legacy_inactive()?;
-
-    if transfer.schema != 1
-        || transfer.source != "normalized-kairo-transfer"
-        || transfer.state.account != account
-        || account.len() != 64
-    {
-        bail!("transfer_invalid / 状态迁移包无效")
-    };
-    transfer.state.validate()?;
-    let verified = runtime::verify(store)?;
-    if verified["account_fingerprint"] != account {
-        bail!("account_mismatch / 账号不匹配")
-    }
-    let current = if store.root.join("state.json").exists() {
-        Some(store.state()?)
-    } else {
-        None
-    };
-    let mut state = merge_states(current, transfer.state)?;
-    let now = chrono::Utc::now().timestamp();
-    if state.last_clock > now {
-        bail!("clock_backward / 时钟回拨")
-    };
-    state.pending = None;
-    state.weekly = Some(serde_json::from_value(verified["weekly"].clone())?);
-    state.server_denied = verified["server_denied"]
-        .as_bool()
-        .context("transfer_invalid / 状态迁移包无效")?;
-    let five = serde_json::from_value(verified["five_hour"].clone())?;
-    kairo_core::observe(&mut state, now, five);
-    state.validate()?;
-    let path = runtime::guard_root().join(account);
-    let gate = Store::open(&path)?;
-    let mut anchors = std::collections::BTreeSet::new();
-    let mut latest = now;
-    for a in &state.legacy_attempts {
-        anchors.insert(a.anchor.clone());
-        latest = latest.max(a.at);
-    }
-    for a in &state.attempts {
-        anchors.insert(a.anchor.clone());
-        latest = latest.max(a.at)
-    }
-    if path.join("account.json").exists() {
-        let old: AccountJournal = gate.read("account.json")?;
-        if old.schema != 1 || old.account != account {
-            bail!("account_guard_invalid / 账号门禁无效")
-        };
-        anchors.extend(old.anchors);
-        latest = latest.max(old.last_attempt);
-    }
-    gate.write(
-        "account.json",
-        &AccountJournal {
-            schema: 1,
-            account: account.into(),
-            last_attempt: latest,
-            anchors,
-        },
-    )?;
-    store.write("state.json", &state)?;
-    let mut cursor = Cursor::new(now, crate::timezone()?);
-    cursor.arm(&store.config()?, crate::timezone()?, now)?;
-    store.write("cursor.json", &cursor)?;
-    store.write(
-        "deployment.json",
-        &Deployment {
-            schema: 1,
-            account: account.into(),
-            enabled: false,
-            approved_at: None,
-        },
-    )?;
     Ok(())
 }
 pub fn doctor(store: &Store, repair: bool) -> Result<Value> {
@@ -350,144 +212,10 @@ pub fn doctor(store: &Store, repair: bool) -> Result<Value> {
         migrate(store)?;
     }
     let r = runtime::runtime(store)?;
-    let codex = account_command(store, &r.codex)?
-        .args(["exec", "--help"])
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .map(|o| {
-            let h = String::from_utf8_lossy(&o.stdout);
-            [
-                "--ignore-user-config",
-                "--sandbox",
-                "--ephemeral",
-                "--skip-git-repo-check",
-            ]
-            .iter()
-            .all(|f| h.contains(f))
-        })
-        .unwrap_or(false);
-    let distro = fs::read_to_string("/etc/os-release").unwrap_or_default();
-    let read = |key: &str| {
-        distro
-            .lines()
-            .find_map(|l| {
-                l.strip_prefix(&format!("{key}="))
-                    .map(|s| s.trim_matches('"').to_string())
-            })
-            .unwrap_or_default()
-    };
-    let recovery = crate::recovery::inspect(store, &runtime::guard_root())?;
     Ok(
-        json!({"distribution":read("ID"),"distribution_version":read("VERSION_ID"),"arch":std::env::consts::ARCH,"systemd":Path::new("/run/systemd/system").exists(),"timezone":crate::timezone().map(|t|t.to_string()).unwrap_or_else(|_|"timezone_unknown".into()),"codex_safety_flags":codex,"oauth_present":crate::identity(&r.codex_home.join("auth.json")).is_ok(),"state_valid":recovery["scheduler_state_ready"],"existing_records_valid":validate(store).is_ok(),"scheduler_state_ready":recovery["scheduler_state_ready"],"production_authorized":recovery["production_authorized"],"recovery_status":recovery,"repair_applied":repair}),
+        json!({"state_valid":validate(store).is_ok(),"oauth_present":crate::codex::logged_in(store,&r).unwrap_or(false),"codex":r.codex,"quota_optional":true,"deployment_approval_required":false,"recovery_wait_required":false}),
     )
 }
-
-pub fn merge_states(current: Option<State>, mut incoming: State) -> Result<State> {
-    incoming.validate()?;
-    if let Some(old) = current {
-        old.validate()?;
-        if old.account != incoming.account {
-            bail!("account_mismatch / 账号不匹配")
-        }
-        for attempt in old.attempts {
-            if let Some(i) = incoming
-                .attempts
-                .iter()
-                .position(|x| x.anchor == attempt.anchor)
-            {
-                if incoming.attempts[i].at != attempt.at {
-                    bail!("transfer_conflict / 状态迁移记录冲突")
-                };
-                incoming.attempts[i] = attempt;
-            } else {
-                incoming.attempts.push(attempt)
-            }
-        }
-        for attempt in old.legacy_attempts {
-            if let Some(existing) = incoming
-                .legacy_attempts
-                .iter()
-                .find(|a| a.anchor == attempt.anchor)
-            {
-                if existing.at != attempt.at {
-                    bail!("transfer_conflict / 状态迁移记录冲突")
-                }
-            } else {
-                incoming.legacy_attempts.push(attempt)
-            }
-        }
-        incoming.last_clock = incoming.last_clock.max(old.last_clock);
-        incoming.positive_until = incoming.positive_until.max(old.positive_until);
-        incoming.observations.extend(old.observations);
-        incoming.observations.sort_by_key(|o| o.at);
-        incoming.observations.dedup_by_key(|o| o.at);
-        if incoming.observations.len() > 64 {
-            incoming
-                .observations
-                .drain(..incoming.observations.len() - 64);
-        }
-    }
-    incoming.pending = None;
-    incoming.attempts.sort_by_key(|a| a.at);
-    incoming.validate()?;
-    Ok(incoming)
-}
 pub fn repair_defaults(store: &Store) -> Result<()> {
-    if store.config().is_err() {
-        let saved = store
-            .read::<kairo_core::Config>(".config.json.previous")
-            .ok()
-            .filter(|c| c.validate().is_ok())
-            .unwrap_or_default();
-        store.write("config.json", &saved)?;
-    }
-    if runtime::runtime(store).is_err() {
-        if store.root.join("deployment.json").exists() {
-            runtime::pause(store)?
-        };
-        store.write("runtime.json", &Runtime::default())?;
-    }
-    validate(store)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    fn state() -> State {
-        State {
-            schema: 1,
-            account: "synthetic".into(),
-            ..Default::default()
-        }
-    }
-    #[test]
-    fn migration_preserves_all_reservations() {
-        let mut old = state();
-        kairo_core::reserve(
-            &mut old,
-            "old",
-            100000,
-            kairo_core::Quota {
-                duration: 18000,
-                used: 0.,
-                reset_at: 118000,
-                remaining: 18000,
-            },
-        );
-        old.positive_until = 120000;
-        let mut new = state();
-        new.pending = Some(140000);
-        let merged = merge_states(Some(old), new).unwrap();
-        assert_eq!(merged.attempts.len(), 1);
-        assert_eq!(merged.attempts[0].outcome, "attempt_persisted_unknown");
-        assert_eq!(merged.positive_until, 120000);
-        assert!(merged.pending.is_none());
-    }
-    #[test]
-    fn migration_rejects_account_change() {
-        let mut other = state();
-        other.account = "other".into();
-        assert!(merge_states(Some(state()), other).is_err());
-    }
+    migrate(store)
 }

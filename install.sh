@@ -47,7 +47,7 @@ if ((missing)); then
   timeout 180 "$pm" -y install "${packages[@]}"
  else fail '缺少可用包管理器' 'No supported package manager'; fi
 fi
-msg 'Kairo：安装授权在安全条件满足后自动预热；可随时暂停。升级继承已有授权，不自动取消暂停。' 'Kairo: installation authorizes automatic warmup once safe; pause anytime. Upgrades preserve existing intent and pauses.'
+msg 'Kairo：安装授权在预设时间自动调用 Codex CLI；可随时暂停。升级继承已有授权，不自动取消暂停。' 'Kairo: installation authorizes scheduled Codex CLI calls; pause anytime. Upgrades preserve existing intent and pauses.'
 stage=$(mktemp -d /tmp/kairo-online.XXXXXXXX)
 chmod 700 "$stage"
 was_active=0; changed=0; old_hash=; completed=0; fresh_install=0; new_auto_intent=0
@@ -432,7 +432,7 @@ done
 systemctl daemon-reload
 systemctl enable --now kairo.service
 if ((restart_mode)); then systemctl restart kairo.service; fi
-msg '安装即授权：额度与安全条件允许时自动预热。官方 OAuth 由本人完成；服务会自动检测登录。' 'Installation authorizes automatic warmup within quota and safety limits. Complete official OAuth personally; login is detected automatically.'
+msg '安装即授权：在预设时间自动调用 Codex CLI。官方 OAuth 由本人完成；服务会自动检测登录。' 'Installation authorizes scheduled Codex CLI calls; official limits apply. Complete official OAuth personally; login is detected automatically.'
 else
  if ((was_active)); then systemctl start kairo.service; fi
 fi

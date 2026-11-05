@@ -69,6 +69,9 @@ assert pathlib.Path('/usr/local/bin/kairo').is_symlink() and pathlib.Path('/etc/
 automatic = tuple(map(int,version.split('.'))) >= (0,2,4)
 assert pathlib.Path('/tmp/service-active').exists()==automatic
 modern = tuple(map(int,version.split('.'))) >= (0,2,6)
+scheduled = tuple(map(int,version.split('.'))) >= (0,2,8)
+def paused():
+ return json.loads((state/'schedule.json').read_text())['paused'] if scheduled else not json.loads((state/'onboarding.json').read_text())['requested']
 if not modern: assert 'daemon --observe' in pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').read_text()
 else: assert not pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf').exists()
 if automatic and not modern:
@@ -78,7 +81,7 @@ if automatic and not modern:
  call(['kairo','--json','onboard'],False) # Offline prohibits actual root coordinator/network/cutover.
  # Pause before any deployment exists must cancel automatic initialization durably.
  call(['kairo','pause'])
- assert not json.loads((state/'onboarding.json').read_text())['requested']
+ assert paused()
 if modern:
  assert not pathlib.Path('/etc/systemd/system/kairo-onboarding.timer').exists()
  assert json.loads((state/'runtime.json').read_text())['codex_home']=='/root/.codex'
@@ -87,7 +90,7 @@ assert not pathlib.Path('/home/kairo/.codex/auth.json').exists()
 call(entry);call(['kairo','schedule','add','03:37']);before=(state/'config.json').read_bytes()
 call(['kairo','update','online'])
 assert (state/'config.json').read_bytes()==before
-if automatic:assert not json.loads((state/'onboarding.json').read_text())['requested']
+if automatic:assert paused()
 if modern:
  mode=pathlib.Path('/etc/systemd/system/kairo.service.d/20-mode.conf');mode.parent.mkdir(exist_ok=True)
  mode.write_text('[Service]\nExecStart=\nExecStart=/opt/kairo/current/bin/kairo --data-dir /var/lib/kairo daemon --observe\n')
@@ -150,7 +153,7 @@ if modern and old.exists():
  call(entry)
  assert hashlib.sha256(binary.read_bytes()).hexdigest()==original
  assert json.loads((state/'state.json').read_text())['account']==account
- assert not json.loads((state/'onboarding.json').read_text())['requested']
+ assert paused()
 # Optional actual official binary is used only for --version, never login/models.
 if pathlib.Path('/official-codex.tar.gz').exists():
  codex.unlink();call(entry);assert codex.read_bytes()[:4]==b'\x7fELF'
@@ -169,11 +172,11 @@ if automatic and not modern:
  assert copied.read_bytes()==auth.read_bytes() and copied.stat().st_uid==pwd.getpwnam('kairo').pw_uid
  assert stat.S_IMODE(copied.stat().st_mode)==0o600
  assert 'synthetic-onboarding-placeholder' not in p.stdout+p.stderr
- assert not json.loads((state/'onboarding.json').read_text())['requested']
+ assert paused()
 if modern:
  assert auth.read_text().find('synthetic-onboarding-placeholder')>=0
  assert not pathlib.Path('/home/kairo/.codex/auth.json').exists()
- assert not json.loads((state/'onboarding.json').read_text())['requested']
+ assert paused()
 if modern:
  # A pre-existing unrelated kairo user's OAuth is not owned by this root install.
  import pwd

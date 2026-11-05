@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.8
+
+- Replace window-management scheduling with one official Codex CLI call per configured time.
+- Remove deployment approval, account guards, recovery/onboarding and window-confirmation execution paths.
+- Preserve local durable slot reservations, single-instance/call locks, pauses and upgrade state.
+- Treat quota as optional information; report CLI success only with valid completion evidence.
+
 ## 0.2.7
 
 - Compact bilingual Rust CLI: home actions 1–7, one exit at 0, consistent single-digit submenu navigation.

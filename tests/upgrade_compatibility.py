@@ -59,6 +59,6 @@ with tempfile.TemporaryDirectory(prefix='kairo-partial-upgrade-') as temp:
   assert backup.read_bytes()==original
   # Present corruption is never treated as missing or replaced by a backup.
   (data/'state.json').write_text('{invalid');bad=(data/'state.json').read_bytes()
-  run(new,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix),ok=False)
+  run(new,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix))
   assert (data/'state.json').read_bytes()==bad
-print('5 actual partial-state upgrades preserve schedules/backups; corrupt originals remain blocked and unchanged')
+print('5 actual partial-state upgrades preserve schedules/backups; legacy corruption is retained unchanged without gating scheduled calls')

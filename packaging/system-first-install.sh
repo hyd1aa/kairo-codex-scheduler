@@ -54,4 +54,4 @@ printf 'schema=1\n' > /var/lib/kairo-installer/managed-user
 chmod 600 /var/lib/kairo-installer/managed-user
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 "$script_dir/system-install.sh" "$binary" "$checksum" "$account_user"
-msg '安装即授权 Kairo 在额度和安全条件允许时自动预热。未登录时，请以安装用户完成官方 Codex 登录，服务会自动检测。' 'Installation authorizes automatic warmup within quota and safety limits. Complete official Codex login as the installing user; the service detects it automatically.'
+msg '安装即授权 Kairo 在预设时间自动调用 Codex CLI。未登录时，请以安装用户完成官方 Codex 登录，服务会自动检测。' 'Installation authorizes scheduled Codex CLI calls; official limits apply. Complete official Codex login as the installing user; the service detects it automatically.'

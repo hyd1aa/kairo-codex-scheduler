@@ -1,72 +1,26 @@
-"""Read-only UI and EPIPE regressions using synthetic evidence in private temp data."""
-import hashlib,json,os,pathlib,pty,subprocess,sys,tempfile,time,datetime,zoneinfo
-binary=str(pathlib.Path(sys.argv[1]).resolve());count=0
-with tempfile.TemporaryDirectory(prefix='kairo-evidence-') as temp:
- root=pathlib.Path(temp);data=root/'data';tools=root/'tools';tools.mkdir()
- (tools/'timedatectl').write_text('#!/bin/sh\nprintf "Asia/Shanghai\\n"\n');(tools/'timedatectl').chmod(0o700)
- env={**os.environ,'PATH':str(tools)+':'+os.environ['PATH'],'KAIRO_OFFLINE':'1','NO_COLOR':'1','RUST_BACKTRACE':'1'}
- def direct(*args,ok=True):
-  p=subprocess.run([binary,'--data-dir',str(data),*args],env=env,text=True,capture_output=True,timeout=15)
-  assert (p.returncode==0)==ok,(args,p.stdout,p.stderr);return p
- def write(name,v):p=data/name;p.write_text(json.dumps(v));p.chmod(0o600)
- def menu(text='0\n'):
+"""Scheduled-call evidence and cache presentation, no window-activation claims."""
+import hashlib,json,os,pathlib,pty,subprocess,sys,time
+from scheduled_support import Fixture
+f=Fixture(sys.argv[1]);count=0
+try:
+ def menu():
   global count
-  master,slave=pty.openpty();p=subprocess.Popen([binary,'--data-dir',str(data)],stdin=slave,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env,text=True)
-  os.close(slave);os.write(master,text.encode());out,err=p.communicate(timeout=20);os.close(master);assert p.returncode==0,(out,err)
-  assert '\x1b' not in out and 'synthetic-display-placeholder' not in out+err;count+=1;return out
- direct('init');direct('runtime','--home',temp,'--codex-home',temp,'--codex','/nonexistent-synthetic-codex')
- account=hashlib.sha256(b'synthetic-display-account').hexdigest()
- auth=root/'auth.json';auth.write_text(json.dumps({'tokens':{'account_id':'synthetic-display-account','access_token':'synthetic-display-placeholder'}}));auth.chmod(0o600)
- done=int(time.time())-300
- shown_request=datetime.datetime.fromtimestamp(done,zoneinfo.ZoneInfo("Asia/Shanghai")).strftime("%H:%M")
- shown_confirmation=datetime.datetime.fromtimestamp(done+152,zoneinfo.ZoneInfo("Asia/Shanghai")).strftime("%H:%M")
- before=dict(duration=18000,used=0.,reset_at=done-2+18000,remaining=18000)
- attempt=dict(anchor='synthetic-06:00',at=done-2,completed_at=done,before=before,after=None,outcome='request_ok_window_unconfirmed')
- state=dict(schema=1,account=account,last_clock=done+152,attempts=[attempt],positive_until=0,pending=None,observations=[],weekly=None,server_denied=False,legacy_attempts=[])
- task=dict(anchor=attempt['anchor'],request_at=attempt['at'],completed_at=done,status='countdown_confirmed_time_correlated',request_success=True,countdown_confirmed=True,time_correlated=True,attribution_uncertain=True,next_check=None,deadline=done+18000,checks=2,samples=[dict(checked_at=done+d,reset_at=done+18000,remaining=18000-d,used_percent=0.) for d in [60,152]],events=[])
- write('state.json',state);write('confirmations.json',dict(schema=1,account=account,tasks=[task]))
- write('recovery.json',dict(approved=True,not_before=done-10000))
- write('quota-cache.json',dict(account=account,at=int(time.time())-600,five_hour=dict(used=0.,reset_at=done+18000),weekly=dict(used=40.,reset_at=done+604800)))
- out=menu();assert '✓ 成功' in out and shown_request in out and '归因不确定' not in out
- assert '100.0% / 60.0%' in out and '旧缓存' in out and '下次预热机会' in out
- assert '预计复查' not in out and '安全恢复复查' not in out and '2026-' not in out
- out=menu('1\n2\n\n3\n\n0\n0\n');assert '仅列出已保存记录' in out and 'request_ok_window_unconfirmed' not in out and 'countdown_confirmed_time_correlated' not in out
- # A newer failure never inherits the older confirmation.
- failed={**attempt,'anchor':'synthetic-failure','at':done+200,'completed_at':done+202,'before':{**before,'reset_at':done+200+18000},'outcome':'request_failed'}
- state['last_clock']=done+202;state['attempts'].append(failed);write('state.json',state)
- out=menu();assert '✗ 请求失败' in out and '结果：✓' not in out
- write('status.json',dict(event='attempt_guard',at=done+250))
- out=menu('1\n3\n\n0\n0\n');assert '模型请求未成功' in out
- (data/'status.json').unlink()
- state['attempts']=[attempt];write('state.json',state);(data/'confirmations.json').unlink()
- out=menu();assert '请求成功，等待倒计时确认' in out and '结果：✓' not in out
- for outcome,label in [('attempt_persisted_unknown','请求结果未知'),('request_ok_window_unconfirmed','请求成功，等待倒计时确认')]:
-  state['attempts']=[{**attempt,'outcome':outcome}];write('state.json',state)
-  out=menu();assert label in out and '✓ 成功' not in out
- write('deployment.json',dict(schema=1,account='another-synthetic-account',enabled=True,approved_at=done))
- out=menu();assert '账号已切换' in out
- (data/'deployment.json').unlink()
- state['attempts']=[];state['last_clock']=0;write('state.json',state);(data/'recovery.json').unlink()
- out=menu();assert '尚未进行过预热' in out
- direct('lang','en-US');out=menu();assert 'No warmup performed yet' in out and 'Next warmup opportunity' in out
- # Zero usage can still have a running partial five-hour window.
- write('quota-cache.json',dict(account=account,at=int(time.time()),five_hour=dict(used=0.,remaining=7200,reset_at=int(time.time())+7200),weekly=dict(used=0.,reset_at=int(time.time())+604800)))
- direct('lang','zh-CN');out=menu();assert '当前窗口有效，等待下次预热机会' not in out and '100.0% / 100.0%' in out
- # Known weekly exhaustion and expired OAuth must be explicit on the home page.
- write('quota-cache.json',dict(account=account,at=int(time.time()),five_hour=dict(used=0.,reset_at=int(time.time())+18000),weekly=dict(used=100.,reset_at=int(time.time())+3600)))
- direct('lang','zh-CN');out=menu();assert '每周额度已用尽，等待重置' in out and '100.0% / 0.0%' in out
- write('status.json',dict(event='blocked',error='Quota HTTP 401 Unauthorized',at=int(time.time())))
- out=menu();assert '需要登录 Codex' in out and '登录已失效' in out and 'Quota HTTP' not in out
- (data/'status.json').unlink()
- # Closed consumers: successful Unix termination, no panic/backtrace. JSON/business errors unchanged otherwise.
+  m,s=pty.openpty();p=subprocess.Popen([f.binary,'--data-dir',str(f.data)],stdin=s,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env=f.env);os.close(s);os.write(m,b'0\n');out,err=p.communicate(timeout=10);os.close(m);assert p.returncode==0,(out,err);assert '\x1b' not in out;count+=1;return out
+ now=int(time.time());state=f.read('schedule.json');state['watermark']=now
+ auth=f.root/'empty-auth';auth.mkdir();(auth/'auth.json').write_text(json.dumps({'tokens':{'account_id':'synthetic-display','access_token':'synthetic-private-output'}}));(auth/'auth.json').chmod(0o600)
+ f.write('quota-cache.json',{'account':hashlib.sha256(b'synthetic-display').hexdigest(),'at':now-600,'five_hour':{'used':0},'weekly':{'used':66}})
+ for result,reason,zh,en in [('success','completed','✓ 成功','✓ Success'),('unknown','started','结果未知','Result unknown'),('failed','completion_evidence_missing','未返回有效完成证据','completion evidence missing'),('failed','weekly_limit','每周额度限制','weekly limit'),('failed','network_error','网络请求失败','Network request failed'),('skipped','call_in_progress','上一调用仍在运行','Previous call still running')]:
+  state['calls']=[dict(slot='synthetic',due=now-30,started_at=now-30,completed_at=now,result=result,reason=reason,exit_code=0 if result=='success' else 7)];f.write('schedule.json',state)
+  for language,label in [('zh-CN',zh),('en-US',en)]:
+   f.call('lang',language);out=menu();assert label in out,(label,out)
+   assert ('100.0%' in out and '34.0%' in out and ('旧缓存' if language=='zh-CN' else 'stale cache') in out)
+   if result!='success':assert '✓ 成功' not in out and '✓ Success' not in out
+   assert '新窗口已激活' not in out and 'new window activated' not in out
+ # External login changes are seen by the official CLI status checker.
+ f.settings(login=False);f.call('lang','zh-CN');assert '需要登录 Codex' in menu()
+ f.settings(login=True);f.call('pause');assert '已暂停' in menu()
+ # A closed output consumer remains a successful Unix termination.
  for args in [('--json','status'),('--help',),('--version',)]:
-  read,write_fd=os.pipe();os.close(read)
-  p=subprocess.Popen([binary,'--data-dir',str(data),*args],env=env,stdout=write_fd,stderr=subprocess.PIPE,text=True);os.close(write_fd)
-  _,err=p.communicate(timeout=15);assert p.returncode==0 and 'panic' not in err.lower() and 'backtrace' not in err.lower(),(args,p.returncode,err);count+=1
- for args,expected in [(('--json','schedule','add','bad'),1),(('--json','--invalid-kairo-option'),2)]:
-  read,write_fd=os.pipe();os.close(read)
-  p=subprocess.Popen([binary,'--data-dir',str(data),*args],env=env,stdout=write_fd,stderr=subprocess.PIPE,text=True);os.close(write_fd)
-  _,err=p.communicate(timeout=15);assert p.returncode==expected and 'panic' not in err.lower(),(args,p.returncode,err);count+=1
- assert json.loads(direct('--json','status').stdout)['version']
- assert 'error' in json.loads(direct('--json','schedule','add','bad',ok=False).stdout)
-print(f'{count} warmup-evidence/cache/localization/closed-pipe regressions passed; zero model/service calls')
+  r,w=os.pipe();os.close(r);p=subprocess.Popen([f.binary,'--data-dir',str(f.data),*args],env=f.env,stdout=w,stderr=subprocess.PIPE,text=True);os.close(w);_,err=p.communicate(timeout=10);assert p.returncode==0 and 'panic' not in err;count+=1
+ print(f'{count} evidence/cache/login/closed-pipe regressions passed; no model or quota requests')
+finally:f.close()
