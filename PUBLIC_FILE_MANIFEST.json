@@ -269,7 +269,7 @@
     },
     {
       "path": "crates/kairo-cli/src/main.rs",
-      "sha256": "e2957d9d22f0444da1a420689aaf3a795c0fd060c2042439e72ca661d9d0a866",
+      "sha256": "5759d6ff544a6cd37d97f964ec4d0c25042b548ab89401b819db8183beb1082a",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -396,7 +396,7 @@
     },
     {
       "path": "crates/kairo-platform/src/runtime.rs",
-      "sha256": "58c0db37dd6846c088d4f92407cf221c042a9b874428358322151065083d69c3",
+      "sha256": "50b602d6880d42c8ee365b1eebe4da74e91dafd3f8999ddf0cc824de26ef4eb0",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",

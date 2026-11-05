@@ -152,6 +152,27 @@ impl ScheduleState {
             calls,
         })
     }
+    /// UI previews obey the same local watermark and slot identity as execution.
+    pub fn upcoming(
+        &self,
+        config: &kairo_core::Config,
+        tz: chrono_tz::Tz,
+        now: chrono::DateTime<Utc>,
+        hours: i64,
+    ) -> Result<Vec<chrono::DateTime<Utc>>> {
+        let floor = chrono::DateTime::from_timestamp(self.watermark.max(now.timestamp()), 0)
+            .context("clock_invalid")?;
+        Ok(kairo_core::plan(config, tz, floor, hours)?
+            .into_iter()
+            .filter(|due| {
+                let slot = (*due - chrono::Duration::seconds(config.buffer_seconds))
+                    .with_timezone(&tz)
+                    .format("%Y-%m-%d/%H:%M")
+                    .to_string();
+                !self.calls.iter().any(|call| call.slot == slot)
+            })
+            .collect())
+    }
     pub fn save(&self, store: &Store) -> Result<()> {
         store.write("schedule.json", self)
     }
@@ -361,4 +382,50 @@ pub fn replay(root: &Path, path: &Path, poll_ms: u64, hold: bool) -> Result<()> 
         thread::sleep(Duration::from_millis(20));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod preview_tests {
+    use super::*;
+    fn at(value: &str) -> chrono::DateTime<Utc> {
+        chrono::DateTime::parse_from_rfc3339(value)
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+    #[test]
+    fn preview_excludes_processed_slot_after_delay_change_and_clock_rollback() {
+        let due = at("2026-11-10T06:00:30+00:00").timestamp();
+        let state = ScheduleState {
+            schema: 1,
+            paused: false,
+            watermark: due,
+            calls: vec![Call {
+                slot: "2026-11-10/06:00".into(),
+                due,
+                started_at: Some(due),
+                completed_at: Some(due + 1),
+                result: "success".into(),
+                reason: "completed".into(),
+                exit_code: Some(0),
+            }],
+        };
+        let mut config = kairo_core::Config {
+            anchors: vec!["06:00".into(), "11:00".into()],
+            buffer_seconds: 60,
+            ..Default::default()
+        };
+        assert_eq!(
+            state
+                .upcoming(&config, chrono_tz::UTC, at("2026-11-10T06:00:40+00:00"), 24)
+                .unwrap()[0],
+            at("2026-11-10T11:01:00+00:00")
+        );
+        config.buffer_seconds = 30;
+        assert_eq!(
+            state
+                .upcoming(&config, chrono_tz::UTC, at("2026-11-10T05:00:00+00:00"), 24)
+                .unwrap()[0],
+            at("2026-11-10T11:00:30+00:00")
+        );
+    }
 }
