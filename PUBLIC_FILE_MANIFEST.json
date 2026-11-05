@@ -374,7 +374,7 @@
     },
     {
       "path": "crates/kairo-platform/src/management.rs",
-      "sha256": "a5686bd0199f059727422477b3a1c887cff664205fe9a7463a3420b5482a58ce",
+      "sha256": "498a77b48d0d832a53921981473df5fd8922e86006705999591ead2c7797b8ee",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1152,7 +1152,7 @@
     },
     {
       "path": "tests/acceptance.py",
-      "sha256": "229342510f4317a8109280ab2bbbf84e0db579bd3bbf5cbdcf93c08f2155ac02",
+      "sha256": "5498b2ba05c0a730c0233b4047718b5da35a92a95b3f0d6618cb25457cd1d641",
       "category": "first-party",
       "license_expression": "MIT",
       "license_basis": "Existing project MIT grant / independently authored export tooling or documentation; final owner licensing-authority sign-off remains pending",
@@ -1381,7 +1381,7 @@
       "source_path": "tests/upgrade_compatibility.py",
       "source_sha256": null,
       "transformation": "Maintained after snapshot; original source identifiers retained for provenance",
-      "sha256": "351a74d933ed65dc4e5f674fe63b344fc3ca3b63b291fd34f80a886e7d3df426"
+      "sha256": "976afa0d088b876fb91aaab42b27c8d3e3b31acba3f3977f989d61ddf39ff44c"
     },
     {
       "path": "tests/validate_sbom.py",

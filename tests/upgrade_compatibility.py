@@ -55,7 +55,7 @@ with tempfile.TemporaryDirectory(prefix='kairo-partial-upgrade-') as temp:
   (data/missing).unlink()
   run(new,'update','apply',new,'--sha256',digest(new),'--prefix',str(prefix))
   assert '03:37' in json.loads((data/'config.json').read_text())['anchors']
-  if missing in ['state.json','config.json','runtime.json']:assert json.loads((data/missing).read_text())==json.loads(original)
+  if missing in ['state.json','config.json','runtime.json']:assert json.loads((data/missing).read_text())==json.loads(original),(missing,json.loads((data/missing).read_text()),json.loads(original))
   assert backup.read_bytes()==original
   # Present corruption is never treated as missing or replaced by a backup.
   (data/'state.json').write_text('{invalid');bad=(data/'state.json').read_bytes()
