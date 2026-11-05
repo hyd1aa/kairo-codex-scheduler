@@ -370,10 +370,10 @@ fn emit(cli: &Cli, value: Value) -> Result<()> {
 fn configured(cli: &Cli) -> Result<Store> {
     Store::open(&cli.data_dir)
 }
-fn next_checks(_store: &Store, c: &Config, hours: i64) -> Result<Value> {
+fn next_checks(store: &Store, c: &Config, hours: i64) -> Result<Value> {
     let tz = timezone()?;
     Ok(
-        json!({"timezone":tz.to_string(),"buffer_seconds":c.buffer_seconds,"checks":plan(c,tz,chrono::Utc::now(),hours)?.into_iter().map(|d|d.with_timezone(&tz).to_rfc3339()).collect::<Vec<_>>()}),
+        json!({"timezone":tz.to_string(),"buffer_seconds":c.buffer_seconds,"checks":rt::ScheduleState::load(store)?.upcoming(c,tz,chrono::Utc::now(),hours)?.into_iter().map(|d|d.with_timezone(&tz).to_rfc3339()).collect::<Vec<_>>()}),
     )
 }
 fn status(store: &Store) -> Result<Value> {
