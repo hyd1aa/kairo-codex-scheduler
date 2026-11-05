@@ -123,4 +123,11 @@ def disconnect(f):
   assert len(f.invocations())==1 and p.poll() is None
  finally:p.terminate();p.wait(timeout=5)
 scenario('SSH-style SIGHUP does not stop scheduled daemon calls',disconnect)
+def restore_runtime(f):
+ original=f.read('runtime.json');original['home']=str(f.root/'unmounted-old-home');original['codex_home']=str(f.root/'custom-login');f.write('.runtime.json.previous',original);(f.data/'runtime.json').unlink()
+ env={k:v for k,v in f.env.items() if k!='HOME'}
+ p=subprocess.run([f.binary,'--data-dir',str(f.data),'migrate'],env=env,text=True,capture_output=True,timeout=10)
+ assert p.returncode==0,(p.stdout,p.stderr)
+ assert f.read('runtime.json')==original and f.read('.runtime.json.previous')==original
+scenario('valid runtime backup survives absent HOME and temporarily unavailable paths',restore_runtime)
 print(f'{checks} scheduled-call scenarios passed; mock CLI only, zero real model requests')

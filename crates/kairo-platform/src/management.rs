@@ -167,11 +167,13 @@ pub fn migrate(store: &Store) -> Result<()> {
     if !crate::present(&store.root.join("runtime.json"))? {
         use std::os::unix::fs::MetadataExt;
         let owner = fs::metadata(&store.root)?.uid();
-        let mut r = store
-            .retained::<Runtime>("runtime.json")?
-            .unwrap_or_default();
-        if fs::metadata(&r.home).map_or(true, |m| m.uid() != owner)
-            || std::env::var_os("HOME").is_none()
+        let retained = store.retained::<Runtime>("runtime.json")?;
+        let missing = retained.is_none();
+        let mut r = retained.unwrap_or_default();
+        // Existing paths belong to the installation, not the upgrader's environment.
+        if missing
+            && (fs::metadata(&r.home).map_or(true, |m| m.uid() != owner)
+                || std::env::var_os("HOME").is_none())
         {
             let u = unsafe { libc::getpwuid(owner) };
             if u.is_null() {
